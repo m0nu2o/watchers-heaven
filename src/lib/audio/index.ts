@@ -972,22 +972,9 @@ export function resolveAudioSource(params: ResolveAudioSourceParams): ResolveAud
   }
 
   // Determine provider to use:
-  let chosenProvider = track.provider;
+  let chosenProvider = preferredProvider || track.provider;
 
-  // Smart Dub auto-prioritization
-  if (track.id === 'dub-hi') {
-    if (mediaType === 'anime') {
-      chosenProvider = 'vidlink-anime';
-    } else {
-      chosenProvider = preferredProvider || 'vidsrc-dev';
-    }
-  } else if (track.id === 'dub-en') {
-    if (mediaType === 'anime') {
-      chosenProvider = 'vidlink-anime';
-    } else {
-      chosenProvider = preferredProvider || 'vidlink';
-    }
-  } else if (preferredProvider) {
+  if (preferredProvider) {
     const adapter = ProviderRegistry.getById(preferredProvider);
     if (adapter) {
       const isCompatible =
@@ -995,8 +982,15 @@ export function resolveAudioSource(params: ResolveAudioSourceParams): ResolveAud
         (mediaType === 'tv' && adapter.supportsTV) ||
         (mediaType === 'movie' && adapter.supportsMovie);
       if (isCompatible) {
-        chosenProvider = preferredProvider;
+        chosenProvider = adapter.id;
       }
+    }
+  } else {
+    // Smart Dub auto-prioritization when no explicit provider chosen
+    if (track.id === 'dub-hi') {
+      chosenProvider = mediaType === 'anime' ? 'vidlink-anime' : 'vidsrc-dev';
+    } else if (track.id === 'dub-en') {
+      chosenProvider = mediaType === 'anime' ? 'vidlink-anime' : 'vidlink';
     }
   }
 
@@ -1104,7 +1098,7 @@ export async function resolveAudioSourceAsync(
     }
   }
 
-  let chosenProvider = track.provider;
+  let chosenProvider = preferredProvider || track.provider;
 
   if (preferredProvider) {
     const adapter = ProviderRegistry.getById(preferredProvider);
@@ -1114,23 +1108,15 @@ export async function resolveAudioSourceAsync(
         (mediaType === 'tv' && adapter.supportsTV) ||
         (mediaType === 'movie' && adapter.supportsMovie);
       if (isCompatible) {
-        chosenProvider = preferredProvider;
+        chosenProvider = adapter.id;
       }
     }
-  }
-
-  // Smart Dub auto-prioritization
-  if (track.id === 'dub-hi') {
-    if (mediaType === 'anime') {
-      chosenProvider = 'vidlink-anime';
-    } else {
-      chosenProvider = preferredProvider || 'vidsrc-dev';
-    }
-  } else if (track.id === 'dub-en') {
-    if (mediaType === 'anime') {
-      chosenProvider = 'vidlink-anime';
-    } else {
-      chosenProvider = preferredProvider || 'vidlink';
+  } else {
+    // Smart Dub auto-prioritization when no explicit provider chosen
+    if (track.id === 'dub-hi') {
+      chosenProvider = mediaType === 'anime' ? 'vidlink-anime' : 'vidsrc-dev';
+    } else if (track.id === 'dub-en') {
+      chosenProvider = mediaType === 'anime' ? 'vidlink-anime' : 'vidlink';
     }
   }
 

@@ -188,7 +188,7 @@ export const ApiGateway = {
     }
   },
 
-  // --- VidFast (vidfast.pro) API ---
+  // --- VidFast (vidfast.vc) API ---
   getVidFastUrl: (
     tmdbId: string | number,
     type: 'movie' | 'tv',
@@ -205,8 +205,8 @@ export const ApiGateway = {
     }
   ) => {
     let url = type === 'movie'
-      ? `https://vidfast.pro/movie/${tmdbId}`
-      : `https://vidfast.pro/tv/${tmdbId}/${season || 1}/${episode || 1}`;
+      ? `https://vidfast.vc/movie/${tmdbId}`
+      : `https://vidfast.vc/tv/${tmdbId}/${season || 1}/${episode || 1}`;
     const params: string[] = [];
     if (options?.autoPlay !== undefined) params.push(`autoPlay=${options.autoPlay ? 1 : 0}`);
     if (options?.theme) params.push(`theme=${options.theme}`);

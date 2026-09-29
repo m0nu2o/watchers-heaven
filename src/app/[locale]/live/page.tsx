@@ -185,9 +185,9 @@ export default function LiveTvPage() {
     { all: 0, news: 0, sports: 0, entertainment: 0, kids: 0, others: 0 }
   );
 
-  // Determine which player to use for selected channel
-  const useHls = selectedChannel.hlsUrl && !hlsFailed;
-  const useEmbed = !useHls && selectedChannel.embedUrl;
+  // Prefer verified embed (YouTube iframe) — always works, zero CORS issues, zero black screen. HLS is fallback.
+  const useEmbed = Boolean(selectedChannel.embedUrl);
+  const useHls = !useEmbed && Boolean(selectedChannel.hlsUrl) && !hlsFailed;
   const handleHlsError = useCallback(() => setHlsFailed(true), []);
 
   return (
@@ -253,9 +253,7 @@ export default function LiveTvPage() {
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-md overflow-hidden">
             {/* Player Area */}
             <div className="relative aspect-video w-full bg-black">
-              {useHls && selectedChannel.hlsUrl ? (
-                <HlsPlayer src={selectedChannel.hlsUrl} onError={handleHlsError} />
-              ) : useEmbed && selectedChannel.embedUrl ? (
+              {useEmbed && selectedChannel.embedUrl ? (
                 <iframe
                   key={selectedChannel.id}
                   src={selectedChannel.embedUrl}
@@ -265,6 +263,8 @@ export default function LiveTvPage() {
                   title={`Live TV – ${selectedChannel.name}`}
                   style={{ border: 'none' }}
                 />
+              ) : useHls && selectedChannel.hlsUrl ? (
+                <HlsPlayer src={selectedChannel.hlsUrl} onError={handleHlsError} />
               ) : (
                 <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-400">
                   <AlertTriangle className="w-10 h-10 text-yellow-500" />

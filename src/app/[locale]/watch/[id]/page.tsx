@@ -563,10 +563,17 @@ export default function WatchPage() {
       setSelectedAudioTrack(trackId);
       triggerSeekFeedback(trackId.startsWith('dub') ? '🎙️ Switching to Dubbed Audio...' : '🇯🇵 Switching to Original / SUB...');
 
-      // Auto-switch provider for Hindi dub if not already selected
+      // Auto-switch to dedicated Dub streaming servers when Dub audio is clicked
       let overrideProv: string | undefined = undefined;
       if (trackId === 'dub-hi') {
-        overrideProv = isAnime ? 'nhd-anime' : 'nhd-cinema';
+        overrideProv = isAnime ? 'vidsrc-dev-anime' : 'vidsrc-dev';
+      } else if (trackId === 'dub-en' || trackId === 'dub') {
+        if (isAnime) {
+          // If current provider is not vidlink-anime or vidsrc-dev-anime, switch to primary anime dub provider
+          if (provider !== 'vidlink-anime' && provider !== 'vidsrc-dev-anime') {
+            overrideProv = 'vidlink-anime';
+          }
+        }
       }
 
       const result = await resolveCurrentSource(trackId, overrideProv);
