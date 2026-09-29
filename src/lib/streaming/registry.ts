@@ -18,15 +18,19 @@ export const STREAMING_PROVIDERS: StreamingProvider[] = [
     supportsAnime: true,
     supportsEnglishDub: true,
     getPlaybackUrl: (cfg) => {
+      if (cfg.mediaType === 'anime') {
+        const isDub = cfg.audioTrackId?.startsWith('dub') ?? false;
+        return ApiGateway.getVidLinkAnimeUrl(cfg.tmdbId, cfg.season || 1, cfg.episode || 1, isDub);
+      }
       const type = cfg.mediaType === 'movie' ? 'movie' : 'tv';
       return ApiGateway.getVidLinkUrl(cfg.tmdbId, type, cfg.season || 1, cfg.episode || 1);
     },
   },
   {
-    id: 'vidsrc-me',
-    name: 'VidSrc.me',
-    quality: '1080p / Ad-Free / Multi-Sub',
-    badge: '⚡',
+    id: 'vidsrc-pm',
+    name: 'VidSrc Ultra HD',
+    quality: '1080p / Ad-Free / Global',
+    badge: '🔥',
     priority: 2,
     supportsMovie: true,
     supportsTV: true,
@@ -34,47 +38,45 @@ export const STREAMING_PROVIDERS: StreamingProvider[] = [
     supportsEnglishDub: true,
     getPlaybackUrl: (cfg) => {
       const type = cfg.mediaType === 'movie' ? 'movie' : 'tv';
-      return ApiGateway.getVidsrcMeUrl(cfg.tmdbId, type, cfg.season || 1, cfg.episode || 1);
+      return ApiGateway.getVidSrcPmUrl(cfg.tmdbId, type, cfg.season || 1, cfg.episode || 1);
     },
   },
   {
-    id: 'embedsu-cinema',
-    name: 'Embed.su Ultra HD',
-    quality: '1080p / Ad-Free / Ultra',
-    badge: '💎',
+    id: 'vidsrc-dev',
+    name: 'VidSrc Dev HD',
+    quality: '1080p / Sub+Dub Fast',
+    badge: '🌟',
     priority: 3,
     supportsMovie: true,
     supportsTV: true,
-    supportsAnime: false,
+    supportsAnime: true,
     supportsEnglishDub: true,
     getPlaybackUrl: (cfg) => {
-      const type = cfg.mediaType === 'tv' ? 'tv' : 'movie';
-      return ApiGateway.getEmbedSuUrl(cfg.tmdbId, type, cfg.season || 1, cfg.episode || 1);
+      const type = cfg.mediaType === 'movie' ? 'movie' : 'tv';
+      const isDub = cfg.audioTrackId?.startsWith('dub') ?? false;
+      return ApiGateway.getVidSrcDevUrl(cfg.tmdbId, type, cfg.season || 1, cfg.episode || 1, isDub);
     },
   },
   {
-    id: 'videasy',
-    name: 'Videasy HD',
-    quality: '1080p / Premium Player / Multi-Sub',
-    badge: '🎯',
+    id: 'autoembed-co',
+    name: 'AutoEmbed HD',
+    quality: '1080p / Fast Multi-Audio',
+    badge: '🎬',
     priority: 4,
     supportsMovie: true,
     supportsTV: true,
     supportsAnime: true,
     supportsEnglishDub: true,
     getPlaybackUrl: (cfg) => {
-      if (cfg.mediaType === 'anime' && cfg.aniListId) {
-        return ApiGateway.getVideasyUrl(cfg.tmdbId, 'anime', cfg.season || 1, cfg.episode || 1, cfg.aniListId);
-      }
       const type = cfg.mediaType === 'movie' ? 'movie' : 'tv';
-      return ApiGateway.getVideasyUrl(cfg.tmdbId, type, cfg.season || 1, cfg.episode || 1);
+      return ApiGateway.getAutoEmbedCoUrl(cfg.tmdbId, type, cfg.season || 1, cfg.episode || 1);
     },
   },
   {
-    id: 'vidsrc-cc',
-    name: 'VidSrc.cc',
-    quality: '1080p / High Speed',
-    badge: '🔥',
+    id: '2embed-skin',
+    name: '2Embed Cinema',
+    quality: '1080p / Wide Catalog',
+    badge: '💎',
     priority: 5,
     supportsMovie: true,
     supportsTV: true,
@@ -82,7 +84,7 @@ export const STREAMING_PROVIDERS: StreamingProvider[] = [
     supportsEnglishDub: true,
     getPlaybackUrl: (cfg) => {
       const type = cfg.mediaType === 'movie' ? 'movie' : 'tv';
-      return ApiGateway.getVidSrcCcUrl(cfg.tmdbId, type, cfg.season || 1, cfg.episode || 1);
+      return ApiGateway.get2EmbedSkinUrl(cfg.tmdbId, type, cfg.season || 1, cfg.episode || 1);
     },
   },
 

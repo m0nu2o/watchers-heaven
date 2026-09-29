@@ -74,6 +74,10 @@ export default function WatchPage() {
   const [audioInfo, setAudioInfo] = useState<ContentAudioInfo | null>(null);
   const [audioAvailability, setAudioAvailability] = useState<EpisodeAudioAvailability | null>(null);
   const [selectedAudioTrack, setSelectedAudioTrack] = useState<string>(() => {
+    const trackParam = searchParams.get('track');
+    if (trackParam === 'dub' || trackParam === 'dub-en') return 'dub-en';
+    if (trackParam === 'dub-hi' || trackParam === 'hindi') return 'dub-hi';
+    if (trackParam === 'sub' || trackParam === 'original') return 'sub';
     return AudioAvailabilityCache.getPreferredLanguage();
   });
   const [audioError, setAudioError] = useState<string | null>(null);
@@ -547,9 +551,9 @@ export default function WatchPage() {
   // ── Real Audio Switching with Verified Dub Availability ──
   const handleSelectAudioTrack = useCallback(
     async (trackId: string) => {
-      // Guard: The disabled DUB button must not initiate a broken request!
+      // Guard: Check availability unless anime dub which is supported natively on VidLink
       const trackObj = audioAvailability?.tracks?.find((t) => t.id === trackId);
-      if (trackObj && trackObj.available === false) {
+      if (trackObj && trackObj.available === false && !(isAnime && trackId === 'dub-en')) {
         triggerSeekFeedback(`⚠️ ${trackObj.label} is unavailable`);
         return;
       }
@@ -557,6 +561,7 @@ export default function WatchPage() {
       setShowAudioMenu(false);
       setAudioError(null);
       setSelectedAudioTrack(trackId);
+      triggerSeekFeedback(trackId.startsWith('dub') ? '🎙️ Switching to Dubbed Audio...' : '🇯🇵 Switching to Original / SUB...');
 
       // Auto-switch provider for Hindi dub if not already selected
       let overrideProv: string | undefined = undefined;
@@ -1594,24 +1599,26 @@ export default function WatchPage() {
               const defaultTracks = isAnime
                 ? [
                     { id: 'sub', label: '🇯🇵 Japanese (SUB)', available: true },
-                    { id: 'dub-en', label: '🇬🇧 English (DUB)', available: false },
+                    { id: 'dub-en', label: '🇬🇧 English (DUB)', available: true },
                     { id: 'dub-hi', label: '🇮🇳 Hindi (DUB)', available: false },
                   ]
                 : [
                     { id: 'sub', label: '🌐 Original (SUB)', available: true },
-                    { id: 'dub-en', label: '🇬🇧 English Audio', available: false },
+                    { id: 'dub-en', label: '🇬🇧 English Audio', available: true },
                     { id: 'dub-hi', label: '🇮🇳 Hindi Audio', available: false },
                   ];
               const tracksToRender =
                 audioAvailability?.tracks && audioAvailability.tracks.length > 0
-                  ? audioAvailability.tracks
+                  ? audioAvailability.tracks.map((t) =>
+                      isAnime && t.id === 'dub-en' ? { ...t, available: true } : t
+                    )
                   : defaultTracks;
 
               return (
                 <div className="flex items-center gap-1.5 bg-black/[0.04] dark:bg-white/[0.06] p-1 rounded-xl border border-black/[0.06] dark:border-white/[0.08]">
                   {tracksToRender.map((track) => {
                     const isSelected = selectedAudioTrack === track.id;
-                    const isAvailable = track.available !== false;
+                    const isAvailable = (isAnime && track.id === 'dub-en') || track.available !== false;
                     return (
                       <button
                         key={track.id}

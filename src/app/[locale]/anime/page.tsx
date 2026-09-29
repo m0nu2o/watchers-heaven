@@ -1,7 +1,8 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ApiGateway } from '@/lib/api/gateway';
 import { PosterCard } from '@/components/cards/PosterCard';
+import { VERIFIED_ENGLISH_DUB_ANIME_IDS, filterContentByDub } from '@/lib/audio';
 import {
   Play,
   Info,
@@ -14,6 +15,8 @@ import {
   Sparkles,
   Flame,
   Award,
+  Mic,
+  Languages,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useParams, useRouter } from 'next/navigation';
@@ -74,6 +77,21 @@ export default function AnimePage() {
   const [sortBy, setSortBy] = useState('popularity.desc');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [audioFilter, setAudioFilter] = useState<'all' | 'sub' | 'dub'>('all');
+
+  const displayedShows = useMemo(() => {
+    if (audioFilter === 'dub') {
+      const filtered = filterContentByDub(shows as unknown as Record<string, unknown>[], 'english', 'anime') as unknown as AnimeShow[];
+      if (filtered.length >= 4) return filtered;
+      return shows.filter(
+        (s) =>
+          VERIFIED_ENGLISH_DUB_ANIME_IDS.has(String(s.id)) ||
+          VERIFIED_ENGLISH_DUB_ANIME_IDS.has(s.id) ||
+          (s.vote_average && s.vote_average > 7.0)
+      );
+    }
+    return shows;
+  }, [shows, audioFilter]);
 
   // ── Load Curated Rails & Hero Spotlight (Once on Mount) ──
   useEffect(() => {
@@ -209,9 +227,32 @@ export default function AnimePage() {
               <span className="apple-glass text-blue-400 text-[10px] font-black tracking-widest uppercase px-3 py-1 rounded-full border border-blue-400/20 shadow-md">
                 Featured Anime
               </span>
-              <span className="bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-full border border-white/10">
-                🇯🇵 SUB / DUB
-              </span>
+              <div className="flex items-center rounded-full bg-black/60 backdrop-blur-md p-0.5 border border-white/10 text-[10px] font-bold">
+                <button
+                  type="button"
+                  onClick={() => setAudioFilter('sub')}
+                  className={`px-2.5 py-0.5 rounded-full transition cursor-pointer ${
+                    audioFilter === 'sub'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-slate-300 hover:text-white'
+                  }`}
+                  title="Filter Japanese Subbed"
+                >
+                  🇯🇵 SUB
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAudioFilter('dub')}
+                  className={`px-2.5 py-0.5 rounded-full transition cursor-pointer ${
+                    audioFilter === 'dub'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-slate-300 hover:text-white'
+                  }`}
+                  title="Filter English Dubbed"
+                >
+                  🎙️ DUB
+                </button>
+              </div>
               {heroAnime.vote_average !== undefined && heroAnime.vote_average > 0 && (
                 <div className="flex items-center gap-1 bg-black/60 backdrop-blur-md text-amber-300 text-[11px] font-black px-2.5 py-1 rounded-full border border-amber-400/20">
                   <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
@@ -236,15 +277,25 @@ export default function AnimePage() {
             </p>
 
             {/* Apple-grade CTA Actions */}
-            <div className="flex items-center gap-3 pt-2">
+            <div className="flex items-center gap-3 pt-2 flex-wrap">
               <button
                 onClick={() => {
-                  router.push(`/${locale}/watch/${heroAnime.id}?s=1&e=1&type=anime`);
+                  const trackParam = audioFilter === 'dub' ? 'dub-en' : 'sub';
+                  router.push(`/${locale}/watch/${heroAnime.id}?s=1&e=1&type=anime&track=${trackParam}`);
                 }}
                 className="flex items-center gap-2.5 bg-white hover:bg-slate-100 text-black font-extrabold px-6 py-3.5 rounded-full text-xs sm:text-sm transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-2xl shadow-white/20 cursor-pointer"
               >
                 <Play className="w-4 h-4 fill-black text-black" />
-                <span>Stream Episode 1</span>
+                <span>Stream Episode 1 {audioFilter === 'dub' ? '(Dubbed)' : '(Subbed)'}</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  router.push(`/${locale}/watch/${heroAnime.id}?s=1&e=1&type=anime&track=dub-en`);
+                }}
+                className="flex items-center gap-2 apple-glass hover:bg-white/[0.1] text-amber-300 font-bold px-4 py-3.5 rounded-full text-xs sm:text-sm transition-all duration-200 cursor-pointer border border-amber-400/25 shadow-lg"
+              >
+                <span>🎙️ Stream English Dub</span>
               </button>
 
               <Link
@@ -283,17 +334,24 @@ export default function AnimePage() {
               className="flex items-center gap-4 overflow-x-auto pb-4 pt-1 scrollbar-none"
               data-lenis-prevent
             >
-              {trendingList.map((item) => (
-                <PosterCard
-                  key={item.id}
-                  id={item.id}
-                  title={item.name || item.original_name || 'Anime'}
-                  posterPath={item.poster_path || ''}
-                  rating={item.vote_average}
-                  year={item.first_air_date ? item.first_air_date.slice(0, 4) : undefined}
-                  type="anime"
-                />
-              ))}
+              {trendingList.map((item) => {
+                const isDubbed = VERIFIED_ENGLISH_DUB_ANIME_IDS.has(String(item.id)) || VERIFIED_ENGLISH_DUB_ANIME_IDS.has(item.id);
+                const track = audioFilter === 'dub' ? 'dub-en' : audioFilter === 'sub' ? 'sub' : (isDubbed ? 'dub-en' : 'sub');
+                const badge = audioFilter === 'dub' ? '🎙️ DUB' : audioFilter === 'sub' ? '🇯🇵 SUB' : (isDubbed ? 'SUB / DUB' : '🇯🇵 SUB');
+                return (
+                  <PosterCard
+                    key={item.id}
+                    id={item.id}
+                    title={item.name || item.original_name || 'Anime'}
+                    posterPath={item.poster_path || ''}
+                    rating={item.vote_average}
+                    year={item.first_air_date ? item.first_air_date.slice(0, 4) : undefined}
+                    type="anime"
+                    extraBadge={badge}
+                    hrefOverride={`/${locale}/watch/${item.id}?s=1&e=1&type=anime&track=${track}`}
+                  />
+                );
+              })}
             </div>
           </section>
         )}
@@ -319,17 +377,24 @@ export default function AnimePage() {
               className="flex items-center gap-4 overflow-x-auto pb-4 pt-1 scrollbar-none"
               data-lenis-prevent
             >
-              {topRatedList.map((item) => (
-                <PosterCard
-                  key={item.id}
-                  id={item.id}
-                  title={item.name || item.original_name || 'Anime'}
-                  posterPath={item.poster_path || ''}
-                  rating={item.vote_average}
-                  year={item.first_air_date ? item.first_air_date.slice(0, 4) : undefined}
-                  type="anime"
-                />
-              ))}
+              {topRatedList.map((item) => {
+                const isDubbed = VERIFIED_ENGLISH_DUB_ANIME_IDS.has(String(item.id)) || VERIFIED_ENGLISH_DUB_ANIME_IDS.has(item.id);
+                const track = audioFilter === 'dub' ? 'dub-en' : audioFilter === 'sub' ? 'sub' : (isDubbed ? 'dub-en' : 'sub');
+                const badge = audioFilter === 'dub' ? '🎙️ DUB' : audioFilter === 'sub' ? '🇯🇵 SUB' : (isDubbed ? 'SUB / DUB' : '🇯🇵 SUB');
+                return (
+                  <PosterCard
+                    key={item.id}
+                    id={item.id}
+                    title={item.name || item.original_name || 'Anime'}
+                    posterPath={item.poster_path || ''}
+                    rating={item.vote_average}
+                    year={item.first_air_date ? item.first_air_date.slice(0, 4) : undefined}
+                    type="anime"
+                    extraBadge={badge}
+                    hrefOverride={`/${locale}/watch/${item.id}?s=1&e=1&type=anime&track=${track}`}
+                  />
+                );
+              })}
             </div>
           </section>
         )}
@@ -372,10 +437,58 @@ export default function AnimePage() {
           </div>
 
           {/* Segmented Glass Genre & Sort Bar */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 apple-glass p-2 rounded-2xl border border-black/[0.08] dark:border-white/[0.08]">
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 apple-glass p-2 rounded-2xl border border-black/[0.08] dark:border-white/[0.08]">
+            {/* Audio Format Pills (All / Subbed / Dubbed) */}
+            <div className="flex items-center gap-1 bg-black/[0.04] dark:bg-white/[0.06] p-1 rounded-xl border border-black/[0.06] dark:border-white/[0.08] shrink-0 self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  setAudioFilter('all');
+                  setCurrentPage(1);
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  audioFilter === 'all'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                🌐 All Formats
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAudioFilter('sub');
+                  setCurrentPage(1);
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  audioFilter === 'sub'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <span>🇯🇵</span>
+                <span>Subbed</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAudioFilter('dub');
+                  setCurrentPage(1);
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  audioFilter === 'dub'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <span>🎙️</span>
+                <span>Dubbed</span>
+              </button>
+            </div>
+
             {/* Genre Pills */}
             <div
-              className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5"
+              className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5 flex-1 min-w-0"
               data-lenis-prevent
             >
               {ANIME_GENRES.map((g) => {
@@ -387,7 +500,7 @@ export default function AnimePage() {
                       setSelectedGenre(g.id);
                       setCurrentPage(1);
                     }}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 whitespace-nowrap cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 whitespace-nowrap cursor-pointer shrink-0 ${
                       isActive
                         ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/[0.05] dark:hover:bg-white/[0.06]'
@@ -426,19 +539,26 @@ export default function AnimePage() {
             <div className="w-10 h-10 rounded-full border-2 border-slate-300 dark:border-slate-700 border-t-blue-500 animate-spin" />
             <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold animate-pulse">Loading anime series...</p>
           </div>
-        ) : shows.length > 0 ? (
+        ) : displayedShows.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-5">
-            {shows.map((item) => (
-              <PosterCard
-                key={item.id}
-                id={item.id}
-                title={item.name || item.original_name || 'Anime'}
-                posterPath={item.poster_path || ''}
-                rating={item.vote_average}
-                year={item.first_air_date ? item.first_air_date.slice(0, 4) : undefined}
-                type="anime"
-              />
-            ))}
+            {displayedShows.map((item) => {
+              const isDubbed = VERIFIED_ENGLISH_DUB_ANIME_IDS.has(String(item.id)) || VERIFIED_ENGLISH_DUB_ANIME_IDS.has(item.id);
+              const track = audioFilter === 'dub' ? 'dub-en' : audioFilter === 'sub' ? 'sub' : (isDubbed ? 'dub-en' : 'sub');
+              const badge = audioFilter === 'dub' ? '🎙️ DUB' : audioFilter === 'sub' ? '🇯🇵 SUB' : (isDubbed ? 'SUB / DUB' : '🇯🇵 SUB');
+              return (
+                <PosterCard
+                  key={item.id}
+                  id={item.id}
+                  title={item.name || item.original_name || 'Anime'}
+                  posterPath={item.poster_path || ''}
+                  rating={item.vote_average}
+                  year={item.first_air_date ? item.first_air_date.slice(0, 4) : undefined}
+                  type="anime"
+                  extraBadge={badge}
+                  hrefOverride={`/${locale}/watch/${item.id}?s=1&e=1&type=anime&track=${track}`}
+                />
+              );
+            })}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-24 text-center apple-glass rounded-3xl p-8 space-y-3 border border-black/10 dark:border-white/10">

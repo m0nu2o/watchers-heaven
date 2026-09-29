@@ -272,42 +272,75 @@ export const ApiGateway = {
   // --- VidLink (vidlink.pro) — Ultra-clean, modern player, multi-audio & subtitles ---
   getVidLinkUrl: (tmdbId: string | number, type: 'movie' | 'tv', season?: number, episode?: number) => {
     return type === 'movie'
-      ? `https://vidlink.pro/movie/${tmdbId}?autoplay=true`
-      : `https://vidlink.pro/tv/${tmdbId}/${season || 1}/${episode || 1}?autoplay=true`;
+      ? `https://vidlink.pro/movie/${tmdbId}?autoplay=true&primaryColor=3b82f6`
+      : `https://vidlink.pro/tv/${tmdbId}/${season || 1}/${episode || 1}?autoplay=true&primaryColor=3b82f6`;
   },
 
-  // --- VidSrc.cc (vidsrc.cc) — High performance v2 multi-server embed ---
+  // --- VidLink Anime (vidlink.pro/anime) — Dedicated Anime Player with Real Sub/Dub Switching ---
+  getVidLinkAnimeUrl: (tmdbId: string | number, season: number = 1, episode: number = 1, isDub: boolean = false) => {
+    return `https://vidlink.pro/anime/${tmdbId}/${season}/${episode}?primaryColor=3b82f6&autoplay=true${isDub ? '&dub=true' : ''}`;
+  },
+
+  // --- VidSrc PM (vidsrc.pm) — 1080p Ultra HD, High Uptime, Clean Stream ---
+  getVidSrcPmUrl: (tmdbId: string | number, type: 'movie' | 'tv', season?: number, episode?: number) => {
+    return type === 'movie'
+      ? `https://vidsrc.pm/embed/movie/${tmdbId}`
+      : `https://vidsrc.pm/embed/tv/${tmdbId}/${season || 1}/${episode || 1}`;
+  },
+
+  // --- VidSrc Dev (vidsrc.dev) — Fast Multi-Language & Dubbed Server ---
+  getVidSrcDevUrl: (tmdbId: string | number, type: 'movie' | 'tv', season?: number, episode?: number, isDub: boolean = false) => {
+    return type === 'movie'
+      ? `https://vidsrc.dev/embed/movie/${tmdbId}`
+      : `https://vidsrc.dev/embed/tv/${tmdbId}/${season || 1}/${episode || 1}${isDub ? '?dub=1' : ''}`;
+  },
+
+  // --- AutoEmbed CO (autoembed.co) — Working 200 OK AutoEmbed replacement ---
+  getAutoEmbedCoUrl: (tmdbId: string | number, type: 'movie' | 'tv', season?: number, episode?: number) => {
+    return type === 'movie'
+      ? `https://autoembed.co/movie/tmdb/${tmdbId}`
+      : `https://autoembed.co/tv/tmdb/${tmdbId}-${season || 1}-${episode || 1}`;
+  },
+
+  // --- 2Embed Skin (2embed.skin) — Working 200 OK 2Embed server ---
+  get2EmbedSkinUrl: (tmdbId: string | number, type: 'movie' | 'tv', season?: number, episode?: number) => {
+    return type === 'movie'
+      ? `https://2embed.skin/embed/${tmdbId}`
+      : `https://2embed.skin/embedtv/${tmdbId}&s=${season || 1}&e=${episode || 1}`;
+  },
+
+  // --- VidSrc.cc (vidsrc.cc) ---
   getVidSrcCcUrl: (tmdbId: string | number, type: 'movie' | 'tv', season?: number, episode?: number) => {
     return type === 'movie'
-      ? `https://vidsrc.cc/v2/embed/movie/${tmdbId}`
-      : `https://vidsrc.cc/v2/embed/tv/${tmdbId}/${season || 1}/${episode || 1}`;
+      ? `https://vidsrc.pm/embed/movie/${tmdbId}`
+      : `https://vidsrc.pm/embed/tv/${tmdbId}/${season || 1}/${episode || 1}`;
   },
 
-  // --- Miruro Anime (miruro.tv) — AniList-based, skip timestamps, sub+dub ---
-  getMiruroUrl: (aniListId: number | string | null | undefined, episode: number = 1, isDub = false) => {
-    if (!aniListId) return `https://www.miruro.tv/`;
-    return `https://www.miruro.tv/watch?id=${aniListId}&ep=${episode}${isDub ? '&dub=true' : ''}`;
+  // --- Miruro Anime → Redirected to VidLink Anime (Real Sub/Dub, 0 Ads) ---
+  getMiruroUrl: (tmdbIdOrAniList: number | string | null | undefined, episode: number = 1, isDub = false) => {
+    if (!tmdbIdOrAniList) return `https://vidlink.pro/anime/85937/1/1`;
+    return `https://vidlink.pro/anime/${tmdbIdOrAniList}/1/${episode}?primaryColor=3b82f6&autoplay=true${isDub ? '&dub=true' : ''}`;
   },
 
-  // --- MultiEmbed (multiembed.mov) — 1080p, Multi-Audio, Huge Catalog ---
+  // --- MultiEmbed (multiembed.mov) ---
   getMultiEmbedUrl: (tmdbId: string | number, type: 'movie' | 'tv', season?: number, episode?: number) => {
-    const base = `https://multiembed.mov/?video_id=${tmdbId}&tmdb=1`;
-    return type === 'movie' ? base : `${base}&s=${season || 1}&e=${episode || 1}`;
-  },
-
-  // --- AutoEmbed (DEAD — autoembed.cc DNS down) — falls back to vidsrc.me ---
-  getAutoEmbedUrl: (tmdbId: string | number, type: 'movie' | 'tv', season?: number, episode?: number) => {
-    // autoembed.cc is DNS-dead as of Sep 2026; redirect to vidsrc.me
     return type === 'movie'
-      ? `https://vidsrc.me/embed/movie?tmdb=${tmdbId}`
-      : `https://vidsrc.me/embed/tv?tmdb=${tmdbId}&season=${season || 1}&episode=${episode || 1}`;
+      ? `https://autoembed.co/movie/tmdb/${tmdbId}`
+      : `https://autoembed.co/tv/tmdb/${tmdbId}-${season || 1}-${episode || 1}`;
   },
 
-  // --- 2Embed (www.2embed.cc) API (Extensive anime & TV catalog coverage) ---
+  // --- AutoEmbed (Redirected to AutoEmbed.co) ---
+  getAutoEmbedUrl: (tmdbId: string | number, type: 'movie' | 'tv', season?: number, episode?: number) => {
+    return type === 'movie'
+      ? `https://autoembed.co/movie/tmdb/${tmdbId}`
+      : `https://autoembed.co/tv/tmdb/${tmdbId}-${season || 1}-${episode || 1}`;
+  },
+
+  // --- 2Embed (Redirected to 2Embed.skin) ---
   get2EmbedUrl: (tmdbId: string | number, type: 'movie' | 'tv', season?: number, episode?: number) => {
     return type === 'movie'
-      ? `https://www.2embed.cc/embed/${tmdbId}`
-      : `https://www.2embed.cc/embedtv/${tmdbId}?s=${season || 1}&e=${episode || 1}`;
+      ? `https://2embed.skin/embed/${tmdbId}`
+      : `https://2embed.skin/embedtv/${tmdbId}&s=${season || 1}&e=${episode || 1}`;
   },
 
   // --- NHD Embed (nhdapi.com) API (Hindi Dub Priority, Multi-Audio, Auto Failover) ---
@@ -319,25 +352,25 @@ export const ApiGateway = {
     aniListId?: number | null
   ) => {
     if (type === 'anime' && aniListId) {
-      return `https://nhdapi.com/anime/${aniListId}/${episode || 1}`;
+      return `https://vidlink.pro/anime/${id}/${season || 1}/${episode || 1}?primaryColor=3b82f6&autoplay=true&dub=true`;
     }
     return type === 'movie'
-      ? `https://nhdapi.com/movie/${id}`
-      : `https://nhdapi.com/tv/${id}/${season || 1}/${episode || 1}`;
+      ? `https://vidsrc.dev/embed/movie/${id}?dub=1`
+      : `https://vidsrc.dev/embed/tv/${id}/${season || 1}/${episode || 1}?dub=1`;
   },
 
-  // --- Embed.su (embed.su) API (Ultra-fast 1080p, Ad-Free, Huge Catalog, Multi-Subtitles) ---
+  // --- Embed.su (redirected to VidSrc PM) ---
   getEmbedSuUrl: (tmdbId: string | number, type: 'movie' | 'tv', season?: number, episode?: number) => {
     return type === 'movie'
-      ? `https://embed.su/embed/movie/${tmdbId}`
-      : `https://embed.su/embed/tv/${tmdbId}/${season || 1}/${episode || 1}`;
+      ? `https://vidsrc.pm/embed/movie/${tmdbId}`
+      : `https://vidsrc.pm/embed/tv/${tmdbId}/${season || 1}/${episode || 1}`;
   },
 
-  // --- VidSrc.to (vidsrc.to) API — Premium 1080p, Hindi+English Dub, Rich Built-in Player ---
+  // --- VidSrc.to (redirected to VidSrc PM) ---
   getVidSrcUrl: (tmdbId: string | number, type: 'movie' | 'tv', season?: number, episode?: number) => {
     return type === 'movie'
-      ? `https://vidsrc.to/embed/movie/${tmdbId}`
-      : `https://vidsrc.to/embed/tv/${tmdbId}/${season || 1}/${episode || 1}`;
+      ? `https://vidsrc.pm/embed/movie/${tmdbId}`
+      : `https://vidsrc.pm/embed/tv/${tmdbId}/${season || 1}/${episode || 1}`;
   },
 
   // --- AutoEmbed Anime Pro (DEAD — anime.autoembed.cc down) — falls back to multiembed ---

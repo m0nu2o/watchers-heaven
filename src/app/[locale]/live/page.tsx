@@ -41,14 +41,28 @@ const CHANNELS: LiveChannel[] = [
   { id: 'redbull-tv', name: 'Red Bull TV Sports', category: 'sports', country: '🌍',
     hlsUrl: 'https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8' },
 
-  // ── Kids ──────────────────────────────────────────────────────────────────
-  { id: 'cartoon-classics', name: 'Cartoon Classics', category: 'kids', country: '🌍',
-    hlsUrl: 'https://daiconnect.com/live/hls/tvup/rk-cartoonclassics/578f4b7eb725168349ec0af81b21d388/index.m3u8' },
+  // ── Kids & Cartoons ───────────────────────────────────────────────────────
+  { id: 'pokemon-tv', name: 'Pokémon Live 24/7', category: 'kids', country: '🌍',
+    embedUrl: 'https://www.youtube.com/embed/86YLFOog4GM?autoplay=1' },
+  { id: 'tom-jerry', name: 'WB Kids · Tom & Jerry', category: 'kids', country: '🌍',
+    embedUrl: 'https://www.youtube.com/embed/Y0A-X0G483U?autoplay=1' },
+  { id: 'classic-cartoons', name: 'Classic Retro Cartoons 24/7', category: 'kids', country: '🌍',
+    embedUrl: 'https://www.youtube.com/embed/75x6DncZDZk?autoplay=1' },
+  { id: 'abc-kids', name: 'ABC Kids HD', category: 'kids', country: '🇦🇺',
+    hlsUrl: 'https://c.mjh.nz/abc-kids.m3u8' },
+  { id: '3abn-kids', name: '3ABN Kids TV', category: 'kids', country: '🇺🇸',
+    hlsUrl: 'https://3abn.bozztv.com/3abn2/Kids_live/smil:Kids_live.smil/playlist.m3u8' },
 
   // ── Entertainment & Science ───────────────────────────────────────────────
   { id: 'dd-national', name: 'DD National HD', category: 'entertainment', country: '🇮🇳',
     hlsUrl: 'https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/40492a64c1db4a1385ba1a397d357d3a/index.m3u8' },
-  { id: 'nasa-tv', name: 'NASA TV Science HD', category: 'others', country: '🚀',
+  { id: 'dw-doc', name: 'DW Documentary Science HD', category: 'others', country: '🇩🇪',
+    embedUrl: 'https://www.youtube.com/embed/nv_m_yq9mvg?autoplay=1',
+    hlsUrl: 'https://dwamdstream104.akamaized.net/hls/live/2015530/dwstream104/index.m3u8' },
+  { id: 'nasa-live', name: 'NASA Earth & Space Station 24/7', category: 'others', country: '🚀',
+    embedUrl: 'https://www.youtube.com/embed/21X5lGlDOfg?autoplay=1' },
+  { id: 'nasa-tv', name: 'NASA TV Live HD', category: 'others', country: '🚀',
+    embedUrl: 'https://www.youtube.com/embed/xRPjKQtRXR8?autoplay=1',
     hlsUrl: 'https://ntv1.akamaized.net/hls/live/2014075/NASA-NTV1-HLS/master.m3u8' },
 ];
 
@@ -59,8 +73,8 @@ const CATEGORY_LABELS: { id: Category; label: string; emoji: string }[] = [
   { id: 'news', label: 'News', emoji: '📰' },
   { id: 'sports', label: 'Sports', emoji: '⚽' },
   { id: 'entertainment', label: 'Entertainment', emoji: '🎬' },
-  { id: 'kids', label: 'Kids', emoji: '🧒' },
-  { id: 'others', label: 'Others', emoji: '🌐' },
+  { id: 'kids', label: 'Kids & Cartoons', emoji: '🧒' },
+  { id: 'others', label: 'Science & Docs', emoji: '🔬' },
 ];
 
 // ─── HLS Video Player Component ──────────────────────────────────────────────
@@ -309,7 +323,10 @@ export default function LiveTvPage() {
                 return (
                   <button
                     key={ch.id}
-                    onClick={() => setSelectedChannel(ch)}
+                    onClick={() => {
+                      setSelectedChannel(ch);
+                      setHlsFailed(false);
+                    }}
                     className={`w-full flex items-center justify-between p-3 rounded-xl transition-all text-left border ${
                       isActive
                         ? 'bg-blue-50/80 dark:bg-blue-950/40 border-blue-100/50 dark:border-blue-900/50 text-accent-blue dark:text-blue-400'

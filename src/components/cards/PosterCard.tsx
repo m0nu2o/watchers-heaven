@@ -11,15 +11,18 @@ interface PosterCardProps {
   year?: string;
   className?: string;
   type?: 'movie' | 'tv' | 'anime';
+  extraBadge?: string;
+  hrefOverride?: string;
 }
 
-export function PosterCard({ id, title, posterPath, rating, year, className, type = 'movie' }: PosterCardProps) {
+export function PosterCard({ id, title, posterPath, rating, year, className, type = 'movie', extraBadge, hrefOverride }: PosterCardProps) {
   const pathname = usePathname() || '/';
   const currentLocale = pathname.split('/').filter(Boolean)[0];
   const locale = ['en', 'am', 'om', 'ti', 'so'].includes(currentLocale) ? currentLocale : 'en';
-  const href = type === 'anime'
+  const defaultHref = type === 'anime'
     ? `/${locale}/tv/${id}?from=anime`
     : `/${locale}/${type}/${id}`;
+  const href = hrefOverride || defaultHref;
 
   const posterUrl = posterPath
     ? posterPath.startsWith('http')
@@ -42,17 +45,23 @@ export function PosterCard({ id, title, posterPath, rating, year, className, typ
           </div>
         ) : <div />}
 
-        {/* Type Badge */}
+        {/* Type / Extra Badge */}
         <div className="flex items-center gap-1">
-          <span className={`text-[9px] font-black px-2 py-0.5 rounded-md shadow-md uppercase tracking-wider backdrop-blur-xl border border-white/10 ${
-            type === 'anime' 
-              ? 'bg-blue-500/80 text-white shadow-blue-500/20' 
-              : type === 'tv' 
-              ? 'bg-indigo-500/80 text-white shadow-indigo-500/20' 
-              : 'bg-white/10 text-slate-200'
-          }`}>
-            {type === 'anime' ? 'ANIME' : type === 'tv' ? 'SERIES' : 'MOVIE'}
-          </span>
+          {extraBadge ? (
+            <span className="text-[9px] font-black px-2 py-0.5 rounded-md shadow-md uppercase tracking-wider backdrop-blur-xl border border-white/15 bg-indigo-600/90 text-white shadow-indigo-600/30">
+              {extraBadge}
+            </span>
+          ) : (
+            <span className={`text-[9px] font-black px-2 py-0.5 rounded-md shadow-md uppercase tracking-wider backdrop-blur-xl border border-white/10 ${
+              type === 'anime' 
+                ? 'bg-blue-500/80 text-white shadow-blue-500/20' 
+                : type === 'tv' 
+                ? 'bg-indigo-500/80 text-white shadow-indigo-500/20' 
+                : 'bg-white/10 text-slate-200'
+            }`}>
+              {type === 'anime' ? 'ANIME' : type === 'tv' ? 'SERIES' : 'MOVIE'}
+            </span>
+          )}
         </div>
       </div>
 

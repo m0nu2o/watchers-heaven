@@ -6,9 +6,9 @@ export type { MediaType, MediaPlaybackConfig, ProviderAdapter };
 export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
   // ─── Dedicated Anime Providers (High Speed, Wide Support, Multi-Subtitles) ───
   {
-    id: 'kuhi-hls',
-    name: 'VidSrc Stream',
-    quality: '1080p / Ad-Free / Sub+Dub',
+    id: 'vidlink-anime',
+    name: 'VidLink Anime HD',
+    quality: '1080p / Sub+Dub / 0 Ads',
     badge: '⚡',
     supportsMovie: false,
     supportsTV: false,
@@ -16,14 +16,28 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     requiresApiKey: false,
     isConfigured: () => true,
     getPlaybackUrl: (cfg) => {
-      // vidsrc.me covers anime via TMDB ID — ad-free, multi-sub, huge catalog
-      return ApiGateway.getVidsrcMeUrl(cfg.tmdbId, 'tv', cfg.season || 1, cfg.episode || 1);
+      const isDub = cfg.audioTrackId?.startsWith('dub') ?? false;
+      return ApiGateway.getVidLinkAnimeUrl(cfg.tmdbId, cfg.season || 1, cfg.episode || 1, isDub);
     },
   },
   {
-    id: 'anivexa-hls',
-    name: 'VidSrc Premium',
-    quality: '1080p / Hindi+EN Dub / Rich Player',
+    id: 'vidsrc-pm-anime',
+    name: 'VidSrc Ultra HD',
+    quality: '1080p / Ad-Free / Global',
+    badge: '🔥',
+    supportsMovie: false,
+    supportsTV: false,
+    supportsAnime: true,
+    requiresApiKey: false,
+    isConfigured: () => true,
+    getPlaybackUrl: (cfg) => {
+      return ApiGateway.getVidSrcPmUrl(cfg.tmdbId, 'tv', cfg.season || 1, cfg.episode || 1);
+    },
+  },
+  {
+    id: 'vidsrc-dev-anime',
+    name: 'VidSrc Dev Anime',
+    quality: '1080p / Sub+Dub Fast',
     badge: '🌟',
     supportsMovie: false,
     supportsTV: false,
@@ -31,33 +45,14 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     requiresApiKey: false,
     isConfigured: () => true,
     getPlaybackUrl: (cfg) => {
-      // vidsrc.to handles anime TV shows via TMDB ID
-      return ApiGateway.getVidSrcUrl(cfg.tmdbId, 'tv', cfg.season || 1, cfg.episode || 1);
+      const isDub = cfg.audioTrackId?.startsWith('dub') ?? false;
+      return ApiGateway.getVidSrcDevUrl(cfg.tmdbId, 'tv', cfg.season || 1, cfg.episode || 1, isDub);
     },
   },
   {
-    id: 'miruro-anime',
-    name: 'Miruro Anime',
-    quality: '1080p / Skip Timestamps / Sub+Dub',
-    badge: '✨',
-    supportsMovie: false,
-    supportsTV: false,
-    supportsAnime: true,
-    requiresApiKey: false,
-    isConfigured: () => true,
-    getPlaybackUrl: (cfg) => {
-      // miruro.tv uses AniList ID — best skip-timestamps support; fallback to 2embed if no aniListId
-      if (cfg.aniListId) {
-        const isDub = cfg.audioTrackId?.startsWith('dub') ?? false;
-        return ApiGateway.getMiruroUrl(cfg.aniListId, cfg.episode || 1, isDub);
-      }
-      return ApiGateway.get2EmbedUrl(cfg.tmdbId, 'tv', cfg.season || 1, cfg.episode || 1);
-    },
-  },
-  {
-    id: 'autoembed-anime',
-    name: '2Embed Anime',
-    quality: '1080p / Wide Catalog',
+    id: 'autoembed-co-anime',
+    name: 'AutoEmbed HD',
+    quality: '1080p / Fast Multi-Audio',
     badge: '🎬',
     supportsMovie: false,
     supportsTV: false,
@@ -65,13 +60,13 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     requiresApiKey: false,
     isConfigured: () => true,
     getPlaybackUrl: (cfg) => {
-      return ApiGateway.get2EmbedUrl(cfg.tmdbId, 'tv', cfg.season || 1, cfg.episode || 1);
+      return ApiGateway.getAutoEmbedCoUrl(cfg.tmdbId, 'tv', cfg.season || 1, cfg.episode || 1);
     },
   },
   {
-    id: 'autoembed-anime-pro',
-    name: 'MultiEmbed Anime',
-    quality: '1080p / Multi-Audio / Huge Catalog',
+    id: '2embed-skin-anime',
+    name: '2Embed Anime',
+    quality: '1080p / Wide Catalog',
     badge: '💎',
     supportsMovie: false,
     supportsTV: false,
@@ -79,7 +74,7 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     requiresApiKey: false,
     isConfigured: () => true,
     getPlaybackUrl: (cfg) => {
-      return ApiGateway.getAutoEmbedAnimeProUrl(cfg.tmdbId, cfg.season || 1, cfg.episode || 1);
+      return ApiGateway.get2EmbedSkinUrl(cfg.tmdbId, 'tv', cfg.season || 1, cfg.episode || 1);
     },
   },
   {
@@ -463,25 +458,25 @@ export const ProviderRegistry = {
   getDefault: (mediaType: MediaType, audioTrackId?: string): ProviderAdapter => {
     if (mediaType === 'anime') {
       return (
-        PROVIDER_ADAPTERS.find((p) => p.id === 'kuhi-hls') ||
         PROVIDER_ADAPTERS.find((p) => p.id === 'vidlink-anime') ||
-        PROVIDER_ADAPTERS.find((p) => p.id === 'videasy-anime') ||
-        PROVIDER_ADAPTERS.find((p) => p.id === 'vidsrc-cc-anime') ||
+        PROVIDER_ADAPTERS.find((p) => p.id === 'vidsrc-pm-anime') ||
+        PROVIDER_ADAPTERS.find((p) => p.id === 'vidsrc-dev-anime') ||
+        PROVIDER_ADAPTERS.find((p) => p.id === 'autoembed-co-anime') ||
         PROVIDER_ADAPTERS[0]
       );
     }
     if (audioTrackId === 'dub-hi') {
       return (
         PROVIDER_ADAPTERS.find((p) => p.id === 'nhd-cinema') ||
-        PROVIDER_ADAPTERS.find((p) => p.id === 'embedsu-cinema') ||
+        PROVIDER_ADAPTERS.find((p) => p.id === 'vidsrc-dev') ||
         PROVIDER_ADAPTERS[0]
       );
     }
-    // Default for movie/TV: vidsrc-me -> vidlink -> embedsu-cinema
+    // Default for movie/TV: vidlink -> vidsrc-pm -> autoembed-co
     return (
-      PROVIDER_ADAPTERS.find((p) => p.id === 'vidsrc-me') ||
       PROVIDER_ADAPTERS.find((p) => p.id === 'vidlink') ||
-      PROVIDER_ADAPTERS.find((p) => p.id === 'embedsu-cinema') ||
+      PROVIDER_ADAPTERS.find((p) => p.id === 'vidsrc-pm') ||
+      PROVIDER_ADAPTERS.find((p) => p.id === 'autoembed-co') ||
       PROVIDER_ADAPTERS.find((p) => p.id === 'vidsrc-cc') ||
       PROVIDER_ADAPTERS[0]
     );

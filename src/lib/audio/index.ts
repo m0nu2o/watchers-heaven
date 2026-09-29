@@ -196,7 +196,7 @@ const VERIFIED_HINDI_DUB_IDS = new Set<string | number>([
   '753342', // Tiger 3
 ]);
 
-const VERIFIED_ENGLISH_DUB_ANIME_IDS = new Set<string | number>([
+export const VERIFIED_ENGLISH_DUB_ANIME_IDS = new Set<string | number>([
   // Major anime with verified English dub streaming support
   '21',     // One Piece (AniList ID 21)
   '37854',  // One Piece (TMDB ID 37854)
@@ -736,8 +736,8 @@ export function getEpisodeAudioTracks(params: GetEpisodeAudioTracksParams): Epis
       languageCode: 'en',
       type: 'dub',
       label: isAnime ? '🇬🇧 English (DUB)' : '🇬🇧 English Audio',
-      provider: isAnime ? 'kuhi-hls' : 'vidsrc-me',
-      available: hasEnglishDub,
+      provider: isAnime ? 'vidlink-anime' : 'vidlink',
+      available: isAnime ? true : hasEnglishDub,
       isOriginal: isOriginalEnglish,
     },
     // 3. Hindi Track
@@ -935,23 +935,59 @@ export function resolveAudioSource(params: ResolveAudioSourceParams): ResolveAud
   });
 
   // Find requested track
-  let track: AudioTrack | undefined = availability.tracks.find((t) => t.id === audioTrackId && t.available);
+  let track: AudioTrack | undefined = availability.tracks.find((t) => t.id === audioTrackId);
   let isFallback = false;
   let fallbackMessage: string | undefined;
 
-  // If requested track is not available, safely fallback to authentic original/sub
+  // If requested track is not found, construct or safely fallback
   if (!track) {
-    const subTrack = availability.tracks.find((t) => t.id === 'sub') || availability.tracks[0];
-    track = subTrack;
-    isFallback = true;
-    fallbackMessage = `${audioTrackId === 'dub-hi' ? 'Hindi' : 'English'} dub is not available for this title. Playing in Original / SUB.`;
+    if (audioTrackId === 'dub-en' || audioTrackId === 'dub') {
+      track = {
+        id: 'dub-en',
+        language: 'English',
+        languageCode: 'en',
+        type: 'dub',
+        label: mediaType === 'anime' ? '🇬🇧 English (DUB)' : '🇬🇧 English Audio',
+        provider: mediaType === 'anime' ? 'vidlink-anime' : 'vidlink',
+        available: true,
+        isOriginal: false,
+      };
+    } else if (audioTrackId === 'dub-hi' || audioTrackId === 'hindi') {
+      track = {
+        id: 'dub-hi',
+        language: 'Hindi',
+        languageCode: 'hi',
+        type: 'dub',
+        label: mediaType === 'anime' ? '🇮🇳 Hindi (DUB)' : '🇮🇳 Hindi Audio',
+        provider: mediaType === 'anime' ? 'vidlink-anime' : 'vidsrc-dev',
+        available: true,
+        isOriginal: false,
+      };
+    } else {
+      const subTrack = availability.tracks.find((t) => t.id === 'sub') || availability.tracks[0];
+      track = subTrack;
+      isFallback = true;
+      fallbackMessage = `${audioTrackId === 'dub-hi' ? 'Hindi' : 'English'} dub is not available for this title. Playing in Original / SUB.`;
+    }
   }
 
   // Determine provider to use:
   let chosenProvider = track.provider;
 
-  // For sub/original, allow preferred provider if compatible
-  if (preferredProvider) {
+  // Smart Dub auto-prioritization
+  if (track.id === 'dub-hi') {
+    if (mediaType === 'anime') {
+      chosenProvider = 'vidlink-anime';
+    } else {
+      chosenProvider = preferredProvider || 'vidsrc-dev';
+    }
+  } else if (track.id === 'dub-en') {
+    if (mediaType === 'anime') {
+      chosenProvider = 'vidlink-anime';
+    } else {
+      chosenProvider = preferredProvider || 'vidlink';
+    }
+  } else if (preferredProvider) {
     const adapter = ProviderRegistry.getById(preferredProvider);
     if (adapter) {
       const isCompatible =
@@ -1033,15 +1069,39 @@ export async function resolveAudioSourceAsync(
     malId: resolvedMalId,
   });
 
-  let track = availability.tracks.find((t) => t.id === audioTrackId && t.available);
+  let track = availability.tracks.find((t) => t.id === audioTrackId);
   let isFallback = false;
   let fallbackMessage: string | undefined;
 
   if (!track) {
-    const subTrack = availability.tracks.find((t) => t.id === 'sub') || availability.tracks[0];
-    track = subTrack;
-    isFallback = true;
-    fallbackMessage = `${audioTrackId === 'dub-hi' ? 'Hindi' : 'English'} dub is not available for this title. Playing in Original / SUB.`;
+    if (audioTrackId === 'dub-en' || audioTrackId === 'dub') {
+      track = {
+        id: 'dub-en',
+        language: 'English',
+        languageCode: 'en',
+        type: 'dub',
+        label: mediaType === 'anime' ? '🇬🇧 English (DUB)' : '🇬🇧 English Audio',
+        provider: mediaType === 'anime' ? 'vidlink-anime' : 'vidlink',
+        available: true,
+        isOriginal: false,
+      };
+    } else if (audioTrackId === 'dub-hi' || audioTrackId === 'hindi') {
+      track = {
+        id: 'dub-hi',
+        language: 'Hindi',
+        languageCode: 'hi',
+        type: 'dub',
+        label: mediaType === 'anime' ? '🇮🇳 Hindi (DUB)' : '🇮🇳 Hindi Audio',
+        provider: mediaType === 'anime' ? 'vidlink-anime' : 'vidsrc-dev',
+        available: true,
+        isOriginal: false,
+      };
+    } else {
+      const subTrack = availability.tracks.find((t) => t.id === 'sub') || availability.tracks[0];
+      track = subTrack;
+      isFallback = true;
+      fallbackMessage = `${audioTrackId === 'dub-hi' ? 'Hindi' : 'English'} dub is not available for this title. Playing in Original / SUB.`;
+    }
   }
 
   let chosenProvider = track.provider;
@@ -1062,48 +1122,15 @@ export async function resolveAudioSourceAsync(
   // Smart Dub auto-prioritization
   if (track.id === 'dub-hi') {
     if (mediaType === 'anime') {
-      if (!preferredProvider || preferredProvider === 'kuhi-hls') {
-        chosenProvider = 'nhd-anime';
-      }
+      chosenProvider = 'vidlink-anime';
     } else {
-      if (!preferredProvider || preferredProvider === 'autoembed' || preferredProvider === 'embedsu-cinema') {
-        chosenProvider = 'nhd-cinema';
-      }
+      chosenProvider = preferredProvider || 'vidsrc-dev';
     }
-  }
-
-  // Direct HLS stream extraction for Kuhi, Anivexa, and Miruro
-  if (
-    mediaType === 'anime' &&
-    (chosenProvider === 'kuhi-hls' || chosenProvider === 'anivexa-hls' || chosenProvider === 'miruro-anime')
-  ) {
-    try {
-      const isDub = track.id === 'dub-en' || track.id === 'dub-hi';
-      const direct = await ApiGateway.getDirectAnimeStream(
-        resolvedAniListId || id,
-        episode || 1,
-        isDub
-      );
-
-      if (direct?.url) {
-        if (!isFallback) {
-          AudioAvailabilityCache.setPreferredLanguage(audioTrackId);
-        }
-        return {
-          success: true,
-          available: true,
-          provider: chosenProvider,
-          url: direct.url,
-          isHls: true,
-          track,
-          subtitles: direct.subtitles,
-          skipTimestamps: direct.skipTimestamps,
-          error: fallbackMessage,
-          fallbackTrack: isFallback ? 'sub' : undefined,
-        };
-      }
-    } catch {
-      // Fallback to iframe provider below
+  } else if (track.id === 'dub-en') {
+    if (mediaType === 'anime') {
+      chosenProvider = 'vidlink-anime';
+    } else {
+      chosenProvider = preferredProvider || 'vidlink';
     }
   }
 
