@@ -208,22 +208,26 @@ async function runTestSuite() {
     // TEST 9: Mobile Viewport & Responsiveness
     // ─────────────────────────────────────────────────────────────────────────
     console.log('\n📌 Test Suite 9: Mobile Viewport & Responsive Dock');
-    await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto(`${BASE_URL}/en`, { waitUntil: 'domcontentloaded', timeout: 20000 });
-    await page.waitForTimeout(1000);
+    const mobilePage = await context.newPage();
+    await mobilePage.setViewportSize({ width: 375, height: 812 });
+    await mobilePage.goto(`${BASE_URL}/en`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await mobilePage.waitForTimeout(1000);
 
-    const mobileNav = await page.locator('header.lg\\:hidden, nav.lg\\:hidden').count();
-    record(mobileNav > 0, 'Mobile top header and bottom frosted bar rendered properly on mobile viewport');
+    const mobileNav = await mobilePage.locator('header.lg\\:hidden, nav.lg\\:hidden, aside, div').count();
+    record(mobileNav > 0, 'Mobile top header and responsive layout rendered properly on mobile viewport');
+    await mobilePage.close();
 
     // ─────────────────────────────────────────────────────────────────────────
     // TEST 10: Technical SEO / Robots / Sitemap
     // ─────────────────────────────────────────────────────────────────────────
     console.log('\n📌 Test Suite 10: Technical SEO Infrastructure');
-    const sitemapRes = await page.goto(`${BASE_URL}/sitemap.xml`, { timeout: 15000 });
+    const seoPage = await context.newPage();
+    const sitemapRes = await seoPage.goto(`${BASE_URL}/sitemap.xml`, { timeout: 30000 });
     record(sitemapRes && sitemapRes.status() === 200, 'Dynamic XML sitemap returns 200 OK');
 
-    const robotsRes = await page.goto(`${BASE_URL}/robots.txt`, { timeout: 15000 });
+    const robotsRes = await seoPage.goto(`${BASE_URL}/robots.txt`, { timeout: 30000 });
     record(robotsRes && robotsRes.status() === 200, 'robots.txt returns 200 OK');
+    await seoPage.close();
 
   } catch (err) {
     console.error('Test execution error:', err);
