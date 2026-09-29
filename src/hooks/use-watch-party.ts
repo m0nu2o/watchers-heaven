@@ -16,16 +16,24 @@ export function useWatchParty(roomCode: string, playerRef: React.RefObject<Playe
   useEffect(() => {
     const initAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        // Sign in anonymously for milestone 1
-        const { data, error } = await supabase.auth.signInAnonymously();
-        if (data.user) {
-          store.setUserId(data.user.id);
-        } else if (error) {
-          store.setError('Failed to authenticate');
-        }
-      } else {
+      if (session?.user?.id) {
         store.setUserId(session.user.id);
+      } else {
+        let guestId = typeof window !== 'undefined' ? localStorage.getItem('lumina-guest-id') : null;
+        if (!guestId) {
+          guestId = crypto.randomUUID();
+          if (typeof window !== 'undefined') localStorage.setItem('lumina-guest-id', guestId);
+        }
+        try {
+          const { data } = await supabase.auth.signInAnonymously();
+          if (data?.user?.id) {
+            store.setUserId(data.user.id);
+            return;
+          }
+        } catch {
+          // Anonymous sign-ins disabled on Supabase, fallback cleanly to guestId
+        }
+        store.setUserId(guestId);
       }
     };
     initAuth();

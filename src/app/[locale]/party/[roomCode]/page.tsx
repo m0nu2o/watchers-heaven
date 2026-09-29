@@ -4,7 +4,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { useRef, useState, useEffect } from 'react';
 import { useWatchParty } from '@/hooks/use-watch-party';
 import { useWatchPartyStore } from '@/stores/watch-party-store';
-import { VylaPlayer } from '@/components/player/VylaPlayer';
+import { ApiGateway } from '@/lib/api/gateway';
+import { ProviderRegistry } from '@/lib/providers';
 import { PlayerHandle } from '@/types/watch-party';
 import { Link2, Crown, LogOut, Loader, AlertCircle, Users, Play, Pause, X, UserMinus } from 'lucide-react';
 
@@ -145,15 +146,22 @@ export default function PartyRoomPage() {
 
       {/* Main Video Area */}
       <div className="flex-1 relative bg-black">
-        <VylaPlayer
-          ref={playerRef}
-          id={store.party.movie_id}
-          type={store.party.media_type}
-          season={store.party.season || undefined}
-          episode={store.party.episode || undefined}
-          onPlay={handlePlay}
-          onPause={handlePause}
-          onSeek={handleSeek}
+        <iframe
+          src={
+            store.party
+              ? ProviderRegistry.resolvePlaybackUrl(store.party.provider || 'vidfast', {
+                  mediaType: (store.party.media_type as 'movie' | 'tv' | 'anime') || 'movie',
+                  tmdbId: store.party.movie_id,
+                  season: store.party.season ?? undefined,
+                  episode: store.party.episode ?? undefined,
+                })
+              : ''
+          }
+          className="w-full h-full min-h-[75vh]"
+          allowFullScreen
+          allow="autoplay *; fullscreen *; picture-in-picture *; encrypted-media *"
+          title="Lumina Watch Party Player"
+          style={{ border: 'none' }}
         />
         
         {/* Disconnection Warning Overlay */}

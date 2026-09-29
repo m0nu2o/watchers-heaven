@@ -11,7 +11,7 @@ interface WatchlistItem {
   type: "movie" | "tv";
 }
 
-const STORAGE_KEY = "watchers-heaven-watchlist";
+const STORAGE_KEY = "lumina-watchlist";
 
 // Simple in-memory store standing in for localStorage
 const store = new Map<string, string>();

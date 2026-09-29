@@ -86,137 +86,150 @@ export function HeroFeature({ movies }: HeroFeatureProps) {
   if (!currentMovie) return null;
 
   return (
-    <section className="relative w-full px-2 pt-6 pb-4">
-      <div className="relative w-full">
-
-        {/* Image Card — rounded rectangle, smooth cutout applied via css tab on the card */}
-        <div 
-          className="relative w-full h-[70vh] min-h-[500px] max-h-[750px] overflow-hidden bg-slate-100 dark:bg-slate-950 rounded-[32px]"
-        >
-          
-          {/* Fallback */}
-          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-900 dark:to-slate-950">
-            <ImageIcon className="w-20 h-20 text-slate-300 dark:text-slate-700" />
-          </div>
-
-          {/* Carousel Backdrop Images with Crossfade */}
-          {movies.map((m, idx) => (
-            <img 
-              key={m.id}
-              src={`https://image.tmdb.org/t/p/original${m.backdrop_path}`} 
-              alt={m.title || m.name || ''}
-              className={`absolute inset-0 z-0 w-full h-full object-cover transition-all duration-1000 ease-in-out ${
-                idx === activeIndex 
-                  ? 'opacity-100 scale-100' 
-                  : 'opacity-0 scale-105 pointer-events-none'
-              }`}
-            />
-          ))}
-
-          {/* Bottom gradient for text readability */}
-          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/30 to-transparent z-[1]" />
-
-          {/* Indicator Dots */}
-          <div className="absolute top-6 right-8 z-30 flex items-center gap-2 bg-black/40 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-white/10">
-            {movies.map((_, idx) => (
-              <button
-                key={idx}
-                onClick={() => {
-                  setActiveIndex(idx);
-                  if (timerRef.current) {
-                    clearInterval(timerRef.current);
-                    timerRef.current = setInterval(() => {
-                      setActiveIndex((prev) => (prev + 1) % movies.length);
-                    }, 5000);
-                  }
-                }}
-                className={`h-2 rounded-full transition-all duration-500 ${
-                  idx === activeIndex ? 'w-6 bg-blue-500' : 'w-2 bg-white/50 hover:bg-white'
-                }`}
-                title={`Slide ${idx + 1}`}
-              />
-            ))}
-          </div>
+    <section className="relative w-full pt-4 pb-6 px-2 sm:px-4">
+      <div className="relative w-full h-[65vh] min-h-[480px] max-h-[720px] rounded-3xl overflow-hidden bg-[#0b0f17] border border-slate-800/60 shadow-2xl shadow-black/80 group/hero">
+        
+        {/* Fallback Image */}
+        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-slate-900 to-[#07090e]">
+          <ImageIcon className="w-16 h-16 text-slate-700" />
         </div>
 
-        {/* Floating Info Card */}
-        <div className="absolute bottom-[-1px] left-1/2 -translate-x-1/2 z-40 w-full sm:w-[460px] h-[120px] flex justify-center">
-          <div className="w-full h-full flex items-center gap-3 bg-[var(--color-surface-primary)] dark:bg-[var(--color-surface-secondary)] px-5 pt-8 pb-3.5 hero-tab">
-            
-            {/* Left Side: Vertical Category Marker */}
-            <div className="flex items-center justify-center border-r border-slate-200/60 dark:border-slate-700/60 pr-3 select-none">
-              <span className="text-[9px] font-black tracking-[0.25em] text-slate-400 dark:text-slate-500 [writing-mode:vertical-lr] rotate-180">
-                {isTV ? 'TV SHOW' : 'MOVIE'}
-              </span>
-            </div>
-
-            {/* Right Side: Title, Meta & Actions */}
-            <div className="flex flex-col flex-1 min-w-0 gap-1">
-              {/* Title + Rating row */}
-              <div className="flex items-center gap-2 min-w-0">
-                <h2 className="text-sm sm:text-base font-extrabold text-slate-800 dark:text-white truncate flex-1">
-                  {currentMovie.title || currentMovie.name || 'Loading Title...'}
-                </h2>
-                {currentMovie.vote_average !== undefined && currentMovie.vote_average > 0 && (
-                  <div className="flex items-center gap-0.5 bg-yellow-400/10 border border-yellow-400/20 px-1.5 py-0.5 rounded-lg shrink-0">
-                    <Star className="w-2.5 h-2.5 fill-yellow-400 text-yellow-400" />
-                    <span className="text-[10px] font-black text-yellow-500 dark:text-yellow-400">
-                      {currentMovie.vote_average.toFixed(1)}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Year + type meta */}
-              {(() => {
-                const year = (currentMovie.release_date || currentMovie.first_air_date || '').slice(0, 4);
-                return year ? (
-                  <p className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold -mt-0.5">
-                    {year} · {isTV ? 'Series' : 'Film'}
-                  </p>
-                ) : null;
-              })()}
-
-              {/* Action buttons */}
-              <div className="flex items-center gap-1.5 w-full mt-0.5">
-                <button 
-                  onClick={handleWatch}
-                  className="flex items-center justify-center gap-1 bg-[var(--color-accent-blue)] text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-sm transition hover:brightness-110"
-                >
-                  <Play className="w-3 h-3 fill-white" />
-                  Watch
-                </button>
-                
-                <button 
-                  onClick={handleDetails}
-                  className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-3 py-1.5 rounded-xl text-xs font-bold transition hover:bg-slate-200 dark:hover:bg-slate-700"
-                >
-                  Details
-                </button>
-
-                <button 
-                  onClick={toggleBookmark}
-                  className={`p-1.5 rounded-xl border transition ${
-                    isBookmarked 
-                      ? 'bg-blue-50 border-blue-100 text-[var(--color-accent-blue)] dark:bg-blue-950/50 dark:border-blue-900' 
-                      : 'border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-                  }`}
-                  title={isBookmarked ? 'Remove from Watchlist' : 'Add to Watchlist'}
-                >
-                  <Bookmark className={`w-3.5 h-3.5 ${isBookmarked ? 'fill-[var(--color-accent-blue)]' : ''}`} />
-                </button>
-
-                <button 
-                  onClick={() => setActiveIndex((prev) => (prev + 1) % movies.length)}
-                  className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
-                  title="Next Slide"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-
+        {/* Backdrop Slides with Crossfade */}
+        {movies.map((m, idx) => (
+          <div
+            key={m.id}
+            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+              idx === activeIndex ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            }`}
+          >
+            <img 
+              src={`https://image.tmdb.org/t/p/w1280${m.backdrop_path}`} 
+              alt={m.title || m.name || ''}
+              loading={idx === 0 ? 'eager' : 'lazy'}
+              fetchPriority={idx === 0 ? 'high' : 'low'}
+              className={`w-full h-full object-cover object-center transition-transform duration-7000 ease-out ${
+                idx === activeIndex ? 'scale-105' : 'scale-100'
+              }`}
+            />
           </div>
+        ))}
+
+        {/* Cinema Vignette Gradients */}
+        {/* Bottom Fade */}
+        <div className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-[#07090e] via-[#07090e]/75 to-transparent z-10 pointer-events-none" />
+        {/* Left Fade for text legibility */}
+        <div className="absolute inset-y-0 left-0 w-full md:w-3/5 bg-gradient-to-r from-[#07090e]/95 via-[#07090e]/60 to-transparent z-10 pointer-events-none" />
+        {/* Top subtle vignette */}
+        <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/50 to-transparent z-10 pointer-events-none" />
+
+        {/* Slide Indicators & Navigation (Top Right) */}
+        <div className="absolute top-5 right-5 z-20 flex items-center gap-2 bg-black/50 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/10 shadow-lg">
+          {movies.map((_, idx) => (
+            <button
+              key={idx}
+              onClick={() => {
+                setActiveIndex(idx);
+                if (timerRef.current) {
+                  clearInterval(timerRef.current);
+                  timerRef.current = setInterval(() => {
+                    setActiveIndex((prev) => (prev + 1) % movies.length);
+                  }, 6000);
+                }
+              }}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                idx === activeIndex ? 'w-6 bg-blue-500' : 'w-2 bg-white/40 hover:bg-white/80'
+              }`}
+              title={`Go to slide ${idx + 1}`}
+            />
+          ))}
+          <button
+            onClick={() => setActiveIndex((prev) => (prev + 1) % movies.length)}
+            className="text-slate-400 hover:text-white transition-colors ml-1 p-1"
+            title="Next Slide"
+          >
+            <RefreshCw className="w-3 h-3" />
+          </button>
+        </div>
+
+        {/* Content Overlay */}
+        <div className="absolute inset-0 z-20 flex flex-col justify-end p-6 sm:p-10 md:p-14 max-w-3xl">
+          
+          {/* Category Pill Tag */}
+          <div className="flex items-center gap-2 mb-3">
+            <span className="flex items-center gap-1.5 bg-blue-600/25 border border-blue-500/40 text-blue-400 text-[11px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+              {isTV ? 'Featured TV Series' : 'Featured Movie'}
+            </span>
+
+            {/* Quality badge */}
+            <span className="bg-white/10 backdrop-blur-sm text-slate-300 text-[10px] font-bold px-2 py-0.5 rounded-md border border-white/10">
+              4K ULTRA HD
+            </span>
+          </div>
+
+          {/* Title */}
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.08] mb-3 drop-shadow-xl line-clamp-2">
+            {currentMovie.title || currentMovie.name || 'Featured Title'}
+          </h1>
+
+          {/* Metadata Row */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-slate-300 font-semibold mb-3.5 drop-shadow">
+            {currentMovie.vote_average !== undefined && currentMovie.vote_average > 0 && (
+              <div className="flex items-center gap-1 text-amber-400 font-black">
+                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                <span>{currentMovie.vote_average.toFixed(1)}</span>
+              </div>
+            )}
+            
+            {(() => {
+              const year = (currentMovie.release_date || currentMovie.first_air_date || '').slice(0, 4);
+              return year ? <span>• {year}</span> : null;
+            })()}
+
+            <span>• {isTV ? 'Multi-Season' : 'Full Feature'}</span>
+            <span className="text-emerald-400 font-bold">• 100% Free</span>
+          </div>
+
+          {/* Overview Snippet */}
+          {currentMovie.overview && (
+            <p className="text-xs sm:text-sm md:text-base text-slate-300/90 font-normal leading-relaxed line-clamp-2 sm:line-clamp-3 mb-6 max-w-2xl drop-shadow">
+              {currentMovie.overview}
+            </p>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Primary Watch Button */}
+            <button 
+              onClick={handleWatch}
+              className="flex items-center gap-2.5 bg-blue-600 hover:bg-blue-500 text-white px-6 py-3.5 rounded-2xl text-sm font-extrabold transition-all duration-200 shadow-xl shadow-blue-600/30 hover:shadow-blue-600/50 hover:scale-[1.02] cursor-pointer"
+            >
+              <Play className="w-4 h-4 fill-white text-white" />
+              <span>Play Now</span>
+            </button>
+            
+            {/* Details Button */}
+            <button 
+              onClick={handleDetails}
+              className="flex items-center gap-2 bg-slate-800/80 hover:bg-slate-700/90 text-slate-200 hover:text-white px-5 py-3.5 rounded-2xl text-sm font-bold backdrop-blur-md border border-slate-700/60 transition cursor-pointer"
+            >
+              <span>More Info</span>
+            </button>
+
+            {/* Watchlist Toggle Button */}
+            <button 
+              onClick={toggleBookmark}
+              className={`p-3.5 rounded-2xl border backdrop-blur-md transition-all duration-200 cursor-pointer ${
+                isBookmarked 
+                  ? 'bg-blue-600/20 border-blue-500/50 text-blue-400' 
+                  : 'bg-slate-800/80 hover:bg-slate-700/90 border-slate-700/60 text-slate-300 hover:text-white'
+              }`}
+              title={isBookmarked ? 'Remove from Watchlist' : 'Add to Watchlist'}
+            >
+              <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-blue-400' : ''}`} />
+            </button>
+          </div>
+
         </div>
 
       </div>

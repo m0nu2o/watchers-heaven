@@ -13,8 +13,7 @@ CREATE TABLE IF NOT EXISTS watch_parties (
   movie_title TEXT NOT NULL,
   media_type TEXT NOT NULL DEFAULT 'movie',  -- 'movie' | 'tv'
   season INTEGER,
-  episode INTEGER,
-  provider TEXT NOT NULL DEFAULT 'vyla',
+  provider TEXT NOT NULL DEFAULT 'vidfast',
 
   -- Host
   host_user_id UUID NOT NULL,

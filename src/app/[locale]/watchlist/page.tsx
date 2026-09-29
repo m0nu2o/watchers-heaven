@@ -28,11 +28,16 @@ export default function WatchlistPage() {
       const batchResults = await Promise.all(
         batch.map(async (item) => {
           try {
-            const data =
-              item.type === 'tv'
-                ? await ApiGateway.getTvDetails(item.id)
-                : await ApiGateway.getMovieDetails(item.id);
-            return { ...item, data: data as Record<string, unknown> };
+            const preferred = item.type === 'anime' ? 'anime' : item.type === 'tv' ? 'tv' : 'movie';
+            const media = await ApiGateway.getMediaDetails(item.id, preferred);
+            if (!media || !media.data) {
+              return { ...item, data: undefined };
+            }
+            return {
+              ...item,
+              type: (item.type === 'anime' ? 'anime' : media.resolvedType) as 'movie' | 'tv' | 'anime',
+              data: media.data as Record<string, unknown>,
+            };
           } catch {
             return { ...item, data: undefined };
           }

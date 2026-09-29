@@ -3,9 +3,25 @@ import { NextRequest, NextResponse } from 'next/server';
 import { tmdbCache, channelsCache, MemoryCache } from '@/lib/cache';
 import { apiRateLimiter } from '@/lib/rate-limiter';
 
-const TMDB_API_KEY: string = process.env.TMDB_API_KEY ?? (() => {
-  throw new Error('TMDB_API_KEY environment variable is required');
-})();
+const TMDB_DEFAULT_BASE_URL = 'https://api.tmdb.org/3';
+// Adaptive preferred host for rapid failover
+let activeTmdbHost = 'api.themoviedb.org';
+
+async function fetchWithTimeout(url: string, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, {
+      headers: { Accept: 'application/json' },
+      signal: controller.signal,
+    });
+    clearTimeout(id);
+    return response;
+  } catch (err) {
+    clearTimeout(id);
+    throw err;
+  }
+}
 const MAX_RESPONSE_SIZE = 4 * 1024 * 1024; // 4 MB — reject oversized payloads
 
 function getClientIp(request: NextRequest): string {
@@ -22,6 +38,14 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
+  const apiKey = process.env.TMDB_API_KEY;
+  if (!apiKey) {
+    return NextResponse.json(
+      { error: 'TMDB_API_KEY environment variable is required' },
+      { status: 500 }
+    );
+  }
+
   // ── Rate limit ──
   const ip = getClientIp(request);
   if (!apiRateLimiter.hit(ip)) {
@@ -59,30 +83,84 @@ export async function GET(
     }
 
     // ── Build upstream URL ──
-    const targetUrl = new URL(`https://api.themoviedb.org/3/${path}`);
-    targetUrl.searchParams.append('api_key', TMDB_API_KEY);
+    const customBase = process.env.TMDB_BASE_URL;
+    const targetHost = customBase ? new URL(customBase).hostname : activeTmdbHost;
+    const targetUrl = new URL(`https://${targetHost}/3/${path}`);
+    targetUrl.searchParams.append('api_key', apiKey);
     searchParams.forEach((value, key) => {
       if (key !== 'api_key') {
         targetUrl.searchParams.append(key, value);
       }
     });
 
-    // ── Fetch with timeout + size guard ──
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10_000); // 10 s
+    // ── Fetch with fast 3s timeout + instant domain fallback ──
+    let res: Response | null = null;
+    let fetchError: unknown = null;
 
-    const res = await fetch(targetUrl.toString(), {
-      headers: { Accept: 'application/json' },
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
+    try {
+      res = await fetchWithTimeout(targetUrl.toString(), 3200);
+    } catch (err) {
+      fetchError = err;
+      // Primary host failed or timed out; switch to alternate host instantly
+      const alternateHost = targetHost === 'api.tmdb.org' ? 'api.themoviedb.org' : 'api.tmdb.org';
+      const fallbackUrl = new URL(targetUrl.toString());
+      fallbackUrl.hostname = alternateHost;
+      try {
+        res = await fetchWithTimeout(fallbackUrl.toString(), 3500);
+        if (res && res.ok) {
+          activeTmdbHost = alternateHost; // Adapt to working host
+        }
+      } catch {
+        // Keep original error
+      }
+    }
+
+    if (!res) {
+      throw fetchError;
+    }
 
     if (!res.ok) {
+      const errorBody = await res.text();
+
+      // Only log server/upstream errors (5xx/401/403), skip normal 404s to avoid log noise
+      if (res.status !== 404) {
+        console.error('TMDB API ERROR:', {
+          status: res.status,
+          statusText: res.statusText,
+          path,
+          body: errorBody,
+        });
+      }
+
       const headers: Record<string, string> = {};
-      // Forward Retry-After header for 429 responses so client can back off
       const retryAfter = res.headers.get('retry-after');
-      if (retryAfter) headers['Retry-After'] = retryAfter;
-      return new NextResponse(res.statusText, { status: res.status, headers });
+
+      if (retryAfter) {
+        headers['Retry-After'] = retryAfter;
+      }
+
+      let errorMessage = `TMDB API request failed (${res.status})`;
+      try {
+        const parsed = JSON.parse(errorBody);
+        if (parsed?.status_message) {
+          errorMessage = parsed.status_message;
+        } else if (parsed?.error) {
+          errorMessage = parsed.error;
+        }
+      } catch {
+        if (errorBody && errorBody.length < 150) {
+          errorMessage = errorBody;
+        }
+      }
+
+      return NextResponse.json(
+        {
+          error: errorMessage,
+          status: res.status,
+          details: errorBody,
+        },
+        { status: res.status, headers }
+      );
     }
 
     // Check Content-Length before reading the body
@@ -166,7 +244,7 @@ export async function POST(request: NextRequest) {
           signal: controller.signal,
           headers: {
             'Accept': 'application/json',
-            'User-Agent': 'Mozilla/5.0 (compatible; WatchersHeaven/1.0)',
+            'User-Agent': 'Mozilla/5.0 (compatible; Lumina/1.0)',
           },
         });
         if (r.ok) { res = r; break; }

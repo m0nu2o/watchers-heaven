@@ -7,14 +7,15 @@
 
 export interface WatchlistItem {
   id: string;
-  type: 'movie' | 'tv';
+  type: 'movie' | 'tv' | 'anime';
 }
 
-const STORAGE_KEY = 'watchers-heaven-watchlist';
+const STORAGE_KEY = 'lumina-watchlist';
+const LEGACY_STORAGE_KEY = 'watchers-heaven-watchlist';
 
 export function getWatchlist(): WatchlistItem[] {
   if (typeof window === 'undefined') return [];
-  const stored = localStorage.getItem(STORAGE_KEY);
+  const stored = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
   if (!stored) return [];
   try {
     const raw: unknown[] = JSON.parse(stored);
@@ -38,7 +39,7 @@ export function isInWatchlist(id: string | number): boolean {
   return getWatchlist().some((item) => item.id === String(id));
 }
 
-export function toggleWatchlistItem(id: string | number, type: 'movie' | 'tv'): boolean {
+export function toggleWatchlistItem(id: string | number, type: 'movie' | 'tv' | 'anime'): boolean {
   const items = getWatchlist();
   const idStr = String(id);
   const idx = items.findIndex((item) => item.id === idStr);

@@ -85,9 +85,9 @@ export const VidSyncPlayer = forwardRef<PlayerHandle, VidSyncPlayerProps>(({
     return () => window.removeEventListener('message', handleMessage);
   }, [onPlay, onPause, onSeek]);
 
-  const embedUrl = ApiGateway.getVidSyncUrl(id, type, season, episode, {
+  const embedUrl = ApiGateway.getVidFastUrl(id, type, season, episode, {
     autoPlay: true,
-    startTime: startAt,
+    startAt,
     theme: accentColor,
   });
 
@@ -103,7 +103,9 @@ export const VidSyncPlayer = forwardRef<PlayerHandle, VidSyncPlayerProps>(({
         src={embedUrl}
         className="w-full h-full border-0 absolute inset-0 z-20"
         allowFullScreen
-        allow="autoplay; fullscreen"
+        allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+        referrerPolicy="no-referrer"
+        title="Lumina Sync Player"
         onLoad={() => setIsLoaded(true)}
       />
     </div>

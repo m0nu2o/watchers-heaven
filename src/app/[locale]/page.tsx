@@ -22,46 +22,95 @@ const fallbackRecommendation = [
   { id: 1022789, title: 'Inside Out 2', poster_path: '/vpnVM9B6NMmQpWeZvzRxHXh2kM2.jpg', vote_average: 7.7, release_date: '2024-06-11' }
 ];
 
+import { tmdbCache } from '@/lib/cache';
+
 async function fetchFromTmdb(endpoint: string, params: Record<string, string> = {}) {
   const apiKey = process.env.TMDB_API_KEY;
   if (!apiKey) throw new Error('TMDB_API_KEY is not set');
-  const url = new URL(`https://api.themoviedb.org/3${endpoint}`);
+
+  const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const sortedParams = Object.entries(params).sort(([a], [b]) => a.localeCompare(b));
+  const paramStr = sortedParams.map(([k, v]) => `${k}=${v}`).join('&');
+  const cacheKey = `server:tmdb:${normalizedEndpoint}${paramStr ? '?' + paramStr : ''}`;
+
+  // 1. Instant in-memory cache hit (< 1ms)
+  const cached = tmdbCache.get(cacheKey);
+  if (cached) {
+    try {
+      return JSON.parse(cached);
+    } catch {
+      // cache corrupted, proceed to fetch
+    }
+  }
+
+  const TMDB_BASE_URL = process.env.TMDB_BASE_URL || 'https://api.tmdb.org/3';
+  const url = new URL(`${TMDB_BASE_URL}${normalizedEndpoint}`);
   url.searchParams.append('api_key', apiKey);
-  url.searchParams.append('include_adult', 'false'); // Persistently filter adult content
-  Object.entries(params).forEach(([key, value]) => url.searchParams.append(key, value));
+  url.searchParams.append('include_adult', 'false');
+  sortedParams.forEach(([key, value]) => url.searchParams.append(key, value));
   
   try {
-    const res = await fetch(url.toString(), { next: { revalidate: 3600 } }); // Cache 1hr
-    if (!res.ok) throw new Error('TMDB API Fetch failed');
-    return await res.json();
+    let res: Response | null = null;
+    try {
+      res = await fetch(url.toString(), {
+        next: { revalidate: 3600 },
+        signal: AbortSignal.timeout(3500),
+      });
+    } catch {
+      // Fast fallback to alternate host if primary domain is throttled
+      const alternateHost = url.hostname === 'api.tmdb.org' ? 'api.themoviedb.org' : 'api.tmdb.org';
+      const fallbackUrl = new URL(url.toString());
+      fallbackUrl.hostname = alternateHost;
+      res = await fetch(fallbackUrl.toString(), {
+        next: { revalidate: 3600 },
+        signal: AbortSignal.timeout(3500),
+      });
+    }
+
+    if (!res.ok) throw new Error(`TMDB API Fetch failed: ${res.status}`);
+    const data = await res.json();
+    
+    // Store in memory cache for 1 hour
+    if (data && data.results) {
+      tmdbCache.set(cacheKey, JSON.stringify(data), 60 * 60 * 1000);
+    }
+
+    return data;
   } catch (err) {
     console.error(`Error querying TMDB ${endpoint}:`, err);
     return { results: [] };
   }
 }
 
-export default async function Home() {
+export default async function Home(props: { params: Promise<{ locale?: string }> }) {
+  const { locale = 'en' } = (await props.params) || {};
+
   // Query actual trending/latest lists
   const [
     trendingMovies,
     trendingTv,
     topRated,
     nowPlaying,
-    ,
     anime,
+    bollywood,
+    kdrama,
     action
   ] = await Promise.all([
     fetchFromTmdb('/trending/movie/week'),
     fetchFromTmdb('/trending/tv/week'),
     fetchFromTmdb('/movie/top_rated'),
     fetchFromTmdb('/movie/now_playing'),
-    fetchFromTmdb('/discover/movie', {
-      'primary_release_date.gte': '2025-01-01',
-      'sort_by': 'popularity.desc'
-    }),
     fetchFromTmdb('/discover/tv', {
       'with_genres': '16',
       'with_original_language': 'ja',
+      'sort_by': 'popularity.desc'
+    }),
+    fetchFromTmdb('/discover/movie', {
+      'with_original_language': 'hi',
+      'sort_by': 'popularity.desc'
+    }),
+    fetchFromTmdb('/discover/tv', {
+      'with_original_language': 'ko',
       'sort_by': 'popularity.desc'
     }),
     fetchFromTmdb('/discover/movie', {
@@ -88,104 +137,178 @@ export default async function Home() {
       <HeroFeature movies={heroSlides} />
       
       <div className="mt-8 space-y-4 animate-fadeIn">
-        <CarouselRow title="Recommendation">
+        {/* Recommendation / Trending Movies */}
+        <CarouselRow
+          title="Trending Movies"
+          seeMoreHref={`/${locale}/movies`}
+          exploreHref={`/${locale}/explore?type=movie`}
+        >
           {getList(trendingMovies, fallbackRecommendation).map((item) => {
             const movie = item as TmdbItem;
             return (
-            <PosterCard 
-              key={movie.id}
-              id={movie.id}
-              title={movie.title ?? movie.name ?? ''}
-              posterPath={movie.poster_path ?? ''}
-              rating={movie.vote_average}
-              year={movie.release_date ? movie.release_date.split('-')[0] : (movie.first_air_date ? movie.first_air_date.split('-')[0] : '')}
-              type="movie"
-            />
+              <PosterCard 
+                key={movie.id}
+                id={movie.id}
+                title={movie.title ?? movie.name ?? ''}
+                posterPath={movie.poster_path ?? ''}
+                rating={movie.vote_average}
+                year={movie.release_date ? movie.release_date.split('-')[0] : (movie.first_air_date ? movie.first_air_date.split('-')[0] : '')}
+                type="movie"
+              />
             );
           })}
         </CarouselRow>
 
-        <CarouselRow title="Trending TV Shows">
+        {/* Trending TV Shows */}
+        <CarouselRow
+          title="Trending TV Shows"
+          seeMoreHref={`/${locale}/tv`}
+          exploreHref={`/${locale}/explore?type=tv`}
+        >
           {getList(trendingTv, []).map((item) => {
             const show = item as TmdbItem;
             return (
-            <PosterCard 
-              key={show.id}
-              id={show.id}
-              title={show.name ?? show.title ?? ''}
-              posterPath={show.poster_path ?? ''}
-              rating={show.vote_average}
-              year={show.first_air_date ? show.first_air_date.split('-')[0] : ''}
-              type="tv"
-            />
+              <PosterCard 
+                key={show.id}
+                id={show.id}
+                title={show.name ?? show.title ?? ''}
+                posterPath={show.poster_path ?? ''}
+                rating={show.vote_average}
+                year={show.first_air_date ? show.first_air_date.split('-')[0] : ''}
+                type="tv"
+              />
             );
           })}
         </CarouselRow>
 
-        <CarouselRow title="Top Rated Movies">
-          {getList(topRated, []).map((item) => {
-            const movie = item as TmdbItem;
-            return (
-            <PosterCard 
-              key={movie.id}
-              id={movie.id}
-              title={movie.title ?? ''}
-              posterPath={movie.poster_path ?? ''}
-              rating={movie.vote_average}
-              year={movie.release_date ? movie.release_date.split('-')[0] : ''}
-              type="movie"
-            />
-            );
-          })}
-        </CarouselRow>
-
-        <CarouselRow title="Now Playing in Theaters">
-          {getList(nowPlaying, []).map((item) => {
-            const movie = item as TmdbItem;
-            return (
-            <PosterCard 
-              key={movie.id}
-              id={movie.id}
-              title={movie.title ?? ''}
-              posterPath={movie.poster_path ?? ''}
-              rating={movie.vote_average}
-              year={movie.release_date ? movie.release_date.split('-')[0] : ''}
-              type="movie"
-            />
-            );
-          })}
-        </CarouselRow>
-
-        <CarouselRow title="Popular Anime">
+        {/* Popular Anime */}
+        <CarouselRow
+          title="Popular Anime"
+          seeMoreHref={`/${locale}/anime`}
+          exploreHref={`/${locale}/explore?type=anime`}
+        >
           {getList(anime, []).map((item) => {
             const show = item as TmdbItem;
             return (
-            <PosterCard 
-              key={show.id}
-              id={show.id}
-              title={show.name ?? ''}
-              posterPath={show.poster_path ?? ''}
-              rating={show.vote_average}
-              year={show.first_air_date ? show.first_air_date.split('-')[0] : ''}
-              type="tv"
-            />
+              <PosterCard 
+                key={show.id}
+                id={show.id}
+                title={show.name ?? ''}
+                posterPath={show.poster_path ?? ''}
+                rating={show.vote_average}
+                year={show.first_air_date ? show.first_air_date.split('-')[0] : ''}
+                type="anime"
+              />
             );
           })}
         </CarouselRow>
 
-        <CarouselRow title="Action & Adventure">
+        {/* Bollywood & Indian Cinema */}
+        <CarouselRow
+          title="Bollywood & Indian Cinema"
+          seeMoreHref={`/${locale}/movies`}
+          exploreHref={`/${locale}/explore?type=bollywood`}
+        >
+          {getList(bollywood, []).map((item) => {
+            const movie = item as TmdbItem;
+            return (
+              <PosterCard 
+                key={movie.id}
+                id={movie.id}
+                title={movie.title ?? ''}
+                posterPath={movie.poster_path ?? ''}
+                rating={movie.vote_average}
+                year={movie.release_date ? movie.release_date.split('-')[0] : ''}
+                type="movie"
+              />
+            );
+          })}
+        </CarouselRow>
+
+        {/* K-Drama & Korean Shows */}
+        <CarouselRow
+          title="K-Drama & Korean Shows"
+          seeMoreHref={`/${locale}/k-drama`}
+          exploreHref={`/${locale}/explore?type=kdrama`}
+        >
+          {getList(kdrama, []).map((item) => {
+            const show = item as TmdbItem;
+            return (
+              <PosterCard 
+                key={show.id}
+                id={show.id}
+                title={show.name ?? show.title ?? ''}
+                posterPath={show.poster_path ?? ''}
+                rating={show.vote_average}
+                year={show.first_air_date ? show.first_air_date.split('-')[0] : ''}
+                type="tv"
+              />
+            );
+          })}
+        </CarouselRow>
+
+        {/* Top Rated Movies */}
+        <CarouselRow
+          title="Top Rated Movies"
+          seeMoreHref={`/${locale}/movies`}
+          exploreHref={`/${locale}/explore?type=movie&sort=vote_average.desc`}
+        >
+          {getList(topRated, []).map((item) => {
+            const movie = item as TmdbItem;
+            return (
+              <PosterCard 
+                key={movie.id}
+                id={movie.id}
+                title={movie.title ?? ''}
+                posterPath={movie.poster_path ?? ''}
+                rating={movie.vote_average}
+                year={movie.release_date ? movie.release_date.split('-')[0] : ''}
+                type="movie"
+              />
+            );
+          })}
+        </CarouselRow>
+
+        {/* Now Playing in Theaters */}
+        <CarouselRow
+          title="Now Playing in Theaters"
+          seeMoreHref={`/${locale}/theater`}
+          exploreHref={`/${locale}/explore?type=movie&sort=primary_release_date.desc`}
+        >
+          {getList(nowPlaying, []).map((item) => {
+            const movie = item as TmdbItem;
+            return (
+              <PosterCard 
+                key={movie.id}
+                id={movie.id}
+                title={movie.title ?? ''}
+                posterPath={movie.poster_path ?? ''}
+                rating={movie.vote_average}
+                year={movie.release_date ? movie.release_date.split('-')[0] : ''}
+                type="movie"
+              />
+            );
+          })}
+        </CarouselRow>
+
+        {/* Action & Adventure */}
+        <CarouselRow
+          title="Action & Adventure"
+          seeMoreHref={`/${locale}/movies`}
+          exploreHref={`/${locale}/explore?genre=28`}
+        >
           {getList(action, []).map((item) => {
             const movie = item as TmdbItem;
             return (
-            <PosterCard 
-              key={movie.id}
-              id={movie.id}
-              title={movie.title ?? ''}
-              posterPath={movie.poster_path ?? ''}
-              rating={movie.vote_average}
-              year={movie.release_date ? movie.release_date.split('-')[0] : ''}
-              type="movie"
-            />
+              <PosterCard 
+                key={movie.id}
+                id={movie.id}
+                title={movie.title ?? ''}
+                posterPath={movie.poster_path ?? ''}
+                rating={movie.vote_average}
+                year={movie.release_date ? movie.release_date.split('-')[0] : ''}
+                type="movie"
+              />
             );
           })}
         </CarouselRow>

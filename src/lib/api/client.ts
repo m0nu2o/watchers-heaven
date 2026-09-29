@@ -19,13 +19,65 @@ export const fetchClient = async (
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal,
-    });
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+    } catch (fetchErr) {
+      if (url.includes('api.tmdb.org')) {
+        const altUrl = url.replace('api.tmdb.org', 'api.themoviedb.org');
+        response = await fetch(altUrl, {
+          ...options,
+          signal: controller.signal,
+        });
+      } else {
+        throw fetchErr;
+      }
+    }
 
     if (!response.ok) {
-      const err = new ApiError(response.status, `API Error: ${response.statusText}`);
+      let message = `API Error: ${response.statusText || response.status}`;
+      let errorData: unknown;
+
+      try {
+        const text = await response.text();
+        try {
+          const json = JSON.parse(text);
+          errorData = json;
+          if (json && typeof json === 'object') {
+            const raw = json as Record<string, unknown>;
+            let parsedMsg = raw.error || raw.status_message || raw.message;
+
+            // Unpack nested JSON string if present in details
+            if (raw.details && typeof raw.details === 'string') {
+              try {
+                const nested = JSON.parse(raw.details);
+                if (nested?.status_message) {
+                  parsedMsg = nested.status_message;
+                }
+              } catch {
+                // ignore
+              }
+            }
+
+            if (typeof parsedMsg === 'string' && parsedMsg.trim()) {
+              message = parsedMsg.startsWith('API Error:')
+                ? parsedMsg
+                : `API Error: ${parsedMsg}`;
+            }
+          }
+        } catch {
+          if (text && text.trim().length > 0 && text.length < 200) {
+            message = `API Error: ${text.trim()}`;
+          }
+        }
+      } catch {
+        // Fallback to generic message
+      }
+
+      const err = new ApiError(response.status, message, errorData);
       // Capture Retry-After header for 429 responses
       if (response.status === 429) {
         const retryAfter = response.headers.get('retry-after') || response.headers.get('x-ratelimit-reset');

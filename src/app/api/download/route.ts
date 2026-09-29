@@ -17,9 +17,20 @@ function getClientIp(request: NextRequest): string {
 // Allowed download origin domains (whitelist)
 const ALLOWED_ORIGINS = [
   'rivestream.ru',
+  'vidsrc.sh',
   'vidsrc-embed.ru',
+  'vidfast.vc',
   'vidfast.pro',
-  'vidsync.live',
+  'embed.su',
+  'autoembed.co',
+  'autoembed.cc',
+  'nhdapi.com',
+  'screenscape.me',
+  'anyembed.xyz',
+  'vidsrc.pm',
+  'nyaa.si',
+  '1337x.to',
+  'yts.mx',
 ];
 
 export async function GET(request: NextRequest) {
@@ -61,7 +72,7 @@ export async function GET(request: NextRequest) {
 
     const upstream = await fetch(targetUrl.toString(), {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; WatchersHeaven/1.0)',
+        'User-Agent': 'Mozilla/5.0 (compatible; Lumina/1.0)',
         'Accept': '*/*',
       },
       signal: controller.signal,

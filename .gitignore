@@ -27,6 +27,7 @@
 # IDEs and Editors
 /.vscode
 /.idea
+/.kilo
 *.suo
 *.ntvs*
 *.njsproj

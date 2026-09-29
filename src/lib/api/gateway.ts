@@ -1,9 +1,8 @@
-import process from 'node:process';
-import { fetchClient } from './client';
+import { fetchClient, ApiError } from './client';
 import { withRetries } from './retries';
 import { tmdbCircuitBreaker } from './circuit-breaker';
 
-const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+const TMDB_BASE_URL = process.env.TMDB_BASE_URL || 'https://api.tmdb.org/3';
 const RIVE_BASE = 'https://rivestream.ru';
 
 // ─── Client-side in-memory cache (browser only) ───
@@ -89,6 +88,19 @@ export interface TouStreamChannel {
   slug: string;
   name: string;
 }
+
+export interface AniListSearchResult {
+  id: number;
+  title: { romaji: string; english: string | null };
+  coverImage: { large: string };
+  episodes: number | null;
+  averageScore: number | null;
+}
+
+import type { AniListMediaDetails } from '@/types/media';
+
+export type { AniListMediaDetails };
+
 
 export const ApiGateway = {
   // --- RiveStream API ---
@@ -176,29 +188,48 @@ export const ApiGateway = {
     }
   },
 
-  // --- VidKing API ---
-  getVidKingUrl: (tmdbId: string | number, type: 'movie' | 'tv', season?: number, episode?: number, options?: { color?: string; autoPlay?: boolean; nextEpisode?: boolean; episodeSelector?: boolean; progress?: number }) => {
-    let url = type === 'movie' 
-      ? `https://www.vidking.net/embed/movie/${tmdbId}`
-      : `https://www.vidking.net/embed/tv/${tmdbId}/${season || 1}/${episode || 1}`;
-    
+  // --- VidFast (vidfast.pro) API ---
+  getVidFastUrl: (
+    tmdbId: string | number,
+    type: 'movie' | 'tv',
+    season?: number,
+    episode?: number,
+    options?: {
+      autoPlay?: boolean;
+      theme?: string;
+      title?: boolean;
+      poster?: boolean;
+      nextButton?: boolean;
+      autoNext?: boolean;
+      startAt?: number;
+    }
+  ) => {
+    let url = type === 'movie'
+      ? `https://vidfast.pro/movie/${tmdbId}`
+      : `https://vidfast.pro/tv/${tmdbId}/${season || 1}/${episode || 1}`;
     const params: string[] = [];
-    if (options) {
-      if (options.color) params.push(`color=${options.color}`);
-      if (options.autoPlay !== undefined) params.push(`autoPlay=${options.autoPlay}`);
-      if (options.nextEpisode !== undefined) params.push(`nextEpisode=${options.nextEpisode}`);
-      if (options.episodeSelector !== undefined) params.push(`episodeSelector=${options.episodeSelector}`);
-      if (options.progress !== undefined) params.push(`progress=${options.progress}`);
-    }
-    if (params.length > 0) {
-      url += `?${params.join('&')}`;
-    }
+    if (options?.autoPlay !== undefined) params.push(`autoPlay=${options.autoPlay ? 1 : 0}`);
+    if (options?.theme) params.push(`theme=${options.theme}`);
+    if (options?.startAt && options.startAt > 0) params.push(`startAt=${options.startAt}`);
+    if (params.length > 0) url += `?${params.join('&')}`;
     return url;
   },
 
-  // --- Vidsrc (vidsrc-embed.ru) API ---
+  // --- Dedicated Anime (vidsrc.sh) API ---
+  getVidsrcAnimeUrl: (tmdbId: string | number, episode?: number) => {
+    return `https://vidsrc.sh/embed/anime/${tmdbId}/${episode || 1}`;
+  },
+
+  // --- Vidsrc Mirror (vidsrc.pm) API ---
+  getVidsrcMirrorUrl: (tmdbId: string | number, type: 'movie' | 'tv', season?: number, episode?: number) => {
+    return type === 'movie'
+      ? `https://vidsrc.pm/embed/movie/${tmdbId}`
+      : `https://vidsrc.pm/embed/tv/${tmdbId}/${season || 1}/${episode || 1}`;
+  },
+
+  // --- Vidsrc.sh API ---
   getVidsrcEmbedUrl: (id: string | number, type: 'movie' | 'tv', season?: number, episode?: number, options?: { subUrl?: string; dsLang?: string; autoplay?: boolean }) => {
-    const base = 'https://vidsrc-embed.ru/embed';
+    const base = 'https://vidsrc.sh/embed';
     let url = type === 'movie'
       ? `${base}/movie/${id}`
       : `${base}/tv/${id}/${season || 1}-${episode || 1}`;
@@ -210,91 +241,257 @@ export const ApiGateway = {
     return url;
   },
 
-  // --- VidLink (vidlink.pro) API ---
-  getVidLinkUrl: (id: string | number, type: 'movie' | 'tv', season?: number, episode?: number, options?: { primaryColor?: string; secondaryColor?: string; iconColor?: string; autoplay?: boolean; nextButton?: boolean; title?: boolean }) => {
-    let url = type === 'movie'
-      ? `https://vidlink.pro/movie/${id}`
-      : `https://vidlink.pro/tv/${id}/${season || 1}/${episode || 1}`;
-    const params: string[] = [];
-    if (options?.primaryColor) params.push(`primaryColor=${options.primaryColor}`);
-    if (options?.secondaryColor) params.push(`secondaryColor=${options.secondaryColor}`);
-    if (options?.iconColor) params.push(`iconColor=${options.iconColor}`);
-    if (options?.autoplay !== undefined) params.push(`autoplay=${options.autoplay}`);
-    if (options?.nextButton !== undefined) params.push(`nextButton=${options.nextButton}`);
-    if (options?.title !== undefined) params.push(`title=${options.title}`);
-    if (params.length > 0) url += `?${params.join('&')}`;
-    return url;
-  },
-
-  // --- Vidsrc.to API ---
-  getVidsrcToUrl: (id: string | number, type: 'movie' | 'tv', season?: number, episode?: number) => {
-    const base = 'https://vidsrc.to/embed';
+  // --- RiveStream (dead — blocks X-Frame-Options) → redirected to vidsrc.net ---
+  getRiveStreamUrl: (tmdbId: string | number, type: 'movie' | 'tv', season?: number, episode?: number) => {
     return type === 'movie'
-      ? `${base}/movie/${id}`
-      : `${base}/tv/${id}/${season || 1}/${episode || 1}`;
+      ? `https://vidsrc.net/embed/movie/?tmdb=${tmdbId}`
+      : `https://vidsrc.net/embed/tv/?tmdb=${tmdbId}&season=${season || 1}&episode=${episode || 1}`;
   },
 
-  // --- VidSync API ---
-  getVidSyncUrl: (
-    id: string | number,
-    type: 'movie' | 'tv',
-    season?: number,
-    episode?: number,
-    options?: {
-      autoPlay?: boolean;
-      startTime?: number;        // resume position in seconds
-      defaultServer?: string;    // e.g. 'cinevault'
-      theme?: string;            // hex without #
-      nextButton?: boolean;      // TV only — show at 90%
-      autoNext?: boolean;        // TV only — requires nextButton
-    }
-  ): string => {
-    const base = 'https://vidsync.live/embed';
-    const url = type === 'movie'
-      ? new URL(`${base}/movie/${id}`)
-      : new URL(`${base}/tv/${id}/${season || 1}/${episode || 1}`);
-
-    if (options?.autoPlay !== undefined) url.searchParams.set('autoPlay', String(options.autoPlay));
-    if (options?.startTime !== undefined && options.startTime > 0) url.searchParams.set('startTime', String(options.startTime));
-    if (options?.defaultServer) url.searchParams.set('defaultServer', options.defaultServer);
-    if (options?.theme) url.searchParams.set('theme', options.theme);
-    if (options?.nextButton !== undefined) url.searchParams.set('nextButton', String(options.nextButton));
-    if (options?.autoNext !== undefined) url.searchParams.set('autoNext', String(options.autoNext));
-    return url.toString();
+  // --- 111Movies Fast Stream API ---
+  get111MoviesUrl: (tmdbId: string | number, type: 'movie' | 'tv', season?: number, episode?: number) => {
+    return type === 'movie'
+      ? `https://111movies.com/movie/${tmdbId}`
+      : `https://111movies.com/tv/${tmdbId}/${season || 1}/${episode || 1}`;
   },
 
-  // --- VidRock API ---
-  getVidRockUrl: (
+  // --- VidSrc.me (vidsrc.me) API — Alternative 1080p, Multi-Sub, Wide Catalog ---
+  getVidsrcMeUrl: (tmdbId: string | number, type: 'movie' | 'tv', season?: number, episode?: number) => {
+    return type === 'movie'
+      ? `https://vidsrc.me/embed/movie?tmdb=${tmdbId}`
+      : `https://vidsrc.me/embed/tv?tmdb=${tmdbId}&season=${season || 1}&episode=${episode || 1}`;
+  },
+
+  // --- VidSrc.net — most reliable vidsrc variant, iframe-friendly ---
+  getVidSrcNetUrl: (tmdbId: string | number, type: 'movie' | 'tv', season?: number, episode?: number) => {
+    return type === 'movie'
+      ? `https://vidsrc.net/embed/movie/?tmdb=${tmdbId}`
+      : `https://vidsrc.net/embed/tv/?tmdb=${tmdbId}&season=${season || 1}&episode=${episode || 1}`;
+  },
+
+  // --- VidLink (vidlink.pro) — Ultra-clean, modern player, multi-audio & subtitles ---
+  getVidLinkUrl: (tmdbId: string | number, type: 'movie' | 'tv', season?: number, episode?: number) => {
+    return type === 'movie'
+      ? `https://vidlink.pro/movie/${tmdbId}?autoplay=true`
+      : `https://vidlink.pro/tv/${tmdbId}/${season || 1}/${episode || 1}?autoplay=true`;
+  },
+
+  // --- VidSrc.cc (vidsrc.cc) — High performance v2 multi-server embed ---
+  getVidSrcCcUrl: (tmdbId: string | number, type: 'movie' | 'tv', season?: number, episode?: number) => {
+    return type === 'movie'
+      ? `https://vidsrc.cc/v2/embed/movie/${tmdbId}`
+      : `https://vidsrc.cc/v2/embed/tv/${tmdbId}/${season || 1}/${episode || 1}`;
+  },
+
+  // --- Miruro Anime (miruro.tv) — AniList-based, skip timestamps, sub+dub ---
+  getMiruroUrl: (aniListId: number | string | null | undefined, episode: number = 1, isDub = false) => {
+    if (!aniListId) return `https://www.miruro.tv/`;
+    return `https://www.miruro.tv/watch?id=${aniListId}&ep=${episode}${isDub ? '&dub=true' : ''}`;
+  },
+
+  // --- MultiEmbed (multiembed.mov) — 1080p, Multi-Audio, Huge Catalog ---
+  getMultiEmbedUrl: (tmdbId: string | number, type: 'movie' | 'tv', season?: number, episode?: number) => {
+    const base = `https://multiembed.mov/?video_id=${tmdbId}&tmdb=1`;
+    return type === 'movie' ? base : `${base}&s=${season || 1}&e=${episode || 1}`;
+  },
+
+  // --- AutoEmbed (DEAD — autoembed.cc DNS down) — falls back to vidsrc.me ---
+  getAutoEmbedUrl: (tmdbId: string | number, type: 'movie' | 'tv', season?: number, episode?: number) => {
+    // autoembed.cc is DNS-dead as of Sep 2026; redirect to vidsrc.me
+    return type === 'movie'
+      ? `https://vidsrc.me/embed/movie?tmdb=${tmdbId}`
+      : `https://vidsrc.me/embed/tv?tmdb=${tmdbId}&season=${season || 1}&episode=${episode || 1}`;
+  },
+
+  // --- 2Embed (www.2embed.cc) API (Extensive anime & TV catalog coverage) ---
+  get2EmbedUrl: (tmdbId: string | number, type: 'movie' | 'tv', season?: number, episode?: number) => {
+    return type === 'movie'
+      ? `https://www.2embed.cc/embed/${tmdbId}`
+      : `https://www.2embed.cc/embedtv/${tmdbId}?s=${season || 1}&e=${episode || 1}`;
+  },
+
+  // --- NHD Embed (nhdapi.com) API (Hindi Dub Priority, Multi-Audio, Auto Failover) ---
+  getNhdEmbedUrl: (
     id: string | number,
-    type: 'movie' | 'tv',
+    type: 'movie' | 'tv' | 'anime',
     season?: number,
     episode?: number,
-    options?: {
-      autoplay?: boolean;        // auto-start playback
-      autonext?: boolean;        // auto-play next TV episode
-      theme?: string;            // hex color without #
-      download?: boolean;        // show/hide download button
-      nextbutton?: boolean;      // show/hide next episode notification
-      episodeselector?: boolean; // show/hide episode selector
-      lang?: string;             // subtitle language ISO code e.g. 'en'
+    aniListId?: number | null
+  ) => {
+    if (type === 'anime' && aniListId) {
+      return `https://nhdapi.com/anime/${aniListId}/${episode || 1}`;
     }
-  ): string => {
-    const base = 'https://vidrock.ru';
-    const url = type === 'movie'
-      ? new URL(`${base}/movie/${id}`)
-      : new URL(`${base}/tv/${id}/${season || 1}/${episode || 1}`);
+    return type === 'movie'
+      ? `https://nhdapi.com/movie/${id}`
+      : `https://nhdapi.com/tv/${id}/${season || 1}/${episode || 1}`;
+  },
 
-    if (options?.autoplay !== undefined) url.searchParams.set('autoplay', String(options.autoplay));
-    if (options?.autonext !== undefined) url.searchParams.set('autonext', String(options.autonext));
-    if (options?.theme) url.searchParams.set('theme', options.theme);
-    if (options?.download !== undefined) url.searchParams.set('download', String(options.download));
-    if (options?.nextbutton !== undefined) url.searchParams.set('nextbutton', String(options.nextbutton));
-    if (options?.episodeselector !== undefined) url.searchParams.set('episodeselector', String(options.episodeselector));
-    if (options?.lang) url.searchParams.set('lang', options.lang);
-    return url.toString();
+  // --- Embed.su (embed.su) API (Ultra-fast 1080p, Ad-Free, Huge Catalog, Multi-Subtitles) ---
+  getEmbedSuUrl: (tmdbId: string | number, type: 'movie' | 'tv', season?: number, episode?: number) => {
+    return type === 'movie'
+      ? `https://embed.su/embed/movie/${tmdbId}`
+      : `https://embed.su/embed/tv/${tmdbId}/${season || 1}/${episode || 1}`;
+  },
+
+  // --- VidSrc.to (vidsrc.to) API — Premium 1080p, Hindi+English Dub, Rich Built-in Player ---
+  getVidSrcUrl: (tmdbId: string | number, type: 'movie' | 'tv', season?: number, episode?: number) => {
+    return type === 'movie'
+      ? `https://vidsrc.to/embed/movie/${tmdbId}`
+      : `https://vidsrc.to/embed/tv/${tmdbId}/${season || 1}/${episode || 1}`;
+  },
+
+  // --- AutoEmbed Anime Pro (DEAD — anime.autoembed.cc down) — falls back to multiembed ---
+  getAutoEmbedAnimeProUrl: (tmdbId: string | number, season?: number, episode?: number) => {
+    // anime.autoembed.cc is DNS-dead; route to multiembed.mov which covers anime via TMDB
+    const base = `https://multiembed.mov/?video_id=${tmdbId}&tmdb=1`;
+    return `${base}&s=${season || 1}&e=${episode || 1}`;
+  },
+
+  // --- Videasy (player.videasy.net) — Premium built-in player, ad-free, multi-language ---
+  getVideasyUrl: (tmdbId: string | number, type: 'movie' | 'tv' | 'anime', season?: number, episode?: number, aniListId?: number | null) => {
+    if (type === 'movie') return `https://player.videasy.net/movie/${tmdbId}`;
+    if (type === 'anime' && aniListId) return `https://player.videasy.net/anime/${aniListId}/${episode || 1}`;
+    return `https://player.videasy.net/tv/${tmdbId}/${season || 1}/${episode || 1}`;
+  },
+
+  // --- Kuhi & Anivexa Direct HLS Stream Extraction (AniList-based, 0 Ads, parallel race) ---
+  getDirectAnimeStream: async (
+    aniListId: number | string,
+    episode: number = 1,
+    isDub: boolean = false
+  ): Promise<{
+    url: string;
+    subtitles?: Array<{ label: string; file: string }>;
+    skipTimestamps?: { intro?: { start: number; end: number }; outro?: { start: number; end: number } };
+  } | null> => {
+    const id = String(aniListId);
+    const subOrDub = isDub ? 'dub' : 'sub';
+
+    // Race all endpoints in parallel — resolves as soon as the first succeeds
+    // Max wait: 5s total (not 3×4s = 12s like the old sequential loop)
+    const endpoints = [
+      `https://anivexa-api.vercel.app/watch/reanime/${id}/${subOrDub}/reanime-${episode}`,
+      `https://anivexa-api.vercel.app/watch/animepahe/${id}/${subOrDub}/animepahe-${episode}`,
+      `https://anivexa-api.vercel.app/watch/anikoto/${id}/${subOrDub}/anikoto-${episode}`,
+    ];
+
+    const tryEndpoint = async (ep: string) => {
+      const res = await fetch(ep, { signal: AbortSignal.timeout(5000) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const source = data?.sources?.find((s: { url?: string; isM3U8?: boolean }) =>
+        s?.url?.includes('.m3u8') || s?.isM3U8
+      ) || data?.sources?.[0];
+      if (!source?.url) throw new Error('No valid source URL');
+      return {
+        url: source.url as string,
+        subtitles: (data?.subtitles as Array<{ lang?: string; label?: string; url?: string }> | undefined)?.map((s) => ({
+          label: s.label || s.lang || 'English',
+          file: s.url || '',
+        })),
+        skipTimestamps: data?.intro || data?.outro ? {
+          intro: data.intro ? { start: data.intro.start as number, end: data.intro.end as number } : undefined,
+          outro: data.outro ? { start: data.outro.start as number, end: data.outro.end as number } : undefined,
+        } : undefined,
+      };
+    };
+
+    try {
+      return await Promise.any(endpoints.map(tryEndpoint));
+    } catch {
+      return null;
+    }
   },
 
   // --- AniList GraphQL API (via server proxy /api/anilist) ---
+
+  /**
+   * Search AniList for an anime by title or AniList ID and return its ID, MAL ID, and verified spoken dub languages.
+   * Caches response for 24 hours.
+   */
+  getAniListMediaDetails: async (
+    idOrTitle: number | string
+  ): Promise<AniListMediaDetails | null> => {
+    const isId = typeof idOrTitle === 'number' || /^\d+$/.test(String(idOrTitle).trim());
+    const numericId = isId ? parseInt(String(idOrTitle).trim(), 10) : undefined;
+    const search = isId ? undefined : String(idOrTitle).trim();
+
+    const cacheKey = `anilist-media:v2:${isId ? numericId : search?.toLowerCase()}`;
+    const cached = clientCacheGet<AniListMediaDetails | null>(cacheKey);
+    if (cached !== undefined) return cached;
+
+    const query = `
+      query ($id: Int, $search: String) {
+        Media(id: $id, search: $search, type: ANIME) {
+          id
+          idMal
+          title { romaji english }
+          characters(perPage: 12) {
+            edges {
+              node { id }
+              voiceActors {
+                id
+                languageV2
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    try {
+      const endpoint =
+        typeof window !== 'undefined'
+          ? '/api/anilist'
+          : 'https://graphql.anilist.co';
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ query, variables: { id: numericId, search } }),
+      });
+      if (!res.ok) return null;
+      const json = (await res.json()) as {
+        data?: {
+          Media?: {
+            id: number;
+            idMal?: number | null;
+            characters?: {
+              edges?: Array<{
+                node?: { id: number };
+                voiceActors?: Array<{ languageV2?: string }>;
+              }>;
+            };
+          };
+        };
+      };
+      const media = json?.data?.Media;
+      if (!media || !media.id) return null;
+
+      const langs = new Set<string>();
+      (media.characters?.edges || []).forEach((e) => {
+        e.voiceActors?.forEach((v) => {
+          if (v.languageV2) langs.add(v.languageV2);
+        });
+      });
+      const spokenLanguages = Array.from(langs);
+      const hasEnglishDub = spokenLanguages.includes('English');
+
+      const result: AniListMediaDetails = {
+        id: media.id,
+        malId: media.idMal ?? null,
+        hasEnglishDub,
+        spokenLanguages,
+      };
+
+      clientCacheSet(cacheKey, result, 24 * 60 * 60 * 1000); // 24 hours
+      return result;
+    } catch {
+      return null;
+    }
+  },
 
   /**
    * Search AniList for an anime by title and return its AniList ID.
@@ -302,33 +499,8 @@ export const ApiGateway = {
    * Returns null if no match is found.
    */
   getAniListId: async (title: string): Promise<number | null> => {
-    const cacheKey = `anilist-id:${title.toLowerCase().trim()}`;
-    const cached = clientCacheGet<number | null>(cacheKey);
-    if (cached !== undefined) return cached;
-
-    const query = `
-      query ($search: String) {
-        Media(search: $search, type: ANIME) {
-          id
-          title { romaji english native }
-        }
-      }
-    `;
-
-    try {
-      const res = await fetch('/api/anilist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, variables: { search: title } }),
-      });
-      if (!res.ok) return null;
-      const json = await res.json() as { data?: { Media?: { id: number } } };
-      const id = json?.data?.Media?.id ?? null;
-      clientCacheSet(cacheKey, id, 60 * 60 * 1000); // cache 1 hour
-      return id;
-    } catch {
-      return null;
-    }
+    const details = await ApiGateway.getAniListMediaDetails(title);
+    return details?.id ?? null;
   },
 
   /**
@@ -339,9 +511,9 @@ export const ApiGateway = {
     search: string,
     page = 1,
     perPage = 20,
-  ): Promise<{ id: number; title: { romaji: string; english: string | null }; coverImage: { large: string }; episodes: number | null; averageScore: number | null }[]> => {
+  ): Promise<AniListSearchResult[]> => {
     const cacheKey = `anilist-search:${search.toLowerCase().trim()}:${page}:${perPage}`;
-    const cached = clientCacheGet<ReturnType<typeof ApiGateway.searchAniList> extends Promise<infer T> ? T : never>(cacheKey);
+    const cached = clientCacheGet<AniListSearchResult[]>(cacheKey);
     if (cached) return cached;
 
     const query = `
@@ -365,8 +537,8 @@ export const ApiGateway = {
         body: JSON.stringify({ query, variables: { search, page, perPage } }),
       });
       if (!res.ok) return [];
-      const json = await res.json() as { data?: { Page?: { media?: unknown[] } } };
-      const media = (json?.data?.Page?.media ?? []) as ReturnType<typeof ApiGateway.searchAniList> extends Promise<infer T> ? T : never;
+      const json = await res.json() as { data?: { Page?: { media?: AniListSearchResult[] } } };
+      const media = (json?.data?.Page?.media ?? []) as AniListSearchResult[];
       clientCacheSet(cacheKey, media, 10 * 60 * 1000); // 10 min
       return media;
     } catch {
@@ -374,88 +546,8 @@ export const ApiGateway = {
     }
   },
 
-  // --- Videasy API ---
-  getVideasyUrl: (
-    id: string | number,
-    type: 'movie' | 'tv' | 'anime',
-    season?: number,
-    episode?: number,
-    options?: {
-      color?: string;               // hex without #
-      progress?: number;            // resume position in seconds
-      nextEpisode?: boolean;        // show next episode button
-      episodeSelector?: boolean;    // built-in episode selector
-      autoplayNextEpisode?: boolean;// auto-play next episode
-      overlay?: boolean;            // Netflix-style overlay on pause
-    }
-  ): string => {
-    const base = 'https://player.videasy.net';
-    let url: string;
 
-    if (type === 'anime') {
-      // Anime: /anime/{anilistId}/{episode?}
-      url = episode !== undefined
-        ? `${base}/anime/${id}/${episode}`
-        : `${base}/anime/${id}`;
-    } else if (type === 'tv') {
-      url = `${base}/tv/${id}/${season || 1}/${episode || 1}`;
-    } else {
-      url = `${base}/movie/${id}`;
-    }
 
-    const params: string[] = [];
-    if (options?.color) params.push(`color=${options.color}`);
-    if (options?.progress !== undefined && options.progress > 0) params.push(`progress=${options.progress}`);
-    if (options?.nextEpisode !== undefined) params.push(`nextEpisode=${options.nextEpisode}`);
-    if (options?.episodeSelector !== undefined) params.push(`episodeSelector=${options.episodeSelector}`);
-    if (options?.autoplayNextEpisode !== undefined) params.push(`autoplayNextEpisode=${options.autoplayNextEpisode}`);
-    if (options?.overlay !== undefined) params.push(`overlay=${options.overlay}`);
-    if (params.length > 0) url += `?${params.join('&')}`;
-    return url;
-  },
-
-  // --- VidFast API ---
-  getVidFastUrl: (
-    id: string | number,
-    type: 'movie' | 'tv',
-    season?: number,
-    episode?: number,
-    options?: {
-      theme?: string;         // hex color without #
-      autoPlay?: boolean;
-      title?: boolean;
-      poster?: boolean;
-      startAt?: number;       // seconds
-      server?: string;
-      hideServer?: boolean;
-      fullscreenButton?: boolean;
-      chromecast?: boolean;
-      nextButton?: boolean;   // TV only — show at 90% watched
-      autoNext?: boolean;     // TV only — requires nextButton
-      sub?: string;           // e.g. 'en', 'es', 'fr'
-    }
-  ): string => {
-    const base = 'https://vidfast.pro';
-    let url = type === 'movie'
-      ? `${base}/movie/${id}`
-      : `${base}/tv/${id}/${season || 1}/${episode || 1}`;
-
-    const params: string[] = [];
-    if (options?.autoPlay !== undefined) params.push(`autoPlay=${options.autoPlay}`);
-    if (options?.title !== undefined) params.push(`title=${options.title}`);
-    if (options?.poster !== undefined) params.push(`poster=${options.poster}`);
-    if (options?.startAt !== undefined && options.startAt > 0) params.push(`startAt=${options.startAt}`);
-    if (options?.theme) params.push(`theme=${options.theme}`);
-    if (options?.server) params.push(`server=${encodeURIComponent(options.server)}`);
-    if (options?.hideServer !== undefined) params.push(`hideServer=${options.hideServer}`);
-    if (options?.fullscreenButton !== undefined) params.push(`fullscreenButton=${options.fullscreenButton}`);
-    if (options?.chromecast !== undefined) params.push(`chromecast=${options.chromecast}`);
-    if (options?.nextButton !== undefined) params.push(`nextButton=${options.nextButton}`);
-    if (options?.autoNext !== undefined) params.push(`autoNext=${options.autoNext}`);
-    if (options?.sub) params.push(`sub=${options.sub}`);
-    if (params.length > 0) url += `?${params.join('&')}`;
-    return url;
-  },
 
   // --- TMDB API (with client-side cache + deduplication) ---
   fetchTmdb: async <T>(endpoint: string, params: Record<string, string> = {}): Promise<T> => {
@@ -476,14 +568,16 @@ export const ApiGateway = {
     return await dedupeRequest(cacheKey, async () => {
       let urlString = '';
 
+      const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+
       if (isBrowser) {
-        const url = new URL(`${window.location.origin}/api/tmdb${endpoint}`);
+        const url = new URL(`${window.location.origin}/api/tmdb${normalizedEndpoint}`);
         Object.entries(params).forEach(([key, value]) => url.searchParams.append(key, value));
         urlString = url.toString();
       } else {
         const apiKey = process.env.TMDB_API_KEY;
         if (!apiKey) throw new Error('TMDB_API_KEY is not set');
-        const url = new URL(`${TMDB_BASE_URL}${endpoint}`);
+        const url = new URL(`${TMDB_BASE_URL}${normalizedEndpoint}`);
         url.searchParams.append('api_key', apiKey);
         Object.entries(params).forEach(([key, value]) => url.searchParams.append(key, value));
         urlString = url.toString();
@@ -508,27 +602,181 @@ export const ApiGateway = {
     return ApiGateway.fetchTmdb<Record<string, unknown>>(`/movie/${id}`);
   },
 
-  getMovieCredits: (id: string | number) => {
-    return ApiGateway.fetchTmdb<Record<string, unknown>>(`/movie/${id}/credits`);
+  getMovieCredits: async (id: string | number) => {
+    try {
+      return await ApiGateway.fetchTmdb<Record<string, unknown>>(`/movie/${id}/credits`);
+    } catch {
+      return { cast: [], crew: [] };
+    }
   },
 
-  getMovieRecommendations: (id: string | number) => {
-    return ApiGateway.fetchTmdb<Record<string, unknown>>(`/movie/${id}/recommendations`);
+  getMovieRecommendations: async (id: string | number) => {
+    try {
+      return await ApiGateway.fetchTmdb<{ results?: Record<string, unknown>[] }>(`/movie/${id}/recommendations`);
+    } catch {
+      return { results: [] };
+    }
   },
 
   getTvDetails: (id: string | number) => {
     return ApiGateway.fetchTmdb<Record<string, unknown>>(`/tv/${id}`);
   },
 
-  getTvCredits: (id: string | number) => {
-    return ApiGateway.fetchTmdb<Record<string, unknown>>(`/tv/${id}/credits`);
+  getTvCredits: async (id: string | number) => {
+    try {
+      return await ApiGateway.fetchTmdb<Record<string, unknown>>(`/tv/${id}/credits`);
+    } catch {
+      return { cast: [], crew: [] };
+    }
   },
 
-  getTvRecommendations: (id: string | number) => {
-    return ApiGateway.fetchTmdb<Record<string, unknown>>(`/tv/${id}/recommendations`);
+  getTvRecommendations: async (id: string | number) => {
+    try {
+      return await ApiGateway.fetchTmdb<{ results?: Record<string, unknown>[] }>(`/tv/${id}/recommendations`);
+    } catch {
+      return { results: [] };
+    }
   },
 
-  getTvSeasonDetails: (tvId: string | number, seasonNumber: number) => {
-    return ApiGateway.fetchTmdb<Record<string, unknown>>(`/tv/${tvId}/season/${seasonNumber}`);
-  }
+  getTvSeasonDetails: async (tvId: string | number, seasonNumber: number) => {
+    try {
+      return await ApiGateway.fetchTmdb<Record<string, unknown>>(`/tv/${tvId}/season/${seasonNumber}`);
+    } catch (err: unknown) {
+      if (err instanceof ApiError && err.status === 404) {
+        return { season_number: seasonNumber, episodes: [] };
+      }
+      throw err;
+    }
+  },
+
+  /**
+   * Resilient media details loader:
+   * Queries primary endpoint (movie or tv). If it returns 404, automatically tries the alternate endpoint.
+   * Prevents console errors and broken pages when TV shows are opened as movies or anime movies are opened as TV.
+   */
+  getMediaDetails: async (
+    id: string | number,
+    preferredType: 'movie' | 'tv' | 'anime' = 'movie'
+  ): Promise<{ data: Record<string, unknown>; resolvedType: 'movie' | 'tv' } | null> => {
+    const isTvPreferred = preferredType === 'tv' || preferredType === 'anime';
+    const primaryType = isTvPreferred ? 'tv' : 'movie';
+    const secondaryType = isTvPreferred ? 'movie' : 'tv';
+
+    try {
+      const data = await ApiGateway.fetchTmdb<Record<string, unknown>>(`/${primaryType}/${id}`);
+      return { data, resolvedType: primaryType };
+    } catch (err: unknown) {
+      if (err instanceof ApiError && err.status === 404) {
+        try {
+          const fallbackData = await ApiGateway.fetchTmdb<Record<string, unknown>>(`/${secondaryType}/${id}`);
+          return { data: fallbackData, resolvedType: secondaryType };
+        } catch {
+          return null;
+        }
+      }
+      throw err;
+    }
+  },
+
+  getTvAiringToday: async (page = 1) => {
+    return ApiGateway.fetchTmdb<{
+      results: Array<{
+        id: number;
+        name: string;
+        original_name?: string;
+        overview?: string;
+        poster_path?: string;
+        backdrop_path?: string;
+        vote_average?: number;
+        first_air_date?: string;
+        origin_country?: string[];
+        original_language?: string;
+      }>;
+      page: number;
+      total_pages: number;
+    }>('/tv/airing_today', { page: String(page) });
+  },
+
+  getTvOnTheAir: async (page = 1) => {
+    return ApiGateway.fetchTmdb<{
+      results: Array<{
+        id: number;
+        name: string;
+        original_name?: string;
+        overview?: string;
+        poster_path?: string;
+        backdrop_path?: string;
+        vote_average?: number;
+        first_air_date?: string;
+        origin_country?: string[];
+        original_language?: string;
+      }>;
+      page: number;
+      total_pages: number;
+    }>('/tv/on_the_air', { page: String(page) });
+  },
+
+  getAiringAnime: async (page = 1, perPage = 24) => {
+    const cacheKey = `anilist-airing:${page}:${perPage}`;
+    const cached = clientCacheGet<
+      Array<{
+        id: number;
+        title: { romaji?: string; english?: string };
+        coverImage?: { large?: string };
+        nextAiringEpisode?: { episode: number; airingAt: number } | null;
+        averageScore?: number;
+      }>
+    >(cacheKey);
+    if (cached) return cached;
+
+    const query = `
+      query ($page: Int, $perPage: Int) {
+        Page(page: $page, perPage: $perPage) {
+          media(type: ANIME, status: RELEASING, sort: POPULARITY_DESC) {
+            id
+            title { romaji english }
+            coverImage { large }
+            nextAiringEpisode { episode airingAt }
+            averageScore
+          }
+        }
+      }
+    `;
+
+    try {
+      const endpoint =
+        typeof window !== 'undefined'
+          ? '/api/anilist'
+          : 'https://graphql.anilist.co';
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ query, variables: { page, perPage } }),
+      });
+      if (!res.ok) return [];
+      const json = (await res.json()) as {
+        data?: {
+          Page?: {
+            media?: Array<{
+              id: number;
+              title: { romaji?: string; english?: string };
+              coverImage?: { large?: string };
+              nextAiringEpisode?: { episode: number; airingAt: number } | null;
+              averageScore?: number;
+            }>;
+          };
+        };
+      };
+      const media = json?.data?.Page?.media ?? [];
+      clientCacheSet(cacheKey, media, 10 * 60 * 1000);
+      return media;
+    } catch {
+      return [];
+    }
+  },
 };
+
+export default ApiGateway;

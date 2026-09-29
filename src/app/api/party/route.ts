@@ -5,28 +5,33 @@ import { generateRoomCode } from '@/lib/watch-party/room-code';
 
 export async function POST(req: NextRequest) {
   try {
-    const authHeader = req.headers.get('Authorization');
-    const token = authHeader?.split('Bearer ')[1];
-    if (!token) {
-      return NextResponse.json({ error: 'Missing authorization token' }, { status: 401 });
-    }
-
-    const supabase = createServerSupabaseClient(token);
-    
-    // 1. Ensure user is authenticated (anonymously or otherwise)
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // 2. Parse and validate payload
     const body = await req.json();
     const result = createPartySchema.safeParse(body);
     
     if (!result.success) {
       return NextResponse.json({ error: 'Invalid payload', details: result.error.errors }, { status: 400 });
     }
+
+    let hostUserId: string = (body && typeof body.guestUserId === 'string' && body.guestUserId) 
+      ? body.guestUserId 
+      : crypto.randomUUID();
+
+    const authHeader = req.headers.get('Authorization');
+    const token = authHeader?.split('Bearer ')[1];
+    
+    if (token) {
+      try {
+        const authSupabase = createServerSupabaseClient(token);
+        const { data: { user } } = await authSupabase.auth.getUser(token);
+        if (user?.id) {
+          hostUserId = user.id;
+        }
+      } catch (e) {
+        console.warn('Optional auth verification skipped for guest user:', e);
+      }
+    }
+
+    const supabase = createServerSupabaseClient(token);
 
     const data = result.data;
     
@@ -46,7 +51,7 @@ export async function POST(req: NextRequest) {
         season: data.season ?? null,
         episode: data.episode ?? null,
         provider: data.provider,
-        host_user_id: user.id,
+        host_user_id: hostUserId,
         playing: false,
         current_time: 0,
         status: 'active'
@@ -67,6 +72,6 @@ export async function POST(req: NextRequest) {
     
   } catch (error) {
     console.error('Unexpected error in party creation:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Internal Server Error' }, { status: 500 });
   }
 }

@@ -17,10 +17,19 @@ const YEARS = ['2026', '2025', '2024', '2023', '2022', '2021', '2020', '2019', '
 
 const ITEMS_PER_PAGE = 18;
 
+const DRAMA_TABS = [
+  { id: 'kdrama', label: '🇰🇷 K-Drama (Korean)', lang: 'ko' },
+  { id: 'cdrama', label: '🇨🇳 C-Drama (Chinese)', lang: 'zh' },
+  { id: 'all', label: '🌏 All Asian Dramas', lang: 'ko|zh' },
+] as const;
+
+type DramaTabType = (typeof DRAMA_TABS)[number]['id'];
+
 export default function KDramaPage() {
   const tCat = useTranslations('Categories');
   const tFil = useTranslations('Filters');
 
+  const [dramaTab, setDramaTab] = useState<DramaTabType>('kdrama');
   const [shows, setShows] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -52,10 +61,11 @@ export default function KDramaPage() {
     setSelectedYear('');
     setSortBy('popularity.desc');
     setSearchQuery('');
+    setDramaTab('kdrama');
     setCurrentPage(1);
   };
 
-  const hasActiveFilters = selectedGenres.length > 0 || selectedYear || sortBy !== 'popularity.desc' || searchQuery;
+  const hasActiveFilters = selectedGenres.length > 0 || selectedYear || sortBy !== 'popularity.desc' || searchQuery || dramaTab !== 'kdrama';
 
   const loadKDramas = useCallback(async () => {
     setLoading(true);
@@ -67,19 +77,28 @@ export default function KDramaPage() {
           include_adult: 'false',
         });
         if (data.results) {
-          // Filter shows client-side to ensure Korean Drama flavor
           const filtered = data.results.filter((item) => {
             const rec = item as { original_language?: string; origin_country?: string[] };
-            return rec.original_language === 'ko' || rec.origin_country?.includes('KR');
+            if (dramaTab === 'kdrama') {
+              return rec.original_language === 'ko' || rec.origin_country?.includes('KR');
+            }
+            if (dramaTab === 'cdrama') {
+              return rec.original_language === 'zh' || rec.origin_country?.includes('CN') || rec.origin_country?.includes('TW');
+            }
+            return (
+              ['ko', 'zh', 'ja'].includes(rec.original_language || '') ||
+              rec.origin_country?.some((c) => ['KR', 'CN', 'TW', 'JP'].includes(c))
+            );
           });
           setShows(filtered.slice(0, ITEMS_PER_PAGE));
           setTotalPages(Math.min(data.total_pages || 1, 500));
         }
       } else {
+        const langParam = dramaTab === 'kdrama' ? 'ko' : dramaTab === 'cdrama' ? 'zh' : 'ko|zh';
         const params: Record<string, string> = {
           page: String(currentPage),
           sort_by: sortBy,
-          with_original_language: 'ko',
+          with_original_language: langParam,
           include_adult: 'false'
         };
 
@@ -104,7 +123,7 @@ export default function KDramaPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, selectedGenres, selectedYear, sortBy, searchQuery]);
+  }, [currentPage, selectedGenres, selectedYear, sortBy, searchQuery, dramaTab]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -176,6 +195,26 @@ export default function KDramaPage() {
             {isSearching && (
               <Loader className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-accent-blue" />
             )}
+          </div>
+
+          {/* Asian Drama Category Tabs: K-Drama vs C-Drama vs All Asian */}
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pt-1">
+            {DRAMA_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setDramaTab(tab.id);
+                  setCurrentPage(1);
+                }}
+                className={`px-4 py-2 rounded-2xl text-xs font-bold transition-all duration-200 border cursor-pointer whitespace-nowrap shadow-sm ${
+                  dramaTab === tab.id
+                    ? 'bg-accent-blue text-white border-transparent shadow-accent-blue/25 scale-[1.02]'
+                    : 'bg-white dark:bg-slate-900/80 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-accent-blue/40 hover:text-accent-blue'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
         </div>
 

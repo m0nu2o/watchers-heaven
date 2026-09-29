@@ -8,30 +8,30 @@
 @variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --color-main: #f4f7fb;
-  --color-secondary: #e2e8f0;
-  --color-tertiary: #cbd5e1;
+  --color-main: #07090e;
+  --color-secondary: #0f141f;
+  --color-tertiary: #182234;
 
-  --color-surface-primary: #ffffff;
-  --color-surface-secondary: #f8fafc;
+  --color-surface-primary: #0b0f17;
+  --color-surface-secondary: #121824;
 
-  --color-border-subtle: #e2e8f0;
-  --color-border-medium: #cbd5e1;
+  --color-border-subtle: #1e293b;
+  --color-border-medium: #334155;
 
-  --color-text-primary: #0f172a;
-  --color-text-secondary: #475569;
-  --color-text-muted: #94a3b8;
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
 
-  --color-accent-blue: #007bff;
+  --color-accent-blue: #2563eb;
   --color-accent-purple: #8b5cf6;
   --color-accent-cyan: #06b6d4;
 
   --color-danger: #ef4444;
-  --color-success: #22c55e;
+  --color-success: #10b981;
   --color-warning: #f59e0b;
 
-  --shadow-soft: 0 4px 20px rgba(0,0,0,.05);
-  --shadow-deep: 0 10px 40px rgba(0,0,0,.1);
+  --shadow-soft: 0 4px 20px rgba(0,0,0,.35);
+  --shadow-deep: 0 12px 48px rgba(0,0,0,.6);
 
   --font-sans: "Bricolage Grotesque", "Noto Sans Ethiopic", "Inter", system-ui, sans-serif;
   --font-mono: "Roboto Mono", monospace;
@@ -49,24 +49,78 @@
   /* Radius */
   --radius-sm: 6px;
   --radius-md: 12px;
-  --radius-lg: 24px;
-  --radius-xl: 32px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
   --radius-full: 9999px;
 }
 
-:root.dark {
-  --color-main: #0b0f19;
-  --color-secondary: #1e293b;
-  --color-tertiary: #334155;
-  --color-surface-primary: #0f172a;
-  --color-surface-secondary: #1e293b;
-  --color-border-subtle: #1e293b;
-  --color-border-medium: #475569;
+:root {
+  --color-main: #000000;
+  --color-secondary: #05070c;
+  --color-tertiary: #0c101a;
+  --color-surface-primary: #07090f;
+  --color-surface-secondary: #0e1320;
+  --color-border-subtle: rgba(255, 255, 255, 0.08);
+  --color-border-medium: rgba(255, 255, 255, 0.16);
   --color-text-primary: #f8fafc;
-  --color-text-secondary: #cbd5e1;
+  --color-text-secondary: #94a3b8;
   --color-text-muted: #64748b;
 }
+
+/* Light mode override only if explicitly chosen */
+:root:not(.dark) {
+  --color-main: #f5f5f7;
+  --color-secondary: #e5e5ea;
+  --color-tertiary: #d1d1d6;
+  --color-surface-primary: #ffffff;
+  --color-surface-secondary: #f2f2f7;
+  --color-border-subtle: rgba(0, 0, 0, 0.08);
+  --color-border-medium: rgba(0, 0, 0, 0.15);
+  --color-text-primary: #1d1d1f;
+  --color-text-secondary: #515154;
+  --color-text-muted: #86868b;
+}
+
 /* Base styles */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ── Apple macOS / iOS Minimalist Floating Overlay Scrollbar (No Windows Arrows) ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.28);
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(148, 163, 184, 0.55);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.28) transparent;
+}
+
 body {
   background-color: var(--color-main);
   color: var(--color-text-primary);
@@ -78,22 +132,90 @@ body {
   overflow-x: hidden;
 }
 
-/* Glassmorphism */
+::selection {
+  background-color: rgba(59, 130, 246, 0.35);
+  color: #ffffff;
+}
+
+/* Apple Vision & Cinema Glassmorphism */
 .glass {
-  background: rgba(255,255,255,.7);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid rgba(255,255,255,.8);
+  background: rgba(8, 11, 18, 0.72);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
 }
 
-/* Cutout Surfaces */
-.cutout-card {
-  mask-image: none;
+.apple-glass {
+  background: rgba(10, 13, 22, 0.78);
+  backdrop-filter: blur(32px) saturate(200%);
+  -webkit-backdrop-filter: blur(32px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.1), 0 12px 36px 0 rgba(0, 0, 0, 0.55);
 }
 
-/* Mesh Backgrounds */
+.apple-card {
+  background: rgba(12, 16, 26, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+  transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.apple-card:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-3px);
+  box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.65), 0 0 24px -2px rgba(59, 130, 246, 0.15);
+}
+
+/* ── Light Mode (White Mode) Luxury Apple Overrides ── */
+:root:not(.dark) .glass,
+html:not(.dark) .glass {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.95), 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
+:root:not(.dark) .apple-glass,
+html:not(.dark) .apple-glass {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(32px) saturate(190%);
+  -webkit-backdrop-filter: blur(32px) saturate(190%);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.95), 0 10px 30px rgba(0, 0, 0, 0.06);
+}
+
+:root:not(.dark) .apple-card,
+html:not(.dark) .apple-card {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+:root:not(.dark) .apple-card:hover,
+html:not(.dark) .apple-card:hover {
+  border-color: rgba(0, 0, 0, 0.18);
+  transform: translateY(-3px);
+  box-shadow: 0 14px 32px -4px rgba(0, 0, 0, 0.12), 0 0 16px -2px rgba(59, 130, 246, 0.15);
+}
+
+:root:not(.dark) .mesh-bg {
+  background-color: var(--color-main);
+  background-image: 
+    radial-gradient(at 10% 5%, rgba(37, 99, 235, 0.03) 0px, transparent 45%),
+    radial-gradient(at 90% 95%, rgba(99, 102, 241, 0.03) 0px, transparent 50%);
+}
+
+/* Cinema Dark Background */
 .mesh-bg {
-  background: var(--color-main);
+  background-color: var(--color-main);
+  background-image: 
+    radial-gradient(at 10% 5%, rgba(37, 99, 235, 0.05) 0px, transparent 45%),
+    radial-gradient(at 90% 95%, rgba(99, 102, 241, 0.04) 0px, transparent 50%),
+    radial-gradient(at 50% 50%, rgba(6, 182, 212, 0.02) 0px, transparent 60%);
 }
 
 /* Edge Fade Carousels */
@@ -101,19 +223,77 @@ body {
   mask-image: linear-gradient(
     to right,
     transparent,
-    black 6%,
-    black 94%,
+    black 4%,
+    black 96%,
     transparent
   );
 }
 
-/* Scroll Snap */
-.carousel {
+/* Scroll Snap & Hidden Scrollbars for Horizontal Rails & Chips */
+.carousel,
+.scrollbar-none,
+.no-scrollbar,
+.scrollbar-hide {
   scroll-snap-type: x mandatory;
   overflow-x: auto;
-  scrollbar-width: none;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  -webkit-overflow-scrolling: touch;
 }
-.carousel::-webkit-scrollbar {
+.carousel::-webkit-scrollbar,
+.scrollbar-none::-webkit-scrollbar,
+.no-scrollbar::-webkit-scrollbar,
+.scrollbar-hide::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Designed Custom Scrollbar for Long Containers (Episode Lists, Modals, Dropdowns) */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.25) transparent;
+  -webkit-overflow-scrolling: touch;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.22);
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(148, 163, 184, 0.45);
+}
+
+/* Horizontal Rail - Smooth trackpad & touch scroll without ugly bar */
+.horizontal-rail {
+  scroll-snap-type: x proximity;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+.horizontal-rail.is-dragging {
+  scroll-snap-type: none !important;
+  scroll-behavior: auto !important;
+  cursor: grabbing !important;
+  user-select: none !important;
+}
+
+.horizontal-rail::-webkit-scrollbar {
   display: none;
 }
 
@@ -123,45 +303,59 @@ body {
 
 /* Motion System Defaults */
 .smooth-transition {
-  transition: transform .35s cubic-bezier(.2,.8,.2,1), opacity .25s ease, filter .3s ease, background-color .25s ease;
+  transition: transform .25s cubic-bezier(.2,.8,.2,1), opacity .2s ease, filter .2s ease, background-color .2s ease;
 }
 
-/* Hero Section Cutout Tab styling */
-.hero-tab {
-  position: relative;
-  /* Top corners rounded */
-  border-top-left-radius: 24px;
-  border-top-right-radius: 24px;
+@keyframes lumina-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-/* Inverted rounded corners matching background */
-.hero-tab::before,
-.hero-tab::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  width: 24px;
-  height: 24px;
-  background: transparent;
-  pointer-events: none;
+.animate-lumina-fade-in {
+  animation: lumina-fade-in .45s cubic-bezier(.2,.8,.2,1) both;
 }
 
-.hero-tab::before {
-  left: -24px;
-  border-bottom-right-radius: 24px;
-  box-shadow: 12px 0 0 0 var(--color-surface-primary);
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+  }
 }
 
-.hero-tab::after {
-  right: -24px;
-  border-bottom-left-radius: 24px;
-  box-shadow: -12px 0 0 0 var(--color-surface-primary);
+/* Fullscreen Player Styles */
+:fullscreen,
+:-webkit-full-screen,
+:-moz-full-screen,
+:-ms-fullscreen {
+  width: 100vw !important;
+  height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background-color: #000000 !important;
+  overflow: hidden !important;
 }
 
-:root.dark .hero-tab::before {
-  box-shadow: 12px 0 0 0 var(--color-surface-secondary);
-}
-
-:root.dark .hero-tab::after {
-  box-shadow: -12px 0 0 0 var(--color-surface-secondary);
+:fullscreen iframe,
+:-webkit-full-screen iframe,
+:-moz-full-screen iframe,
+:-ms-fullscreen iframe {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  border: none !important;
 }

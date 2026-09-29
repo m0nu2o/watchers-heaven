@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Settings, Check, Sun, Moon, Palette, Type, Globe } from 'lucide-react';
+import { Settings, Check, Sun, Moon, Palette, Type, Globe, ArrowUpRight } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
@@ -213,6 +213,58 @@ export default function SettingsPage() {
                   {currentLocale === lang.code && <Check className="w-4 h-4" />}
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Card: Creator & Software Architecture */}
+          <div className="relative overflow-hidden rounded-3xl p-6 sm:p-7 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-white/10 shadow-lg space-y-4 md:col-span-2 lg:col-span-3">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/[0.08] pb-3">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse" />
+                <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600 dark:text-slate-300">
+                  About Lumina Cinema
+                </span>
+              </div>
+              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                v2.4 Apple Core
+              </span>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 pt-1">
+              <div className="space-y-1">
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <span>Engineered & Designed by</span>
+                  <span className="bg-gradient-to-r from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] bg-clip-text text-transparent font-black">
+                    @itxz_baka
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xl leading-relaxed">
+                  High-performance media architecture featuring verified multi-language audio playback, direct CDN HLS delivery, and airtight ad-shielding.
+                </p>
+              </div>
+
+              <a
+                href="https://instagram.com/itxz_baka"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group/btn relative inline-flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-white/[0.06] hover:bg-white dark:hover:bg-white/[0.12] border border-black/10 dark:border-white/15 text-xs font-bold transition-all hover:scale-[1.03] active:scale-[0.97] hover:shadow-[0_0_25px_rgba(238,42,123,0.3)] shrink-0 cursor-pointer"
+                title="Follow creator @itxz_baka on Instagram"
+              >
+                <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] flex items-center justify-center text-white shadow-sm group-hover/btn:scale-105 transition-transform">
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                    <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+                  </svg>
+                </div>
+                <div className="flex flex-col text-left">
+                  <span className="text-[9px] uppercase tracking-wider text-slate-400 leading-none">Instagram</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 group-hover/btn:text-pink-500 dark:group-hover/btn:text-pink-400 transition-colors mt-0.5">
+                    @itxz_baka
+                  </span>
+                </div>
+                <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 group-hover/btn:text-pink-500 group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform ml-0.5" />
+              </a>
             </div>
           </div>
 

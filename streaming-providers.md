@@ -9,147 +9,34 @@
 
 | Rank | 🎬 Movies | 📺 TV Shows | 🎌 Anime |
 |------|-----------|-------------|---------|
-| 1 ⭐ | Vyla | Vyla | Videasy |
-| 2 ⭐ | VidFast | VidRock | VidRock |
-| 3 | VidRock | VidFast | VidFast |
-| 4 | Videasy | Videasy | VidLink |
-| 5 | VidLink | VidLink | Vidsrc |
-| 6 | Vidsrc | Vidsrc | Vidsrc.to |
-| 7 | Vidsrc.to | Vidsrc.to | VidKing |
-| 8 | VidKing | VidKing | ScreenScape |
-| 9 | ScreenScape | ScreenScape | TouStream |
-| 10 | TouStream | TouStream | RiveStream |
-| 11 | RiveStream | RiveStream | — |
-| 12 | VidSync (last) | VidSync (last) | — |
+| 1 ⭐ | VidFast | VidRock | Videasy |
+| 2 ⭐ | VidRock | VidFast | VidRock |
+| 3 | Videasy | Videasy | VidFast |
+| 4 | VidLink | VidLink | VidLink |
+| 5 | Vidsrc | Vidsrc | Vidsrc |
+| 6 | Vidsrc.to | Vidsrc.to | Vidsrc.to |
+| 7 | VidKing | VidKing | VidKing |
+| 8 | ScreenScape | ScreenScape | ScreenScape |
+| 9 | TouStream | TouStream | TouStream |
+| 10 | RiveStream | RiveStream | RiveStream |
+| 11 | VidSync (last) | VidSync (last) | — |
 
-### Full Comparison: Vyla vs iframe providers
+### Comparison: Leading Providers
 
-| Feature | Vyla | VidSync | VidFast | VidRock | Videasy |
-|---------|:----:|:-------:|:-------:|:-------:|:-------:|
-| **Stream type** | Real HLS/MP4 | iframe | iframe | iframe | iframe |
-| **Multi-provider fanout** | ✅ parallel SSE | ❌ | ❌ | ❌ | ❌ |
-| **Live stream verification** | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Built-in HLS proxy** | ✅ CORS-safe | ❌ | ❌ | ❌ | ❌ |
-| **Subtitles (VTT/SRT)** | ✅ multi-lang | ❌ | ✅ `sub=` | ✅ `lang=` | ❌ |
-| **Resume via param** | ✅ SSE startAt | ✅ `startTime` | ✅ `startAt` | ❌ | ✅ `progress` |
-| **Server picker** | ✅ SSE sources | ✅ `defaultServer` | ❌ | ❌ | ❌ |
-| **Rich event payload** | ✅ native events | ✅ title+poster | ✅ | ✅ | partial |
-| **Download endpoint** | ✅ `/downloads` | ❌ | ❌ | ✅ | ❌ |
-| **Health monitoring** | ✅ `/health` | ❌ | ❌ | ❌ | ❌ |
-| **No auth required** | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Anime support** | ❌ | ❌ | ❌ | ❌ | ✅ AniList |
-| **IMDB IDs** | ❌ TMDB only | ❌ TMDB only | ✅ | ✅ | ✅ TMDB |
-
-**Why Vyla leads:** It's the only provider that gives you **actual stream URLs** (not iframes) with live verification — dead sources are silently dropped before they reach your player. It fans out to 14+ backend providers simultaneously and streams results via SSE so your player starts on the first working source without waiting. It also includes subtitles, download links, and a health endpoint.
-
-**Why Videasy stays ⭐ for anime:** Vyla doesn't support anime (no AniList integration). Videasy remains the only provider with native AniList ID support and sub/dub auto-selection.
+| Feature | VidFast | VidRock | Videasy | VidSync |
+|---------|:-------:|:-------:|:-------:|:-------:|
+| **Stream type** | iframe | iframe | iframe | iframe |
+| **Subtitles (VTT/SRT)** | ✅ `sub=` | ✅ `lang=` | ❌ | ❌ |
+| **Resume via param** | ✅ `startAt` | ❌ | ✅ `progress` | ✅ `startTime` |
+| **Server picker** | ❌ | ❌ | ❌ | ✅ `defaultServer` |
+| **Rich event payload** | ✅ | ✅ | partial | ✅ title+poster |
+| **Download endpoint** | ❌ | ✅ | ❌ | ❌ |
+| **No auth required** | ✅ | ✅ | ✅ | ✅ |
+| **Anime support** | ❌ | ❌ | ✅ AniList | ❌ |
+| **IMDB IDs** | ✅ | ✅ | ✅ TMDB | ❌ TMDB only |
 
 ---
 
-## Vyla v2 ⭐ Movies & TV Shows
-
-**Base URL:** `https://missourimonster-vyla-v2.hf.space`  
-**Type:** Real HLS/MP4 streams via SSE — NOT an iframe  
-**Auth:** Session Token required · CORS: `*`
-
-Unlike every other provider, Vyla returns **actual verified stream URLs** you play in a native `<video>` element. It fans out to 14+ backend providers in parallel, drops dead sources, and streams results back one at a time via Server-Sent Events.
-
-### Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/auth` | POST | Returns a session token (valid for 30 min). Requires API key header. |
-| `/movie?id=:tmdbId` | GET (SSE) | Stream sources + meta for a movie (standard/partner key only) |
-| `/tv?id=:tmdbId&season=:season&episode=:episode` | GET (SSE) | Stream sources + meta for a TV episode (standard/partner key only) |
-| `/api/subtitles/movie/:tmdbId` | GET | Subtitle tracks only |
-| `/api/downloads/movie/:tmdbId` | GET | Download links for a movie |
-| `/api/downloads/tv/:tmdbId/:season/:episode` | GET | Download links for a TV episode |
-| `/api/health` | GET | Per-provider health check with latency (public key allowed) |
-
-### SSE Event Flow
-
-```
-EventSource open (Requires Bearer token)
-  → meta    (immediate) — TMDB info + subtitles
-  → source  (one per working provider)
-  → source
-  → source  ← player auto-starts on first source
-  → ...
-  → done    — total working source count
-```
-
-### SSE Event Shapes
-
-```ts
-// meta — fires immediately before any provider resolves
-{ type: "meta",
-  meta: { id, title, release_date, runtime, vote_average },
-  subtitles: [{ label, file, type: "vtt"|"srt", source }] }
-
-// source — one per working provider
-{ type: "source",
-  source: { source: "provider-key", label: "Provider Name",
-            url: "https://missourimonster-vyla-v2.hf.space/api?url=...&pp=1" } }
-
-// done — stream complete
-{ type: "done", total: 14 }
-```
-
-### Source URL
-
-The `url` in each `source` event is a fully-proxied CORS-safe stream URL:
-- **HLS** (`.m3u8`): pass directly to `hls.loadSource()` — segment and key URIs are pre-rewritten
-- **MP4**: set as `video.src` directly
-
-### Gateway component (`VylaClient` + `VylaPlayer`)
-
-The `VylaClient` singleton handles all SSE parsing, token deduplication, circuit breaking, and time-weighted EMA fallback ranking. The player only handles UI state.
-
-```ts
-<VylaPlayer
-  id={tmdbId}
-  type="movie" | "tv"
-  season={1}
-  episode={1}
-  accentColor="007bff"
-  startAt={resumeSeconds}
-  onProgress={(currentTime, duration) => saveProgress(currentTime, duration)}
-/>
-```
-
-### Download endpoint
-
-```
-GET https://missourimonster-vyla-v2.hf.space/api/downloads/movie/550
-→ {
-    "downloads": [
-      { "url": "https://...", "quality": "720p", "size": "996 MB", "type": "mkv", "active": true },
-      { "url": "https://...", "quality": "1080p", "size": "3.73 GB", "type": "mkv", "active": true }
-    ]
-  }
-
-GET https://missourimonster-vyla-v2.hf.space/api/downloads/tv/1396/1/1
-→ { "downloads": [...] }
-```
-
-Fields: `url` (direct link), `quality` (`720p`, `1080p`, `2160p`), `size` (human-readable), `type` (`mkv`, `mp4`), `active` (boolean — filter to `true` only).
-
-### Caching
-
-- 5-minute in-memory TTL per source
-- Cache key: `source_key + tmdb_id + season + episode`
-- Cache resets on server restart (hosted on Hugging Face Spaces)
-
-### Examples
-
-```
-https://missourimonster-vyla-v2.hf.space/movie?id=550
-https://missourimonster-vyla-v2.hf.space/tv?id=1399&season=1&episode=1
-https://missourimonster-vyla-v2.hf.space/api/downloads/movie/550
-https://missourimonster-vyla-v2.hf.space/api/health
-```
-
----
 
 ## VidSync ⭐ Movies
 

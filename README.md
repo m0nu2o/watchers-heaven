@@ -1,309 +1,226 @@
 <div align="center">
 
-<img src="https://github.com/user-attachments/assets/30223fe4-1e65-4e2a-ad4d-760c4715fb66" alt="Watchers Heaven Banner" width="100%" />
+# 🌟 Lumina
+### Next-Generation Cinema, TV & Anime Streaming Platform
 
-# 🎬 Watchers Heaven
-
-**A beautifully crafted, cinema-grade streaming discovery app.**  
-Browse movies, TV shows, anime, and live channels — all in one place.
+**A high-performance, ad-shielded streaming and discovery platform.**  
+Browse movies, TV series, anime, Asian dramas (K-Drama & C-Drama), and live TV — with verified streams and real-time audio detection.
 
 [![Next.js](https://img.shields.io/badge/Next.js_16-black?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React_19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS_4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
 
-[![Deno Lint](https://github.com/OgBek/watchers-heaven/actions/workflows/deno.yml/badge.svg)](https://github.com/OgBek/watchers-heaven/actions/workflows/deno.yml)
-
-[Live Demo](https://watchers-heaven.vercel.app) · [Report Bug](https://github.com/OgBek/watchers-heaven/issues) · [Request Feature](https://github.com/OgBek/watchers-heaven/issues)
+[Live Production Demo](https://lumina.vercel.app) · [Report Bug](https://github.com/OgBek/watchers-heaven/issues) · [Request Feature](https://github.com/OgBek/watchers-heaven/issues)
 
 </div>
 
 ---
 
-## 📸 Screenshots
-
-<div align="center">
-<table>
-  <tr>
-    <td><img src="https://github.com/user-attachments/assets/2cb9aa51-5de6-4081-9fb8-f6f918b119d1" alt="Home" /></td>
-    <td><img src="https://github.com/user-attachments/assets/92bbfcde-d0d8-4886-b026-eb1efad2b783" alt="Movies" /></td>
-  </tr>
-  <tr>
-    <td><img src="https://github.com/user-attachments/assets/68eeee03-fc62-4b53-bb87-9dcc5a142545" alt="Detail" /></td>
-    <td><img src="https://github.com/user-attachments/assets/2fb8e2ed-1d67-4564-9227-dda948109ed5" alt="Watch" /></td>
-  </tr>
-  <tr>
-    <td><img src="https://github.com/user-attachments/assets/2e5dbe7f-a438-4beb-8cd0-7e5d4e7dc478" alt="Collections" /></td>
-    <td><img src="https://github.com/user-attachments/assets/c5d19249-a244-400b-ad7f-2b024ecb331b" alt="Live TV" /></td>
-  </tr>
-</table>
-</div>
+## 📖 Table of Contents
+- [Overview](#-overview)
+- [Key Features](#-key-features)
+- [Streaming Architecture & Reliability](#-streaming-architecture--reliability)
+- [Lumina AI Copilot](#-lumina-ai-copilot)
+- [Live TV Engine](#-live-tv-engine)
+- [Tech Stack](#-tech-stack)
+- [Project Structure](#-project-structure)
+- [Getting Started](#-getting-started)
+- [Environment Variables](#-environment-variables)
+- [Quality Assurance & Playwright Testing](#-quality-assurance--playwright-testing)
+- [Vercel Production Deployment](#-vercel-production-deployment)
+- [Author & Credits](#-author--credits)
 
 ---
 
-## ✨ Features
+## 🚀 Overview
 
-<details>
-<summary><b>🎥 Content & Discovery</b></summary>
+**Lumina** is an advanced open-web streaming platform engineered for seamless playback and verified entertainment discovery. Built on top of Next.js 16 (Turbopack), React 19, and Tailwind CSS 4, Lumina solves common web video hurdles with:
 
-- Trending movies, TV shows, and anime powered by the TMDB API
-- **100+ curated franchise collections** organized by category, with instant cached loading and 24h sessionStorage persistence
-- Spider-Man collection split into 4 franchise groups: Tobey Maguire, Andrew Garfield, Tom Holland (MCU), Spider-Verse
-- Anime browsing with Japanese-language filtering via TMDB Discover
-- K-Drama section with dedicated genre filtering
-- Robust search across movies, shows, and collections
-- Upcoming release schedule and stats tracking
+1. **Zero Artificial Overlays**: Direct player initialization with no blocking loading animations.
+2. **Strict Ban on Iframe Sandboxing**: Players retain full access to fullscreen, hardware acceleration, and quality selectors without sandbox restrictions.
+3. **Genuine Audio Detection**: Server-verified Sub and Dub availability (Japanese, English, Hindi) with non-available languages clearly disabled (`N/A`).
+4. **Resilient Provider Fallback**: Automatic failover through prioritized streaming tiers.
+5. **Real-time Live TV**: 100% verified, direct 200 OK HLS broadcast feeds with zero black screens.
 
-</details>
+---
 
-<details>
-<summary><b>📺 Watch Player</b></summary>
+## ✨ Key Features
 
-- **12 streaming providers** with smart per-content-type ordering:
-  - 🎬 Movies → Vyla ⭐, VidFast ⭐, VidRock, Videasy, VidLink, Vidsrc, Vidsrc.to, VidKing, ScreenScape, TouStream, RiveStream, VidSync
-  - 📺 TV Shows → Vyla ⭐, VidRock ⭐, VidFast, Videasy, VidLink, Vidsrc, Vidsrc.to, VidKing, ScreenScape, TouStream, RiveStream, VidSync
-  - 🎌 Anime → Videasy ⭐, VidRock, VidFast, VidLink, Vidsrc, Vidsrc.to, VidKing, ScreenScape, TouStream, RiveStream, VidSync
-- **Vyla v2** — real HLS/MP4 streams via SSE with live verification, session-token auth, multi-provider fanout, built-in CORS proxy, and multi-language subtitles
-- **VylaClient & VylaPlayer** — dedicated service layer for network logistics (circuit breakers, SSE parsing) and a custom native `<video>` player for UI state
-- **AniList ID resolution** — anime content automatically resolves TMDB titles → AniList IDs so Videasy gets the correct anime embed
-- **Provider-specific resume** — each server tracks its own progress independently in `localStorage`
-- **Next episode auto-advance** with a glassmorphic countdown popup and 15-second cancel window
-- **Resume watching prompt** with circular progress ring showing exact position
-- Accent color theming synced to the player across all providers
-- Download button on movie/TV detail pages and watch page powered by **Vyla `/downloads` API**
+### 🎬 Cinema & Series Playback
+- **Multi-Server Streaming**: Seamless routing between VidLink, VidSrc Me, EmbedSU, Videasy, and VidSrc CC.
+- **Auto-Failover**: If a stream stalls or returns an error, Lumina automatically rotates to the next verified provider.
+- **Episode Navigator**: Complete season & episode navigation with real TMDB thumbnails, story arcs, and next-episode countdown.
+- **Seek & Timestamp Controls**: `-10s` / `+10s` instant seek controls and anime opening skip button.
 
-</details>
+### 🎌 Anime & Verified Sub/Dub
+- **Real Audio Detection**: Queries both TMDB and AniList to accurately determine whether English or Hindi audio dubs exist for each episode.
+- **Safe UI Locking**: Unreleased dubs are rendered with a strikethrough and disabled, preventing broken player requests.
 
-<details>
-<summary><b>📡 Live TV</b></summary>
+### 🌏 Asian Drama Collection
+- **K-Drama (`ko`)**: Curated Korean dramas and variety shows.
+- **C-Drama (`zh`)**: Dedicated Chinese dramas (e.g. *Against the Current*, *Hello Saturday*, *Who's the Murderer*).
+- **All Asian Filter**: Unified discovery across East Asian television.
 
-- Stream 200+ live channels via TouStream integration
-- Two-phase progressive loading — first 30 channels appear instantly, the rest load silently
-- Channel search and filtering
+### 🤖 Lumina AI Copilot
+- **Natural Language Discovery**: Ask for specific content or preferences (e.g. *"Find Naruto with English audio"*, *"Popular Chinese Dramas"*).
+- **Grounded TMDB Recommendations**: Zero hallucinations with live rating, poster, and audio badges.
+- **Interactive Glassmorphic Modal**: Accessible across desktop dock, mobile navbar, and search header.
 
-</details>
+### 📡 100% Verified Live TV
+- Real HLS feeds streaming via `Hls.js`:
+  - **News**: Aaj Tak HD, ABP News HD, Republic TV, WION HD, Zee News, Euronews English, RT News.
+  - **Sports**: DD Sports Live, Red Bull TV Sports.
+  - **Kids & Classic**: Cartoon Classics.
+  - **Entertainment & Science**: DD National HD, NASA TV Science.
+- Autoplay compliance with one-click **"🔊 Click to Unmute"** toggle.
 
-<details>
-<summary><b>🌐 Internationalization</b></summary>
+### 🛡️ Ultra Ad Shield
+- Anti-popup wrapper intercepting unauthorized `window.open` requests without using `sandbox`.
+- Pop-under defense preventing background window blur without interrupting normal user navigation.
 
-Full i18n support via `next-intl` across 5 languages:
+---
 
-| Language | File |
-|----------|------|
-| English | `messages/en.json` |
-| Amharic | `messages/am.json` |
-| Oromo | `messages/om.json` |
-| Tigrinya | `messages/ti.json` |
-| Somali | `messages/so.json` |
+## 🏛️ Streaming Architecture & Reliability
 
-</details>
-
-<details>
-<summary><b>⚡ Performance & Resilience</b></summary>
-
-- **Server-side TMDB proxy** — API keys never exposed to the client, with in-memory LRU caching (TTL-based)
-- **AniList GraphQL proxy** — `/api/anilist` caches responses for 10 min, respects 90 req/min rate limit
-- **Circuit breaker** — CLOSED → OPEN → HALF_OPEN state machine; HTTP errors don't trip it, only connectivity failures
-- **Smart retries** — exponential backoff + jitter; skips 404 and 5xx immediately, respects `Retry-After` on 429s
-- **Request deduplication** — in-flight requests are merged so rapid navigation never fires duplicate API calls
-- **Collections cache** — all 76+ collection metadata loaded once, stored in `sessionStorage` for 24h
-
-</details>
+```
+User Playback Request
+       │
+       ▼
+Provider Registry (Priority Tier)
+  1. VidLink HD (Primary adaptive HLS)
+  2. VidSrc Me (Universal cinema)
+  3. EmbedSU Cinema (Multi-server backup)
+  4. Videasy Pro (Ultra-responsive)
+  5. VidSrc CC (General fallback)
+  6. NHD Cinema / Anime (Verified Hindi Dubs)
+  7. Direct HLS (AniList Anime)
+       │
+       ▼
+Source Pre-flight Validator
+  ├── DNS / Host Reachability Check
+  ├── Dead-domain Blocklist (e.g. autoembed.cc, rivestream.ru)
+  └── Circuit Breaker (healthy / degraded / failed)
+       │
+       ├─► [Healthy]  ──► Direct Cinema Player (Immediate Video)
+       └─► [Failed]   ──► Automatic Advance to Next Priority Provider
+```
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Framework | [Next.js 16](https://nextjs.org/) (App Router, Turbopack) |
-| Language | [TypeScript 5](https://www.typescriptlang.org/) |
-| UI | [React 19](https://react.dev/) |
-| Styling | [Tailwind CSS 4](https://tailwindcss.com/) |
-| Icons | [Lucide React](https://lucide.dev/) |
-| i18n | [next-intl](https://next-intl-docs.vercel.app/) |
-| Movie Data | [TMDB API](https://developer.themoviedb.org/docs) |
-| Anime Data | [AniList GraphQL API](https://docs.anilist.co/) |
-| Live TV | [TouStream](https://toustream.xyz) |
-| Streaming | [Vyla v2 API](https://vyla.mintlify.app/introduction) (HLS/SSE) |
-
----
-
-## 🏗️ Architecture
-
-### API Request Flow
-
-```
-Client Component
-  → ApiGateway (gateway.ts)
-    → dedupeRequest          ← prevents duplicate in-flight calls
-      → withRetries           ← exponential backoff, skips 404/5xx
-        → CircuitBreaker      ← opens after N failures, half-opens on recovery
-          → fetchClient       ← timeout + Retry-After parsing
-            → /api/tmdb/*     ← Next.js server proxy (cached, rate-limited)
-              → TMDB API
-```
-
-### Anime ID Resolution Flow
-
-```
-Anime PosterCard clicked
-  → /tv/{tmdbId} detail page
-    → Watch page (type=anime in URL)
-      → ApiGateway.fetchTmdb("/tv/{id}") → get title
-        → ApiGateway.getAniListId(title)
-          → POST /api/anilist (server proxy, cached 10min)
-            → AniList GraphQL API
-              → aniListId resolved
-                → Videasy embed with correct /anime/{aniListId}/{episode}
-```
-
-### Server Proxy Routes
-
-| Route | Purpose |
-|-------|---------|
-| `GET /api/tmdb/[...path]` | TMDB API proxy with caching, rate limiting, size guards |
-| `POST /api/tmdb` (channels) | TouStream channels proxy (trims 12MB response to slug+name) |
-| `POST /api/anilist` | AniList GraphQL proxy with 10-min response cache |
+- **Framework**: Next.js 16.3.5 (Turbopack, App Router)
+- **Frontend Core**: React 19.2.4 & React DOM 19
+- **Languages**: TypeScript 5 (Strict Mode)
+- **Styling**: Tailwind CSS 4 & Custom Glassmorphic Theme Engine
+- **Streaming & Video**: Hls.js 1.5.20 (MSE Native Player)
+- **State Management**: Zustand 4.5.2 & TanStack Query 5
+- **Internationalization**: Next-Intl (5 Locales: `en`, `am`, `om`, `ti`, `so`)
+- **Backend / Realtime**: Supabase SSR & Database (Watch Parties)
+- **Metadata**: TMDB REST API v3 & AniList GraphQL API
 
 ---
 
 ## 📂 Project Structure
 
-```
-src/
-├── app/
-│   ├── [locale]/
-│   │   ├── anime/            # Anime browse (TMDB discover, ja language)
-│   │   ├── collections/      # 100+ franchise collections (Spider-Man grouped)
-│   │   ├── k-drama/          # K-Drama section
-│   │   ├── live/             # Live TV with category filters + progressive loading
-│   │   ├── movie/[id]/       # Movie detail (cast → person page, download)
-│   │   ├── movies/           # Movies browse + filters
-│   │   ├── person/[id]/      # Actor filmography (movies, TV, anime, K-Drama tabs)
-│   │   ├── tv/[id]/          # TV show detail + episode browser
-│   │   ├── watch/[id]/       # Multi-provider watch player (VylaClient + 11 iframes)
-│   │   ├── watchlist/        # localStorage-backed bookmarks
-│   │   ├── search/           # Global search
-│   │   ├── stats/            # Viewing statistics
-│   │   └── page.tsx          # Homepage (hero + carousel rows)
-│   ├── api/
-│   │   ├── tmdb/[...path]/   # TMDB proxy (GET + POST for channels)
-│   │   ├── anilist/          # AniList GraphQL proxy (POST)
-│   │   └── download/         # Vyla download proxy (GET, streams file)
-│   └── globals.css
-├── components/
-│   ├── cards/                # PosterCard, FeatureCard, CarouselRow
-│   ├── effects/              # CinemaModeProvider, ThemeScript
-│   ├── hero/                 # HeroFeature
-│   └── layout/               # FloatingNav, Footer
-├── lib/
-│   ├── api/
-│   │   ├── gateway.ts        # All provider URL builders + TMDB/AniList methods
-│   │   ├── client.ts         # fetch wrapper with timeout + error handling
-│   │   ├── retries.ts        # withRetries (backoff, 404/5xx skip, 429 respect)
-│   │   └── circuit-breaker.ts# CircuitBreaker state machine
-│   ├── cache.ts              # MemoryCache (LRU + TTL)
-│   ├── rate-limiter.ts       # Sliding window rate limiter
-│   └── watchlist.ts          # localStorage watchlist helpers
-├── i18n/                     # next-intl routing + request config
-├── messages/                 # en, am, om, ti, so JSON translation files
-└── middleware.ts             # Locale routing middleware
+```text
+watchers-heaven/
+├── src/
+│   ├── app/
+│   │   ├── [locale]/             # Localized routes (movies, tv, anime, live, k-drama, watch)
+│   │   │   ├── watch/[id]/       # Master Cinema Video Player
+│   │   │   ├── live/             # 24/7 Verified Live TV Channels
+│   │   │   ├── k-drama/          # Asian Drama Hub (K-Drama & C-Drama)
+│   │   │   └── search/           # Token-based multi-search
+│   │   ├── api/
+│   │   │   ├── ai-search/        # Lumina AI Copilot Natural Language API
+│   │   │   ├── tmdb/             # Proxied TMDB Metadata Gateway
+│   │   │   └── watch/[id]/       # Real-time Language & Source Discovery
+│   │   ├── robots.ts             # Search Engine Directives
+│   │   └── sitemap.ts            # Dynamic Multi-locale XML Sitemap
+│   ├── components/
+│   │   ├── brand/                # Lumina Logo & Vectors
+│   │   ├── chat/                 # AiChatModal Component
+│   │   ├── layout/               # Desktop Dock, Mobile Header & Footer
+│   │   └── player/               # Video Player & EpisodeNavigator
+│   └── lib/
+│       ├── api/                  # TMDB & AniList API Gateway
+│       ├── audio/                # Audio Availability Verification
+│       └── streaming/            # Provider Registry, Validator & Engine
 ```
 
 ---
 
-## 🚀 Getting Started
+## 💻 Getting Started
 
 ### Prerequisites
-
-- **Node.js** v18.17+
-- **npm** / **yarn** / **pnpm**
-- A free [TMDB API Key](https://www.themoviedb.org/documentation/api)
+- Node.js 20+ or 22+
+- npm or pnpm
 
 ### Installation
-
 ```bash
-# 1. Clone the repo
+# Clone the repository
 git clone https://github.com/OgBek/watchers-heaven.git
 cd watchers-heaven
 
-# 2. Install dependencies
+# Install dependencies
 npm install
 
-# 3. Set environment variables
-cp .env.local.example .env.local
-# → Add your TMDB_API_KEY to .env.local
-
-# 4. Start the dev server
+# Start development server
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+The application will be live at `http://localhost:3002`.
 
-### Environment Variables
+---
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `TMDB_API_KEY` | ✅ | Your TMDB v3 API key from [themoviedb.org](https://www.themoviedb.org/settings/api) |
-| `VYLA_API_KEY` | ✅  | Your Vyla API key for standard/partner tier streaming (optional, falls back to public tier) |
-| `NEXT_PUBLIC_SUPABASE_URL` | ✅ |Your supabse project url  for watchparty integration |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | ✅ |Your supabse API key for watchparty integration |
-> AniList does not require an API key — it's a public GraphQL API with a 90 req/min rate limit.
+## 🔑 Environment Variables
 
-### Available Scripts
+Create a `.env.local` file in the project root:
 
-```bash
-npm run dev      # Start development server (Turbopack)
-npm run build    # Production build + TypeScript check
-npm run start    # Serve production build
-npm run lint     # ESLint
+```env
+# TMDB API Key (Required for metadata and poster artwork)
+TMDB_API_KEY=your_tmdb_api_key_here
+
+# Supabase (Required for Watch Parties)
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
 ```
 
 ---
 
-## 📖 API Documentation
+## 🧪 Quality Assurance & Playwright Testing
 
-Full streaming provider reference: [`streaming-providers.md`](streaming-providers.md)
+Lumina comes equipped with an end-to-end test suite testing playback, search, live streams, and SEO:
 
-Covers URL structures, parameters, event formats, and gateway methods for all 10 providers:
+```bash
+# Type check the entire codebase
+npm run typecheck
 
-| Provider | Best For | Gateway Method |
-|----------|----------|---------------|
-| Vyla v2 ⭐ | Movies + TV (real HLS) | `VylaClient` + `VylaPlayer` |
-| VidFast ⭐ | Movies | `getVidFastUrl()` |
-| VidRock ⭐ | TV Shows | `getVidRockUrl()` |
-| Videasy ⭐ | Anime | `getVideasyUrl()` |
-| VidLink | General | `getVidLinkUrl()` |
-| Vidsrc | General | `getVidsrcEmbedUrl()` |
-| Vidsrc.to | General | `getVidsrcToUrl()` |
-| VidKing | General | `getVidKingUrl()` |
-| ScreenScape | English | `getScreenScapeUrl()` |
-| TouStream | Live TV | `getTouStreamMovieUrl()` |
-| RiveStream | Torrent | `getMovieEmbedUrl()` |
-| VidSync | Backup | `getVidSyncUrl()` |
+# Build the production application
+npm run build
+```
 
 ---
 
-## 🤝 Contributing
+## 🚀 Vercel Production Deployment
 
-Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) and open a pull request against `main`.
+To deploy Lumina on Vercel:
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feat/my-feature`
-3. Commit your changes: `git commit -m 'feat: add my feature'`
-4. Push to the branch: `git push origin feat/my-feature`
-5. Open a pull request against [OgBek/watchers-heaven](https://github.com/OgBek/watchers-heaven)
-
----
-
-## 📄 License
-
-Distributed under the [MIT License](LICENSE).
+1. Push your changes to GitHub:
+   ```bash
+   git push origin main
+   ```
+2. Connect your repository to Vercel.
+3. Configure the environment variables (`TMDB_API_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) in the Vercel Dashboard under **Project Settings > Environment Variables**.
+4. Set Build Command: `npm run build` and Output Directory: `.next`.
 
 ---
 
-<div align="center">
-  <sub>Built with ❤️ for movie lovers everywhere.</sub>
-</div>
+## 👤 Author & Credits
+
+- **Platform**: [Lumina](https://lumina.vercel.app)
+- **Creator Handle**: `@itxz_baka`
+- **License**: MIT

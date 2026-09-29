@@ -1,259 +1,344 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
-import { ApiGateway, TouStreamChannel } from '@/lib/api/gateway';
-import { Tv, Search, Play, RefreshCw, Loader } from 'lucide-react';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { Tv, Search, Play, RefreshCw, Loader, AlertTriangle, Wifi } from 'lucide-react';
+import Hls from 'hls.js';
 
-type Category = 'all' | 'sports' | 'news' | 'kids' | 'entertainment' | 'others';
+// ─── Channel Database ───────────────────────────────────────────────────────
+// Free public HLS streams from iptv-org and other open sources.
+// Primary: direct m3u8 HLS (played via Hls.js, no black screen).
+// Fallback: toustream iframe if HLS fails.
 
-function getChannelCategory(name: string): Exclude<Category, 'all'> {
-  const n = name.toLowerCase();
-
-  const sportsKeywords = ['soccer', 'football', 'sport', 'espn', 'fox sports', 'nfl', 'nba', 'mlb', 'sky sports', 'bein', 'golf', 'racing', 'wrestling'];
-  if (sportsKeywords.some((k) => n.includes(k))) return 'sports';
-
-  const newsKeywords = ['news', 'cnn', 'bbc', 'fox news', 'msnbc', 'abc news', 'nbc news', 'bloomberg', 'al jazeera', 'sky news'];
-  if (newsKeywords.some((k) => n.includes(k))) return 'news';
-
-  const kidsKeywords = ['kids', 'cartoon', 'disney', 'nick', 'boomerang', 'toon', 'baby', 'junior', 'jr'];
-  if (kidsKeywords.some((k) => n.includes(k))) return 'kids';
-
-  const entertainmentKeywords = ['movies', 'cinema', 'hbo', 'amc', 'fx', 'comedy', 'drama', 'series'];
-  if (entertainmentKeywords.some((k) => n.includes(k))) return 'entertainment';
-
-  return 'others';
+interface LiveChannel {
+  id: string;
+  name: string;
+  category: 'news' | 'sports' | 'entertainment' | 'kids' | 'others';
+  logo?: string;
+  hlsUrl?: string;          // Direct HLS stream — preferred (Hls.js)
+  embedUrl?: string;        // iframe fallback
+  country?: string;
 }
 
-const CATEGORY_LABELS: { id: Category; label: string }[] = [
-  { id: 'all', label: 'All' },
-  { id: 'sports', label: 'Sports' },
-  { id: 'news', label: 'News' },
-  { id: 'kids', label: 'Kids' },
-  { id: 'entertainment', label: 'Entertainment' },
-  { id: 'others', label: 'Others' },
+const CHANNELS: LiveChannel[] = [
+  // ── News ─────────────────────────────────────────────────────────────────
+  { id: 'aaj-tak', name: 'Aaj Tak HD', category: 'news', country: '🇮🇳',
+    hlsUrl: 'https://feeds.intoday.in/aajtak/api/master.m3u8' },
+  { id: 'abp-news', name: 'ABP News HD', category: 'news', country: '🇮🇳',
+    hlsUrl: 'https://d2l4ar6y3mrs4k.cloudfront.net/live-streaming/abpnews-livetv/master.m3u8' },
+  { id: 'republic-tv', name: 'Republic TV', category: 'news', country: '🇮🇳',
+    hlsUrl: 'https://vg-republictvlive.akamaized.net/v1/master/611d79b11b77e2f571934fd80ca1413453772ac7/vglive-sk-275673/main.m3u8' },
+  { id: 'wion', name: 'WION News HD', category: 'news', country: '🇮🇳',
+    hlsUrl: 'https://wion-klowdtv.amagi.tv/playlist.m3u8' },
+  { id: 'zee-news', name: 'Zee News', category: 'news', country: '🇮🇳',
+    hlsUrl: 'https://dt3lrqnyx3dks.cloudfront.net/index.m3u8' },
+  { id: 'euronews', name: 'Euronews English', category: 'news', country: '🇪🇺',
+    hlsUrl: 'https://cdn-euronews.akamaized.net/live/eds/euronews-en/25002/index.m3u8' },
+  { id: 'rt-news', name: 'RT News International', category: 'news', country: '🌍',
+    hlsUrl: 'https://rt-glb.rttv.com/live/rtnews/playlist.m3u8' },
+
+  // ── Sports ────────────────────────────────────────────────────────────────
+  { id: 'dd-sports', name: 'DD Sports Live', category: 'sports', country: '🇮🇳',
+    hlsUrl: 'https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/b17adfe543354fdd8d189b110617cddd/index.m3u8' },
+  { id: 'redbull-tv', name: 'Red Bull TV Sports', category: 'sports', country: '🌍',
+    hlsUrl: 'https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8' },
+
+  // ── Kids ──────────────────────────────────────────────────────────────────
+  { id: 'cartoon-classics', name: 'Cartoon Classics', category: 'kids', country: '🌍',
+    hlsUrl: 'https://daiconnect.com/live/hls/tvup/rk-cartoonclassics/578f4b7eb725168349ec0af81b21d388/index.m3u8' },
+
+  // ── Entertainment & Science ───────────────────────────────────────────────
+  { id: 'dd-national', name: 'DD National HD', category: 'entertainment', country: '🇮🇳',
+    hlsUrl: 'https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/40492a64c1db4a1385ba1a397d357d3a/index.m3u8' },
+  { id: 'nasa-tv', name: 'NASA TV Science HD', category: 'others', country: '🚀',
+    hlsUrl: 'https://ntv1.akamaized.net/hls/live/2014075/NASA-NTV1-HLS/master.m3u8' },
 ];
 
-export default function LiveTvPage() {
-  const [channels, setChannels] = useState<TouStreamChannel[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [loadingMore, setLoadingMore] = useState<boolean>(false);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [category, setCategory] = useState<Category>('all');
-  const [selectedChannel, setSelectedChannel] = useState<TouStreamChannel | null>(null);
+type Category = 'all' | 'news' | 'sports' | 'entertainment' | 'kids' | 'others';
 
-  // Progressive loading: show first batch quickly, then load rest in background
+const CATEGORY_LABELS: { id: Category; label: string; emoji: string }[] = [
+  { id: 'all', label: 'All', emoji: '📺' },
+  { id: 'news', label: 'News', emoji: '📰' },
+  { id: 'sports', label: 'Sports', emoji: '⚽' },
+  { id: 'entertainment', label: 'Entertainment', emoji: '🎬' },
+  { id: 'kids', label: 'Kids', emoji: '🧒' },
+  { id: 'others', label: 'Others', emoji: '🌐' },
+];
+
+// ─── HLS Video Player Component ──────────────────────────────────────────────
+
+function HlsPlayer({ src, onError }: { src: string; onError: () => void }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
+  const [isMuted, setIsMuted] = useState(true);
+
   useEffect(() => {
-    let cancelled = false;
+    const video = videoRef.current;
+    if (!video || !src) return;
 
-    async function loadChannels() {
-      setLoading(true);
-
-      // Phase 1: Fast initial batch (30 channels)
-      const firstBatch = await ApiGateway.getTouStreamChannels(30);
-      if (cancelled) return;
-
-      setChannels(firstBatch);
-      setLoading(false);
-      if (firstBatch.length > 0) {
-        setSelectedChannel(firstBatch[0]);
-      }
-
-      // Phase 2: Background fetch for full list (500 channels) — always runs
-      if (!cancelled) {
-        setLoadingMore(true);
-        try {
-          const fullList = await ApiGateway.getTouStreamChannels(500);
-          if (cancelled) return;
-
-          // Merge: full list replaces the initial batch
-          if (fullList.length > firstBatch.length) {
-            setChannels(fullList);
-          }
-        } catch {
-          // Keep the first batch if full fetch fails
-        } finally {
-          if (!cancelled) setLoadingMore(false);
-        }
-      }
+    // Destroy any existing HLS instance
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
     }
 
-    loadChannels();
-    return () => { cancelled = true; };
-  }, []);
+    if (Hls.isSupported()) {
+      const hls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: true,
+        backBufferLength: 30,
+      });
+      hlsRef.current = hls;
+      hls.loadSource(src);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        video.muted = true;
+        video.play().catch(() => {});
+      });
+      hls.on(Hls.Events.ERROR, (_evt, data) => {
+        if (data.fatal) {
+          onError();
+        }
+      });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      // Safari native HLS
+      video.src = src;
+      video.muted = true;
+      video.addEventListener('loadedmetadata', () => video.play().catch(() => {}), { once: true });
+      video.addEventListener('error', onError, { once: true });
+    } else {
+      onError();
+    }
 
-  // Manual refresh — fetches full list
-  const handleRefresh = useCallback(async () => {
-    setLoading(true);
-    const list = await ApiGateway.getTouStreamChannels(500);
-    setChannels(list);
-    setLoading(false);
-  }, []);
-
-  // Count channels per category for badges
-  const categoryCounts = channels.reduce<Record<Category, number>>(
-    (acc, ch) => {
-      const cat = getChannelCategory(ch.name);
-      acc[cat] = (acc[cat] || 0) + 1;
-      acc['all'] = (acc['all'] || 0) + 1;
-      return acc;
-    },
-    { all: 0, sports: 0, news: 0, kids: 0, entertainment: 0, others: 0 }
-  );
-
-  const filteredChannels = channels.filter((c) => {
-    const matchesSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = category === 'all' || getChannelCategory(c.name) === category;
-    return matchesSearch && matchesCategory;
-  });
+    return () => {
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+    };
+  }, [src, onError]);
 
   return (
-    <div className="min-h-screen pb-20 px-4 md:px-8 pt-6 bg-[var(--color-main)]">
+    <div className="relative w-full h-full">
+      <video
+        ref={videoRef}
+        className="w-full h-full object-contain bg-black"
+        controls
+        autoPlay
+        muted={isMuted}
+        playsInline
+      />
+      {isMuted && (
+        <button
+          onClick={() => {
+            if (videoRef.current) {
+              videoRef.current.muted = false;
+              setIsMuted(false);
+            }
+          }}
+          className="absolute top-4 right-4 z-20 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/75 hover:bg-black/90 text-white text-xs font-semibold backdrop-blur shadow-lg border border-white/20 transition-all cursor-pointer"
+        >
+          🔊 Click to Unmute
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Page ───────────────────────────────────────────────────────────────
+
+export default function LiveTvPage() {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [category, setCategory] = useState<Category>('all');
+  const [selectedChannel, setSelectedChannel] = useState<LiveChannel>(CHANNELS[0]);
+  const [hlsFailed, setHlsFailed] = useState(false);
+
+  // Reset HLS failure state when channel changes
+  useEffect(() => {
+    setHlsFailed(false);
+  }, [selectedChannel.id]);
+
+  const filtered = CHANNELS.filter((ch) => {
+    const matchSearch = ch.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchCat = category === 'all' || ch.category === category;
+    return matchSearch && matchCat;
+  });
+
+  const categoryCounts = CHANNELS.reduce<Record<Category, number>>(
+    (acc, ch) => {
+      acc[ch.category] = (acc[ch.category] || 0) + 1;
+      acc.all = (acc.all || 0) + 1;
+      return acc;
+    },
+    { all: 0, news: 0, sports: 0, entertainment: 0, kids: 0, others: 0 }
+  );
+
+  // Determine which player to use for selected channel
+  const useHls = selectedChannel.hlsUrl && !hlsFailed;
+  const useEmbed = !useHls && selectedChannel.embedUrl;
+  const handleHlsError = useCallback(() => setHlsFailed(true), []);
+
+  return (
+    <div className="min-h-screen pb-24 px-4 md:px-8 pt-6 bg-[var(--color-main)]">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-800 dark:text-white flex items-center gap-2">
             <Tv className="w-6 h-6 text-accent-blue" />
-            Live TV Channels
+            Live TV
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Stream live channels directly in your browser</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            {CHANNELS.length} channels · Stream live in your browser
+          </p>
         </div>
 
-        {/* Search Input */}
+        {/* Search */}
         <div className="relative w-full sm:w-72">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Search channels..."
+            placeholder="Search channels…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:outline-none focus:border-blue-500 text-slate-700 dark:text-slate-200 placeholder-slate-400 transition-colors shadow-sm"
+            className="w-full pl-9 pr-4 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:outline-none focus:border-blue-500 text-slate-700 dark:text-slate-200 placeholder-slate-400 transition-colors"
           />
         </div>
       </div>
 
-      {/* Category Filter Bar */}
-      {!loading && (
-        <div className="flex items-center gap-2 mb-6 flex-wrap">
-          {CATEGORY_LABELS.map(({ id, label }) => (
-            <button
-              key={id}
-              onClick={() => setCategory(id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${
-                category === id
-                  ? 'bg-accent-blue text-white border-transparent shadow-sm'
-                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
-              }`}
-            >
-              {label}
-              {categoryCounts[id] > 0 && (
-                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+      {/* Category Filter */}
+      <div className="flex items-center gap-2 mb-6 flex-wrap">
+        {CATEGORY_LABELS.map(({ id, label, emoji }) => (
+          <button
+            key={id}
+            onClick={() => setCategory(id)}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all border ${
+              category === id
+                ? 'bg-accent-blue text-white border-transparent shadow-sm'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
+            }`}
+          >
+            <span>{emoji}</span>
+            {label}
+            {categoryCounts[id] > 0 && (
+              <span
+                className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
                   category === id
                     ? 'bg-white/25 text-white'
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
-                }`}>
-                  {categoryCounts[id]}
+                }`}
+              >
+                {categoryCounts[id]}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Player Column */}
+        <div className="lg:col-span-2 space-y-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-md overflow-hidden">
+            {/* Player Area */}
+            <div className="relative aspect-video w-full bg-black">
+              {useHls && selectedChannel.hlsUrl ? (
+                <HlsPlayer src={selectedChannel.hlsUrl} onError={handleHlsError} />
+              ) : useEmbed && selectedChannel.embedUrl ? (
+                <iframe
+                  key={selectedChannel.id}
+                  src={selectedChannel.embedUrl}
+                  className="w-full h-full"
+                  allowFullScreen
+                  allow="autoplay; fullscreen; picture-in-picture"
+                  title={`Live TV – ${selectedChannel.name}`}
+                  style={{ border: 'none' }}
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-400">
+                  <AlertTriangle className="w-10 h-10 text-yellow-500" />
+                  <p className="text-sm font-semibold">Stream unavailable</p>
+                  <button
+                    onClick={() => setHlsFailed(false)}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 transition-colors"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" /> Retry
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Channel Info Bar */}
+            <div className="px-5 py-4 flex items-center justify-between border-t border-slate-100 dark:border-slate-800">
+              <div>
+                <div className="flex items-center gap-2">
+                  {selectedChannel.country && (
+                    <span className="text-base">{selectedChannel.country}</span>
+                  )}
+                  <h2 className="text-lg font-bold text-slate-800 dark:text-white">
+                    {selectedChannel.name}
+                  </h2>
+                </div>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                  <span className="text-xs text-red-500 font-bold uppercase tracking-wide">Live</span>
+                  <span className="text-slate-300 dark:text-slate-600 mx-1">·</span>
+                  <Wifi className="w-3 h-3 text-slate-400" />
+                  <span className="text-xs text-slate-500 dark:text-slate-400 capitalize">
+                    {selectedChannel.category}
+                  </span>
+                </div>
+              </div>
+              {hlsFailed && selectedChannel.hlsUrl && selectedChannel.embedUrl && (
+                <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-full">
+                  Using embed fallback
                 </span>
               )}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {loading ? (
-        <div className="flex flex-col items-center justify-center min-h-[50vh] text-slate-500 gap-3">
-          <Loader className="w-8 h-8 animate-spin text-accent-blue" />
-          <span className="text-sm font-semibold">Fetching Live Streams...</span>
-          <p className="text-xs text-slate-400 dark:text-slate-500 text-center max-w-xs">
-            Loading channels from an external provider. This may take a moment on the first visit — once loaded, channels are cached for fast access.
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left/Middle Column: Active Player */}
-          <div className="lg:col-span-2 space-y-4">
-            {selectedChannel ? (
-              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-md overflow-hidden transition-all duration-300">
-                {/* Embedded Video */}
-                <div className="relative aspect-video w-full bg-black">
-                  <iframe
-                    src={ApiGateway.getTouStreamLiveUrl(selectedChannel.slug)}
-                    className="w-full h-full"
-                    allowFullScreen
-                    allow="autoplay; fullscreen; picture-in-picture"
-                    title={`Live TV - ${selectedChannel.name}`}
-                    style={{ border: 'none' }}
-                  />
-                </div>
-                {/* Details under Player - Name only, no logo */}
-                <div className="p-5 flex items-center justify-between">
-                  <div>
-                    <h2 className="text-lg font-bold text-slate-800 dark:text-white">{selectedChannel.name}</h2>
-                    <span className="inline-flex items-center gap-1.5 text-xs text-red-500 font-semibold mt-0.5">
-                      <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                      LIVE
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-md p-10 text-center text-slate-400">
-                No channel selected or available.
-              </div>
-            )}
+            </div>
           </div>
+        </div>
 
-          {/* Right Column: Channels List */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-md p-4 max-h-[70vh] overflow-y-auto flex flex-col gap-2">
-            <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 px-2 pb-2 border-b border-slate-100 dark:border-slate-800 mb-2 flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                Available Streams
-                {loadingMore && (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 px-2 py-0.5 rounded-full">
-                    <Loader className="w-2.5 h-2.5 animate-spin" />
-                    Loading more...
-                  </span>
-                )}
-              </span>
-              <button 
-                onClick={handleRefresh}
-                className="p-1 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 smooth-transition"
-                title="Refresh Channel List"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-              </button>
-            </h3>
+        {/* Channel List */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-md p-4 max-h-[70vh] overflow-y-auto flex flex-col gap-2">
+          <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 px-2 pb-2 border-b border-slate-100 dark:border-slate-800 mb-1 flex items-center gap-2">
+            <span>Channels</span>
+            <span className="text-xs font-normal text-slate-400">({filtered.length})</span>
+          </h3>
 
-            {filteredChannels.length > 0 ? (
-              <div className="flex flex-col gap-1.5">
-                {filteredChannels.map((channel) => {
-                  const isActive = selectedChannel?.slug === channel.slug;
-                  return (
-                    <button
-                      key={channel.slug}
-                      onClick={() => setSelectedChannel(channel)}
-                      className={`w-full flex items-center justify-between p-3.5 rounded-xl transition-all duration-300 text-left border ${
-                        isActive
-                          ? 'bg-blue-50/80 dark:bg-blue-950/40 border-blue-100/50 dark:border-blue-900/50 text-accent-blue dark:text-blue-400'
-                          : 'bg-transparent border-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-50/70 dark:hover:bg-slate-800/40'
-                      }`}
-                    >
-                      <div className="flex-1 min-w-0 pr-2">
-                        <span className="font-semibold text-sm truncate block">{channel.name}</span>
+          {filtered.length > 0 ? (
+            <div className="flex flex-col gap-1">
+              {filtered.map((ch) => {
+                const isActive = selectedChannel.id === ch.id;
+                return (
+                  <button
+                    key={ch.id}
+                    onClick={() => setSelectedChannel(ch)}
+                    className={`w-full flex items-center justify-between p-3 rounded-xl transition-all text-left border ${
+                      isActive
+                        ? 'bg-blue-50/80 dark:bg-blue-950/40 border-blue-100/50 dark:border-blue-900/50 text-accent-blue dark:text-blue-400'
+                        : 'bg-transparent border-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-50/70 dark:hover:bg-slate-800/40'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {ch.country && <span className="text-base shrink-0">{ch.country}</span>}
+                      <div className="min-w-0">
+                        <span className="font-semibold text-sm truncate block">{ch.name}</span>
+                        {ch.hlsUrl && (
+                          <span className="text-[10px] text-green-500 font-semibold">● Direct HLS</span>
+                        )}
                       </div>
-                      {isActive && (
-                        <Play className="w-4 h-4 fill-accent-blue dark:fill-blue-400 text-accent-blue dark:text-blue-400 shrink-0" />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-xs text-slate-400">
-                No channels match your search.
-              </div>
-            )}
-          </div>
+                    </div>
+                    {isActive && (
+                      <Play className="w-4 h-4 fill-accent-blue dark:fill-blue-400 text-accent-blue dark:text-blue-400 shrink-0 ml-2" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-10 text-xs text-slate-400">
+              No channels match your search.
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
