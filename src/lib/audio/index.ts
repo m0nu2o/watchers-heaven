@@ -662,7 +662,7 @@ export interface GetEpisodeAudioTracksParams {
 
 export function getEpisodeAudioTracks(params: GetEpisodeAudioTracksParams): EpisodeAudioAvailability {
   const { mediaId, mediaType, season, episode, originalLanguage, aniListId, malId, title } = params;
-  const isAnime = mediaType === 'anime';
+  const isAnime = mediaType === 'anime' || (originalLanguage && originalLanguage.toLowerCase().trim() === 'ja');
   const origLang = (isAnime
     ? (originalLanguage && originalLanguage !== 'en' ? originalLanguage : 'ja')
     : (originalLanguage || 'en')
@@ -844,8 +844,9 @@ export async function getEpisodeAudioTracksAsync(
   let aniListId = params.aniListId;
   let dubLanguages = params.dubLanguages;
   let malId = params.malId ?? null;
+  const isAnime = params.mediaType === 'anime' || (params.originalLanguage && params.originalLanguage.toLowerCase().trim() === 'ja');
 
-  if (params.mediaType === 'anime') {
+  if (isAnime) {
     const idStr = String(params.mediaId);
     const isCatalogEnglish =
       VERIFIED_ENGLISH_DUB_ANIME_IDS.has(idStr) ||
@@ -947,10 +948,13 @@ export function resolveAudioSource(params: ResolveAudioSourceParams): ResolveAud
     title,
   } = params;
 
+  const isAnime = mediaType === 'anime' || (originalLanguage && originalLanguage.toLowerCase().trim() === 'ja');
+  const effectiveMediaType = isAnime ? 'anime' : mediaType;
+
   // Get verified tracks for this episode
   const availability = getEpisodeAudioTracks({
     mediaId: id,
-    mediaType,
+    mediaType: effectiveMediaType,
     season,
     episode,
     originalLanguage,
@@ -972,7 +976,7 @@ export function resolveAudioSource(params: ResolveAudioSourceParams): ResolveAud
   }
 
   // Find all providers verified to support this media type AND this specific audio track
-  const compatibleProviders = ProviderRegistry.getForMediaTypeAndAudio(mediaType, track.id);
+  const compatibleProviders = ProviderRegistry.getForMediaTypeAndAudio(effectiveMediaType, track.id);
   let chosenProvider = track.provider;
 
   if (preferredProvider && compatibleProviders.some((p) => p.id === preferredProvider)) {
@@ -983,7 +987,7 @@ export function resolveAudioSource(params: ResolveAudioSourceParams): ResolveAud
 
   // Resolve playback URL through ProviderRegistry with audio options
   const playbackUrl = ProviderRegistry.resolvePlaybackUrl(chosenProvider, {
-    mediaType,
+    mediaType: effectiveMediaType,
     tmdbId: id,
     season,
     episode,
@@ -1023,10 +1027,13 @@ export async function resolveAudioSourceAsync(
     title,
   } = params;
 
+  const isAnime = mediaType === 'anime' || (originalLanguage && originalLanguage.toLowerCase().trim() === 'ja');
+  const effectiveMediaType = isAnime ? 'anime' : mediaType;
+
   let resolvedAniListId = params.aniListId;
   let resolvedMalId = params.malId;
 
-  if (mediaType === 'anime' && (!resolvedAniListId || !resolvedMalId)) {
+  if (isAnime && (!resolvedAniListId || !resolvedMalId)) {
     const queryTarget = resolvedAniListId || title || id;
     const dubCheck = await checkAniListDubAvailability(queryTarget);
     if (!resolvedAniListId && dubCheck.id) resolvedAniListId = dubCheck.id;
@@ -1036,7 +1043,7 @@ export async function resolveAudioSourceAsync(
   // Dynamically resolve audio tracks for this episode
   const availability = await getEpisodeAudioTracksAsync({
     mediaId: id,
-    mediaType,
+    mediaType: effectiveMediaType,
     season,
     episode,
     originalLanguage,
@@ -1057,7 +1064,7 @@ export async function resolveAudioSourceAsync(
   }
 
   // Find all providers verified to support this media type AND this specific audio track
-  const compatibleProviders = ProviderRegistry.getForMediaTypeAndAudio(mediaType, track.id);
+  const compatibleProviders = ProviderRegistry.getForMediaTypeAndAudio(effectiveMediaType, track.id);
   let chosenProvider = track.provider;
 
   if (preferredProvider && compatibleProviders.some((p) => p.id === preferredProvider)) {
@@ -1067,7 +1074,7 @@ export async function resolveAudioSourceAsync(
   }
 
   const playbackUrl = ProviderRegistry.resolvePlaybackUrl(chosenProvider, {
-    mediaType,
+    mediaType: effectiveMediaType,
     tmdbId: id,
     season,
     episode,

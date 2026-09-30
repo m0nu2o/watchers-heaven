@@ -70,6 +70,7 @@ export default function WatchPage() {
 
   const [mediaTitle, setMediaTitle] = useState<string>('');
   const [mediaOriginalLang, setMediaOriginalLang] = useState<string>(isAnime ? 'ja' : 'en');
+  const isActuallyAnime = isAnime || resolvedContentType === 'anime' || mediaOriginalLang === 'ja';
   const [audioInfo, setAudioInfo] = useState<ContentAudioInfo | null>(null);
   const [audioAvailability, setAudioAvailability] = useState<EpisodeAudioAvailability | null>(() => {
     try {
@@ -193,21 +194,25 @@ export default function WatchPage() {
 
         const data = media.data;
         const isTvResult = media.resolvedType === 'tv';
-        setIsActuallyTv(isTvResult);
-        setResolvedContentType(isAnime ? 'anime' : isTvResult ? 'tv' : 'movie');
+        const origLang = (data.original_language as string) || (isAnime ? 'ja' : 'en');
+        setMediaOriginalLang(origLang);
+
+        const isGenreAnimation = Array.isArray(data.genres) && data.genres.some((g: { id?: number }) => g.id === 16);
+        const isOriginJapan = Array.isArray(data.origin_country) && data.origin_country.includes('JP');
+        const isDetectedAnime = isAnime || origLang === 'ja' || (origLang === 'ja' && (isGenreAnimation || isOriginJapan));
+
+        setIsActuallyTv(isTvResult || isDetectedAnime);
+        setResolvedContentType(isDetectedAnime ? 'anime' : isTvResult ? 'tv' : 'movie');
 
         const title =
           (data.name as string) ||
           (data.title as string) ||
           (data.original_name as string) ||
           (data.original_title as string) ||
-          (isAnime ? `Anime #${id}` : isTvResult ? `Show #${id}` : `Movie #${id}`);
+          (isDetectedAnime ? `Anime #${id}` : isTvResult ? `Show #${id}` : `Movie #${id}`);
         setMediaTitle(title);
 
-        const origLang = (data.original_language as string) || (isAnime ? 'ja' : 'en');
-        setMediaOriginalLang(origLang);
-
-        if (isTvResult) {
+        if (isTvResult || isDetectedAnime) {
           const rawSeasons = (data.seasons as SeasonSummary[]) || [];
           const validSeasons = rawSeasons.filter((s) => (s.episode_count ?? 1) > 0);
           setSeasons(
@@ -221,14 +226,14 @@ export default function WatchPage() {
 
         const audio = getContentAudioInfo({
           id,
-          type: isAnime ? 'anime' : isTvResult ? 'tv' : 'movie',
+          type: isDetectedAnime ? 'anime' : isTvResult ? 'tv' : 'movie',
           original_language: origLang,
           provider,
         });
         setAudioInfo(audio);
 
         // AniList title & dub resolution for anime
-        if (isAnime) {
+        if (isDetectedAnime) {
           try {
             const aniDetails = await ApiGateway.getAniListMediaDetails(title);
             if (aniDetails) {
@@ -272,7 +277,7 @@ export default function WatchPage() {
   // Sync Episode Audio Availability whenever episode, season, or language metadata updates
   useEffect(() => {
     let isMounted = true;
-    const mediaType = isAnime ? 'anime' : isActuallyTv ? 'tv' : 'movie';
+    const mediaType = isActuallyAnime ? 'anime' : isActuallyTv ? 'tv' : 'movie';
 
     // 1. Synchronous preliminary check from cache / verified catalog
     const initialAvail = getEpisodeAudioTracks({
@@ -319,7 +324,7 @@ export default function WatchPage() {
     return () => {
       isMounted = false;
     };
-  }, [id, season, episode, isActuallyTv, isAnime, mediaOriginalLang, mediaTitle, aniListId, malId, selectedAudioTrack]);
+  }, [id, season, episode, isActuallyTv, isActuallyAnime, mediaOriginalLang, mediaTitle, aniListId, malId, selectedAudioTrack]);
 
   // Fetch Season Episodes when season changes
   useEffect(() => {
@@ -429,7 +434,7 @@ export default function WatchPage() {
 
   const resolveCurrentSource = useCallback(
     async (trackId: string = selectedAudioTrack, overrideProvider?: string) => {
-      const mediaType = isAnime ? 'anime' : isActuallyTv ? 'tv' : 'movie';
+      const mediaType = isActuallyAnime ? 'anime' : isActuallyTv ? 'tv' : 'movie';
       const startProgress = initialProgressApplied ? savedProgress : 0;
       const activeProvider = overrideProvider || provider;
 
@@ -488,7 +493,7 @@ export default function WatchPage() {
     },
     [
       selectedAudioTrack,
-      isAnime,
+      isActuallyAnime,
       isActuallyTv,
       initialProgressApplied,
       savedProgress,
@@ -512,7 +517,7 @@ export default function WatchPage() {
       setAudioError(null);
 
       try {
-        const mediaType = isAnime ? 'anime' : isActuallyTv ? 'tv' : 'movie';
+        const mediaType = isActuallyAnime ? 'anime' : isActuallyTv ? 'tv' : 'movie';
         const instantUrl = ProviderRegistry.resolvePlaybackUrl(newProviderId, {
           mediaType,
           tmdbId: id,
@@ -536,7 +541,7 @@ export default function WatchPage() {
         console.warn('Instant server switch resolution failed:', err);
       }
     },
-    [isAnime, isActuallyTv, id, season, episode, mediaTitle, aniListId, malId, selectedAudioTrack, accentColor]
+    [isActuallyAnime, isActuallyTv, id, season, episode, mediaTitle, aniListId, malId, selectedAudioTrack, accentColor]
   );
 
   const triedServersRef = useRef<Set<string>>(new Set());
@@ -709,13 +714,13 @@ export default function WatchPage() {
       let overrideProv: string | undefined = undefined;
       if (trackId === 'dub-en' || trackId === 'dub') {
         // For anime, vidlink-anime is the verified English DUB provider
-        overrideProv = isAnime ? 'vidlink-anime' : (provider === 'vidlink' ? 'vidlink' : 'vidsrc-pm');
+        overrideProv = isActuallyAnime ? 'vidlink-anime' : (provider === 'vidlink' ? 'vidlink' : 'vidsrc-pm');
       } else if (trackId === 'dub-hi') {
         // Hindi DUB: screenscape-anime for anime, autoembed-co for movies/TV
-        overrideProv = isAnime ? 'screenscape-anime' : 'autoembed-co';
+        overrideProv = isActuallyAnime ? 'screenscape-anime' : 'autoembed-co';
       } else {
         // SUB: default provider for media type
-        overrideProv = isAnime ? 'vidlink-anime' : 'vidlink';
+        overrideProv = isActuallyAnime ? 'vidlink-anime' : 'vidlink';
       }
 
       if (overrideProv && overrideProv !== provider) {
@@ -743,7 +748,7 @@ export default function WatchPage() {
         iframeRef.current.src = result.url;
       }
     },
-    [audioAvailability, isAnime, provider, resolveCurrentSource, triggerSeekFeedback]
+    [audioAvailability, isActuallyAnime, provider, resolveCurrentSource, triggerSeekFeedback]
   );
 
   // ── Navigation callbacks ──
@@ -1799,7 +1804,7 @@ export default function WatchPage() {
                   try {
                     const initial = getEpisodeAudioTracks({
                       mediaId: id,
-                      mediaType: isAnime ? 'anime' : isActuallyTv ? 'tv' : 'movie',
+                      mediaType: isActuallyAnime ? 'anime' : isActuallyTv ? 'tv' : 'movie',
                       season,
                       episode,
                       originalLanguage: mediaOriginalLang,
@@ -1809,7 +1814,7 @@ export default function WatchPage() {
                     });
                     if (initial?.tracks && initial.tracks.length > 0) return initial.tracks;
                   } catch {}
-                  return isAnime
+                  return isActuallyAnime
                     ? [
                         { id: 'sub', label: '🇯🇵 Japanese (SUB)', available: true, languageCode: 'ja' },
                         { id: 'dub-en', label: '🇬🇧 English (DUB)', available: true, languageCode: 'en' },
@@ -1857,7 +1862,7 @@ export default function WatchPage() {
                         >
                           <span className="block truncate min-w-0">
                             <span className="sm:hidden">
-                              {track.id === 'sub' ? (isAnime ? '🇯🇵 SUB' : '🌐 Original') : track.id === 'dub-en' ? '🇬🇧 ENG' : track.id === 'dub-hi' ? '🇮🇳 HIN' : track.label}
+                              {track.id === 'sub' ? (isActuallyAnime ? '🇯🇵 SUB' : '🌐 Original') : track.id === 'dub-en' ? '🇬🇧 ENG' : track.id === 'dub-hi' ? '🇮🇳 HIN' : track.label}
                             </span>
                             <span className="hidden sm:inline">
                               {track.label}
@@ -1944,7 +1949,7 @@ export default function WatchPage() {
             isFullscreen={isFullscreen}
             onToggleFullscreen={toggleFullscreen}
             accentColor={accentColor}
-            isAnime={isAnime}
+            isAnime={isActuallyAnime}
             autoNextEnabled={autoNextEnabled}
             onToggleAutoNext={handleToggleAutoNext}
           />
@@ -1965,7 +1970,7 @@ export default function WatchPage() {
                   posterPath={rec.poster_path ?? ''}
                   rating={rec.vote_average}
                   year={rec.release_date ? rec.release_date.split('-')[0] : (rec.first_air_date ? rec.first_air_date.split('-')[0] : '')}
-                  type={isAnime ? 'anime' : isActuallyTv ? 'tv' : 'movie'}
+                  type={isActuallyAnime ? 'anime' : isActuallyTv ? 'tv' : 'movie'}
                 />
               ))}
             </div>

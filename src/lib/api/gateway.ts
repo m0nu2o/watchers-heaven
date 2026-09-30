@@ -215,6 +215,13 @@ export const ApiGateway = {
     return url;
   },
 
+  // --- VidSrc SU (vidsrc.su) — Fast 1080p Direct Embed ---
+  getVidSrcSuUrl: (tmdbId: string | number, type: 'movie' | 'tv', season?: number, episode?: number) => {
+    return type === 'movie'
+      ? `https://vidsrc.su/embed/movie/${tmdbId}`
+      : `https://vidsrc.su/embed/tv/${tmdbId}/${season || 1}/${episode || 1}`;
+  },
+
   // --- Dedicated Anime (vidsrc.sh) API ---
   getVidsrcAnimeUrl: (tmdbId: string | number, episode?: number) => {
     return `https://vidsrc.sh/embed/anime/${tmdbId}/${episode || 1}`;

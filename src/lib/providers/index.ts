@@ -34,7 +34,7 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     name: 'VidSrc Ultra Anime',
     quality: '1080p / Global CDN / Clean',
     badge: '🔥',
-    supportsMovie: false,
+    supportsMovie: true,
     supportsTV: false,
     supportsAnime: true,
     supportsEnglishDub: false,
@@ -42,7 +42,8 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     requiresApiKey: false,
     isConfigured: () => true,
     getPlaybackUrl: (cfg) => {
-      return ApiGateway.getVidSrcPmUrl(cfg.tmdbId, 'tv', cfg.season || 1, cfg.episode || 1);
+      const type = (cfg.season !== undefined && cfg.episode !== undefined) ? 'tv' : 'movie';
+      return ApiGateway.getVidSrcPmUrl(cfg.tmdbId, type, cfg.season || 1, cfg.episode || 1);
     },
   },
   {
@@ -50,7 +51,7 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     name: 'AutoEmbed Anime',
     quality: '1080p / Fast Multi-Audio',
     badge: '🎬',
-    supportsMovie: false,
+    supportsMovie: true,
     supportsTV: false,
     supportsAnime: true,
     supportsEnglishDub: false,
@@ -58,7 +59,8 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     requiresApiKey: false,
     isConfigured: () => true,
     getPlaybackUrl: (cfg) => {
-      return ApiGateway.getAutoEmbedCoUrl(cfg.tmdbId, 'tv', cfg.season || 1, cfg.episode || 1);
+      const type = (cfg.season !== undefined && cfg.episode !== undefined) ? 'tv' : 'movie';
+      return ApiGateway.getAutoEmbedCoUrl(cfg.tmdbId, type, cfg.season || 1, cfg.episode || 1);
     },
   },
   {
@@ -66,7 +68,7 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     name: '2Embed Anime',
     quality: '1080p / Wide Catalog',
     badge: '💎',
-    supportsMovie: false,
+    supportsMovie: true,
     supportsTV: false,
     supportsAnime: true,
     supportsEnglishDub: false,
@@ -74,7 +76,8 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     requiresApiKey: false,
     isConfigured: () => true,
     getPlaybackUrl: (cfg) => {
-      return ApiGateway.get2EmbedSkinUrl(cfg.tmdbId, 'tv', cfg.season || 1, cfg.episode || 1);
+      const type = (cfg.season !== undefined && cfg.episode !== undefined) ? 'tv' : 'movie';
+      return ApiGateway.get2EmbedSkinUrl(cfg.tmdbId, type, cfg.season || 1, cfg.episode || 1);
     },
   },
   {
@@ -82,7 +85,7 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     name: 'ScreenScape Anime',
     quality: '1080p / Multi-Audio / Clean',
     badge: '🌐',
-    supportsMovie: false,
+    supportsMovie: true,
     supportsTV: false,
     supportsAnime: true,
     supportsEnglishDub: true,
@@ -90,16 +93,17 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     requiresApiKey: false,
     isConfigured: () => true,
     getPlaybackUrl: (cfg) => {
+      const type = (cfg.season !== undefined && cfg.episode !== undefined) ? 'tv' : 'movie';
       const lan = cfg.audioTrackId === 'dub-hi' ? 'hi' : (cfg.audioTrackId === 'dub-en' || cfg.audioTrackId === 'dub') ? 'eng' : 'jap';
-      return ApiGateway.getScreenScapeUrl(cfg.tmdbId, 'tv', cfg.season || 1, cfg.episode || 1, lan);
+      return ApiGateway.getScreenScapeUrl(cfg.tmdbId, type, cfg.season || 1, cfg.episode || 1, lan);
     },
   },
   {
-    id: 'vidfast-anime',
-    name: 'VidFast Anime',
-    quality: '1080p / Fast Player',
+    id: 'vidsrc-su-anime',
+    name: 'VidSrc Direct Anime',
+    quality: '1080p / Direct / Clean',
     badge: '🚀',
-    supportsMovie: false,
+    supportsMovie: true,
     supportsTV: false,
     supportsAnime: true,
     supportsEnglishDub: false,
@@ -107,19 +111,8 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     requiresApiKey: false,
     isConfigured: () => true,
     getPlaybackUrl: (cfg) => {
-      return ApiGateway.getVidFastUrl(
-        cfg.tmdbId,
-        'tv',
-        cfg.season || 1,
-        cfg.episode || 1,
-        {
-          autoPlay: true,
-          theme: cfg.accentColor || '007bff',
-          title: true,
-          poster: true,
-          startAt: cfg.startTime && cfg.startTime > 0 ? cfg.startTime : undefined,
-        }
-      );
+      const type = (cfg.season !== undefined && cfg.episode !== undefined) ? 'tv' : 'movie';
+      return ApiGateway.getVidSrcSuUrl(cfg.tmdbId, type, cfg.season || 1, cfg.episode || 1);
     },
   },
 
@@ -232,9 +225,9 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     },
   },
   {
-    id: 'vidfast',
-    name: 'VidFast HD',
-    quality: '1080p / Fast Player',
+    id: 'vidsrc-su',
+    name: 'VidSrc Direct HD',
+    quality: '1080p / Direct / Clean',
     badge: '🚀',
     supportsMovie: true,
     supportsTV: true,
@@ -244,20 +237,11 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     requiresApiKey: false,
     isConfigured: () => true,
     getPlaybackUrl: (cfg) => {
-      return ApiGateway.getVidFastUrl(
+      return ApiGateway.getVidSrcSuUrl(
         cfg.tmdbId,
         cfg.mediaType === 'tv' ? 'tv' : 'movie',
         cfg.season,
-        cfg.episode,
-        {
-          autoPlay: true,
-          theme: cfg.accentColor || '007bff',
-          title: true,
-          poster: true,
-          nextButton: false,
-          autoNext: false,
-          startAt: cfg.startTime && cfg.startTime > 0 ? cfg.startTime : undefined,
-        }
+        cfg.episode
       );
     },
   },
@@ -269,6 +253,12 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
  * automatically redirects to a live 200 OK verified server instead of failing.
  */
 const PROVIDER_ALIASES: Record<string, string> = {
+  // VidFast alias redirects to fast 200 OK VidSrc Direct
+  'vidfast': 'vidsrc-su',
+  'vidfast-anime': 'vidsrc-su-anime',
+  'vidsrc-su': 'vidsrc-su',
+  'vidsrc-su-anime': 'vidsrc-su-anime',
+
   // Movie & TV legacy aliases
   'embedsu-cinema': 'vidsrc-pm',
   'embedsu': 'vidsrc-pm',

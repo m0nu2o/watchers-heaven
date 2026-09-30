@@ -8,7 +8,7 @@ export async function GET(
   try {
     const { id } = await context.params;
     const { searchParams } = new URL(request.url);
-    const type = (searchParams.get('type') || 'movie') as 'movie' | 'tv' | 'anime';
+    let type = (searchParams.get('type') || 'movie') as 'movie' | 'tv' | 'anime';
     const season = searchParams.get('s') || searchParams.get('season') ? parseInt(searchParams.get('s') || searchParams.get('season')!, 10) : undefined;
     const episode = searchParams.get('e') || searchParams.get('episode') ? parseInt(searchParams.get('e') || searchParams.get('episode')!, 10) : undefined;
     const trackId = searchParams.get('track') || searchParams.get('trackId') || 'sub';
@@ -18,6 +18,9 @@ export async function GET(
     const startTime = searchParams.get('startTime') ? parseFloat(searchParams.get('startTime')!) : 0;
     const accentColor = searchParams.get('accentColor') || undefined;
     const originalLanguage = searchParams.get('origLang') || (type === 'anime' ? 'ja' : 'en');
+    if (type !== 'anime' && (originalLanguage === 'ja' || originalLanguage.toLowerCase().trim() === 'ja')) {
+      type = 'anime';
+    }
     const title = searchParams.get('title') || undefined;
 
     const result = await resolveAudioSourceAsync({
@@ -53,7 +56,6 @@ export async function POST(
     const { id } = await context.params;
     const body = await request.json();
     const {
-      type = 'movie',
       season,
       episode,
       trackId = 'sub',
@@ -62,9 +64,13 @@ export async function POST(
       malId,
       startTime,
       accentColor,
-      originalLanguage = type === 'anime' ? 'ja' : 'en',
       title,
     } = body;
+    let type = (body.type || 'movie') as 'movie' | 'tv' | 'anime';
+    const originalLanguage = body.originalLanguage || (type === 'anime' ? 'ja' : 'en');
+    if (type !== 'anime' && (originalLanguage === 'ja' || originalLanguage.toLowerCase().trim() === 'ja')) {
+      type = 'anime';
+    }
 
     const result = await resolveAudioSourceAsync({
       mediaType: type,

@@ -98,11 +98,11 @@ export const STREAMING_PROVIDERS: StreamingProvider[] = [
     },
   },
 
-  // ─── 6. VidFast HD (1080p, Fast Player) ───
+  // ─── 6. VidSrc Direct HD (1080p, Direct Embed, Fast) ───
   {
-    id: 'vidfast',
-    name: 'VidFast HD',
-    quality: '1080p / Fast Player',
+    id: 'vidsrc-su',
+    name: 'VidSrc Direct HD',
+    quality: '1080p / Direct / Clean',
     badge: '🚀',
     priority: 6,
     supportsMovie: true,
@@ -111,24 +111,16 @@ export const STREAMING_PROVIDERS: StreamingProvider[] = [
     supportsEnglishDub: true,
     getPlaybackUrl: (cfg: StreamPlaybackConfig) => {
       const type = cfg.mediaType === 'movie' ? 'movie' : 'tv';
-      return ApiGateway.getVidFastUrl(
-        cfg.tmdbId,
-        type,
-        cfg.season || 1,
-        cfg.episode || 1,
-        {
-          autoPlay: true,
-          theme: cfg.accentColor || '007bff',
-          title: true,
-          poster: true,
-          startAt: cfg.startTime && cfg.startTime > 0 ? cfg.startTime : undefined,
-        }
-      );
+      return ApiGateway.getVidSrcSuUrl(cfg.tmdbId, type, cfg.season || 1, cfg.episode || 1);
     },
   },
 ];
 
 const STREAMING_ALIASES: Record<string, string> = {
+  'vidfast': 'vidsrc-su',
+  'vidfast-anime': 'vidsrc-su',
+  'vidsrc-su': 'vidsrc-su',
+  'vidsrc-su-anime': 'vidsrc-su',
   'embedsu-cinema': 'vidsrc-pm',
   'embedsu': 'vidsrc-pm',
   'vidsrc': 'vidsrc-pm',
