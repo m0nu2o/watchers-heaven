@@ -71,6 +71,7 @@ export default function WatchPage() {
   const [mediaTitle, setMediaTitle] = useState<string>('');
   const [mediaOriginalLang, setMediaOriginalLang] = useState<string>(isAnime ? 'ja' : 'en');
   const isActuallyAnime = isAnime || resolvedContentType === 'anime' || mediaOriginalLang === 'ja';
+  const currentMediaType: MediaType = isActuallyAnime ? 'anime' : isActuallyTv ? 'tv' : 'movie';
   const [audioInfo, setAudioInfo] = useState<ContentAudioInfo | null>(null);
   const [audioAvailability, setAudioAvailability] = useState<EpisodeAudioAvailability | null>(() => {
     try {
@@ -557,7 +558,7 @@ export default function WatchPage() {
   const handleNextServerFallback = useCallback(
     (isManual = false, isWatchdog = false) => {
       triedServersRef.current.add(provider);
-      const next = ProviderRegistry.getFallbackProvider(provider, resolvedContentType, selectedAudioTrack);
+      const next = ProviderRegistry.getFallbackProvider(provider, currentMediaType, selectedAudioTrack);
 
       if (next && next.id !== provider && (!triedServersRef.current.has(next.id) || isManual)) {
         triggerSeekFeedback(
@@ -580,7 +581,7 @@ export default function WatchPage() {
         }
       }
     },
-    [provider, resolvedContentType, selectedAudioTrack, handleSelectServer, triggerSeekFeedback]
+    [provider, currentMediaType, selectedAudioTrack, handleSelectServer, triggerSeekFeedback]
   );
 
   // Stream health watchdog: auto-switch server if iframe stream doesn't start
@@ -633,7 +634,7 @@ export default function WatchPage() {
           }
         } else {
           // Automatic Provider Fallback: Try next compatible server for this audio track
-          const next = ProviderRegistry.getFallbackProvider(provider, resolvedContentType, selectedAudioTrack);
+          const next = ProviderRegistry.getFallbackProvider(provider, currentMediaType, selectedAudioTrack);
           if (next && next.id !== provider && !triedServersRef.current.has(next.id)) {
             handleSelectServer(next.id);
           } else {
@@ -649,7 +650,7 @@ export default function WatchPage() {
     return () => {
       cancelled = true;
     };
-  }, [resolveCurrentSource, selectedAudioTrack, provider, season, episode, resolvedContentType, handleSelectServer]);
+  }, [resolveCurrentSource, selectedAudioTrack, provider, season, episode, currentMediaType, handleSelectServer]);
 
   // Initialize HLS.js for direct .m3u8 playback without iframes or ads
   useEffect(() => {
@@ -816,7 +817,21 @@ export default function WatchPage() {
       return null;
     };
 
-    // 2. Block middle-click pop-unders (mouse button 1) and auxiliary clicks
+    // 2. Intercept programmatic hidden anchor click redirects
+    const originalAnchorClick = HTMLAnchorElement.prototype.click;
+    let isUserNavigating = false;
+    let navTimer: NodeJS.Timeout | null = null;
+
+    HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement) {
+      const href = this.href || '';
+      if (!href || isAllowed(href) || isUserNavigating) {
+        return originalAnchorClick.call(this);
+      }
+      triggerSeekFeedback('🛡️ Ad Redirect Blocked');
+      return;
+    };
+
+    // 3. Block middle-click pop-unders (mouse button 1) and auxiliary clicks
     const handleMouseDown = (e: MouseEvent) => {
       if (e.button === 1) {
         const el = e.target as HTMLElement;
@@ -827,9 +842,15 @@ export default function WatchPage() {
       }
     };
 
-    // 3. Anti-hijack protection: prevent third-party iframes from redirecting the top window
-    let isUserNavigating = false;
-    let navTimer: NodeJS.Timeout | null = null;
+    const handleAuxClick = (e: MouseEvent) => {
+      const el = e.target as HTMLElement;
+      if (!el.closest('a[href], button')) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    // 4. Anti-hijack protection: prevent third-party iframes from redirecting the top window
     const handleUserClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (target?.closest('a') || target?.closest('button')) {
@@ -841,7 +862,7 @@ export default function WatchPage() {
       }
     };
 
-    // 4. Pop-under defense: if page blurs without user navigation, refocus top window
+    // 5. Pop-under defense: if page blurs without user navigation, refocus top window
     let blurTimer: NodeJS.Timeout | null = null;
     const handleBlur = () => {
       if (!isUserNavigating) {
@@ -857,19 +878,64 @@ export default function WatchPage() {
       }
     };
 
+    // 6. Anti-hijack beforeunload guard
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!isUserNavigating) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
+    };
+
+    // 7. MutationObserver to instantly strip malicious injected ad tags
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (const node of Array.from(mutation.addedNodes)) {
+          if (node instanceof HTMLElement) {
+            const tag = node.tagName.toLowerCase();
+            const html = (node.outerHTML || '').toLowerCase();
+            if (
+              tag === 'script' &&
+              (html.includes('popads') ||
+                html.includes('propeller') ||
+                html.includes('adsterra') ||
+                html.includes('onclickmega') ||
+                html.includes('deloton') ||
+                html.includes('1xbet') ||
+                html.includes('bet365'))
+            ) {
+              node.remove();
+            }
+          }
+        }
+      }
+    });
+
+    try {
+      observer.observe(document.documentElement, { childList: true, subtree: true });
+    } catch {
+      // Ignored in non-browser environments
+    }
+
     window.addEventListener('click', handleUserClick, { capture: true });
     window.addEventListener('mousedown', handleMouseDown, { capture: true });
+    window.addEventListener('auxclick', handleAuxClick, { capture: true });
     window.addEventListener('blur', handleBlur);
     window.addEventListener('focus', handleFocus);
+    window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
       window.open = originalOpen;
+      HTMLAnchorElement.prototype.click = originalAnchorClick;
       if (navTimer) clearTimeout(navTimer);
       if (blurTimer) clearTimeout(blurTimer);
+      observer.disconnect();
       window.removeEventListener('click', handleUserClick, { capture: true });
       window.removeEventListener('mousedown', handleMouseDown, { capture: true });
+      window.removeEventListener('auxclick', handleAuxClick, { capture: true });
       window.removeEventListener('blur', handleBlur);
       window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [triggerSeekFeedback]);
 
@@ -1302,8 +1368,8 @@ export default function WatchPage() {
   }, [isFullscreen]);
 
   const availableProviders = useMemo(() => {
-    return ProviderRegistry.getForMediaTypeAndAudio(resolvedContentType, selectedAudioTrack);
-  }, [resolvedContentType, selectedAudioTrack]);
+    return ProviderRegistry.getForMediaTypeAndAudio(currentMediaType, selectedAudioTrack);
+  }, [currentMediaType, selectedAudioTrack]);
 
   // Ensure active provider is compatible with current media type AND selected audio track
   useEffect(() => {
@@ -1743,7 +1809,7 @@ export default function WatchPage() {
             <div className="flex flex-col gap-1.5 flex-1 min-w-0 max-w-full">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Streaming Server ({availableProviders.length} Available)
+                  {currentMediaType === 'anime' ? '🎌 Anime Servers' : currentMediaType === 'tv' ? '📺 Series Servers' : '🎬 Movie Servers'} ({availableProviders.length} Available)
                 </span>
                 <span className="text-[10px] text-blue-500 font-semibold truncate max-w-[160px]">
                   {availableProviders.find((p) => p.id === provider)?.quality || '1080p'}
