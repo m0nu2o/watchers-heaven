@@ -3,9 +3,9 @@
  * Lumina Media Engine
  */
 
-import type { AudioTrack, AudioTrackType, MediaType } from '@/types/media';
+import type { AudioTrack, AudioTrackType, MediaType, LanguageEvidenceLevel } from '@/types/media';
 
-export type { AudioTrack, AudioTrackType, MediaType };
+export type { AudioTrack, AudioTrackType, MediaType, LanguageEvidenceLevel };
 
 
 export interface SubtitleTrack {

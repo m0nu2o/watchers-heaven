@@ -1,8 +1,9 @@
 /**
  * Provider Audio Capability Matrix
- * Lumina Media Engine
+ * AuraStream Media Engine
  *
  * Defines authoritative audio and dub capabilities for each supported streaming provider.
+ * Aligned 100% with PROVIDER_ADAPTERS in src/lib/providers/index.ts.
  */
 
 export interface ProviderAudioCapability {
@@ -11,36 +12,47 @@ export interface ProviderAudioCapability {
   mediaTypes: ('movie' | 'tv' | 'anime')[];
   supportsSub: boolean;
   supportsOriginalAudio: boolean;
-  supportedDubLanguages: string[]; // ISO 639-1: 'en', 'hi', 'ta', 'te', 'bn', etc.
+  supportedDubLanguages: string[]; // ISO 639-1: 'en', 'hi', 'ta', 'te', etc.
   notes?: string;
 }
 
 export const PROVIDER_AUDIO_CAPABILITIES: Record<string, ProviderAudioCapability> = {
-  'vidsrc-anime': {
-    id: 'vidsrc-anime',
-    name: 'AnimeStream HD',
+  // ─── 1. Dedicated Anime Providers ───
+  'vidlink-anime': {
+    id: 'vidlink-anime',
+    name: 'VidLink Anime HD',
     mediaTypes: ['anime'],
     supportsSub: true,
     supportsOriginalAudio: true,
     supportedDubLanguages: ['en'],
-    notes: 'Dedicated anime player supporting Japanese SUB and English DUB.',
+    notes: 'Dedicated anime player supporting Japanese SUB and English DUB via ?dub=true.',
   },
-  'vidsrc-mirror': {
-    id: 'vidsrc-mirror',
-    name: 'Vidsrc Mirror',
-    mediaTypes: ['movie', 'tv', 'anime'],
-    supportsSub: true,
-    supportsOriginalAudio: true,
-    supportedDubLanguages: ['en'],
-  },
-  'vidfast-anime': {
-    id: 'vidfast-anime',
-    name: 'VidFast Anime',
+  'vidsrc-pm-anime': {
+    id: 'vidsrc-pm-anime',
+    name: 'VidSrc Ultra Anime',
     mediaTypes: ['anime'],
     supportsSub: true,
     supportsOriginalAudio: true,
-    supportedDubLanguages: ['en'],
-    notes: 'Fast HLS anime stream.',
+    supportedDubLanguages: [],
+    notes: 'High-speed anime CDN, SUB priority.',
+  },
+  'autoembed-co-anime': {
+    id: 'autoembed-co-anime',
+    name: 'AutoEmbed Anime',
+    mediaTypes: ['anime'],
+    supportsSub: true,
+    supportsOriginalAudio: true,
+    supportedDubLanguages: [],
+    notes: 'Fast anime mirror, SUB priority.',
+  },
+  '2embed-skin-anime': {
+    id: '2embed-skin-anime',
+    name: '2Embed Anime',
+    mediaTypes: ['anime'],
+    supportsSub: true,
+    supportsOriginalAudio: true,
+    supportedDubLanguages: [],
+    notes: 'Deep anime catalog, SUB priority.',
   },
   'screenscape-anime': {
     id: 'screenscape-anime',
@@ -49,108 +61,72 @@ export const PROVIDER_AUDIO_CAPABILITIES: Record<string, ProviderAudioCapability
     supportsSub: true,
     supportsOriginalAudio: true,
     supportedDubLanguages: ['en', 'hi'],
+    notes: 'Multi-audio anime server with verified English and Hindi dub options where available.',
   },
-  'rivestream-anime': {
-    id: 'rivestream-anime',
-    name: 'RiveStream Anime',
+  'vidsrc-su-anime': {
+    id: 'vidsrc-su-anime',
+    name: 'VidSrc Direct Anime',
     mediaTypes: ['anime'],
     supportsSub: true,
     supportsOriginalAudio: true,
-    supportedDubLanguages: ['en'],
+    supportedDubLanguages: [],
+    notes: 'Direct anime stream, SUB priority.',
   },
-  '111movies-anime': {
-    id: '111movies-anime',
-    name: '111Movies Anime',
-    mediaTypes: ['anime'],
-    supportsSub: true,
-    supportsOriginalAudio: true,
-    supportedDubLanguages: ['en'],
-  },
-  screenscape: {
-    id: 'screenscape',
-    name: 'ScreenScape',
-    mediaTypes: ['movie', 'tv'],
-    supportsSub: true,
-    supportsOriginalAudio: true,
-    supportedDubLanguages: ['hi', 'en', 'ta', 'te', 'bn'],
-    notes: 'Multi-Audio server with authentic Indian regional and Hindi dubs.',
-  },
-  vidfast: {
-    id: 'vidfast',
-    name: 'VidFast HD',
+
+  // ─── 2. Movies & TV Series Providers ───
+  vidlink: {
+    id: 'vidlink',
+    name: 'VidLink HD',
     mediaTypes: ['movie', 'tv'],
     supportsSub: true,
     supportsOriginalAudio: true,
     supportedDubLanguages: ['en'],
-    notes: 'Fast HLS stream for Movies and TV shows.',
+    notes: 'Clean 1080p stream for movies and TV series, English original/dub.',
   },
-  vidsrc: {
-    id: 'vidsrc',
-    name: 'Vidsrc HD',
+  'vidsrc-pm': {
+    id: 'vidsrc-pm',
+    name: 'VidSrc Ultra HD',
     mediaTypes: ['movie', 'tv'],
     supportsSub: true,
     supportsOriginalAudio: true,
     supportedDubLanguages: ['en'],
+    notes: 'Global CDN, high uptime, English original/dub.',
   },
-  rivestream: {
-    id: 'rivestream',
-    name: 'VidSrc.net HD',
-    mediaTypes: ['movie', 'tv'],
-    supportsSub: true,
-    supportsOriginalAudio: true,
-    supportedDubLanguages: ['en'],
-  },
-  '111movies': {
-    id: '111movies',
-    name: '111Movies',
-    mediaTypes: ['movie', 'tv'],
-    supportsSub: true,
-    supportsOriginalAudio: true,
-    supportedDubLanguages: ['en'],
-  },
-  'vidsrc-me': {
-    id: 'vidsrc-me',
-    name: 'VidSrc.me',
-    mediaTypes: ['movie', 'tv', 'anime'],
-    supportsSub: true,
-    supportsOriginalAudio: true,
-    supportedDubLanguages: ['en'],
-    notes: 'Ad-free, reliable, iframe-friendly. Great multi-subtitle support.',
-  },
-  'vidsrc-net': {
-    id: 'vidsrc-net',
-    name: 'VidSrc.net',
-    mediaTypes: ['movie', 'tv'],
-    supportsSub: true,
-    supportsOriginalAudio: true,
-    supportedDubLanguages: ['en'],
-  },
-  videasy: {
-    id: 'videasy',
-    name: 'Videasy HD',
-    mediaTypes: ['movie', 'tv'],
-    supportsSub: true,
-    supportsOriginalAudio: true,
-    supportedDubLanguages: ['en'],
-    notes: 'Premium built-in player. Multi-subtitle. Clean UI.',
-  },
-  'videasy-anime': {
-    id: 'videasy-anime',
-    name: 'Videasy Anime',
-    mediaTypes: ['anime'],
-    supportsSub: true,
-    supportsOriginalAudio: true,
-    supportedDubLanguages: ['en'],
-    notes: 'Premium anime player. Uses AniList ID for best episode mapping.',
-  },
-  multiembed: {
-    id: 'multiembed',
-    name: 'MultiEmbed',
+  'autoembed-co': {
+    id: 'autoembed-co',
+    name: 'AutoEmbed HD',
     mediaTypes: ['movie', 'tv'],
     supportsSub: true,
     supportsOriginalAudio: true,
     supportedDubLanguages: ['en', 'hi'],
-    notes: 'Huge catalog. Multi-audio support.',
+    notes: 'Multi-language server supporting English and Hindi dub tracks where available.',
+  },
+  screenscape: {
+    id: 'screenscape',
+    name: 'ScreenScape HD',
+    mediaTypes: ['movie', 'tv'],
+    supportsSub: true,
+    supportsOriginalAudio: true,
+    supportedDubLanguages: ['en', 'hi'],
+    notes: 'Multi-audio server with verified Hindi and English dub options.',
+  },
+  '2embed-skin': {
+    id: '2embed-skin',
+    name: '2Embed Direct',
+    mediaTypes: ['movie', 'tv'],
+    supportsSub: true,
+    supportsOriginalAudio: true,
+    supportedDubLanguages: ['en'],
+    notes: 'Wide catalog of movies and series.',
+  },
+  'vidsrc-su': {
+    id: 'vidsrc-su',
+    name: 'VidSrc Direct HD',
+    mediaTypes: ['movie', 'tv'],
+    supportsSub: true,
+    supportsOriginalAudio: true,
+    supportedDubLanguages: ['en'],
+    notes: 'Direct 1080p stream.',
   },
 };
 

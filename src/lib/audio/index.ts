@@ -68,198 +68,6 @@ const LANGUAGE_NAME_MAP: Record<string, { name: string; flag: string }> = {
   tr: { name: 'Turkish', flag: '🇹🇷' },
 };
 
-// Known titles with verified authorized Hindi audio / dubs
-const VERIFIED_HINDI_DUB_IDS = new Set<string | number>([
-  // MCU / Marvel
-  '299534', // Avengers: Endgame
-  '299536', // Avengers: Infinity War
-  '24428',  // The Avengers
-  '284054', // Black Panther
-  '634649', // Spider-Man: No Way Home
-  '315635', // Spider-Man: Homecoming
-  '429617', // Spider-Man: Far From Home
-  '293660', // Deadpool
-  '533535', // Deadpool & Wolverine
-  '118340', // Guardians of the Galaxy
-  '284053', // Thor: Ragnarok
-  '1726',   // Iron Man
-  '284052', // Doctor Strange
-
-  // Blockbusters / Sci-Fi
-  '19995',  // Avatar
-  '76600',  // Avatar: The Way of Water
-  '438631', // Dune
-  '693134', // Dune: Part Two
-  '157336', // Interstellar
-  '872585', // Oppenheimer
-  '155',    // The Dark Knight
-  '27205',  // Inception
-  '597',    // Titanic
-  '916224', // Suzume
-
-  // TV / Anime Series (Crunchyroll, Netflix & JioCinema Official Hindi Dubs)
-  '66732',  // Stranger Things
-  '71446',  // Money Heist
-  '93405',  // Squid Game
-  '99966',  // All of Us Are Dead
-  '70523',  // Dark
-  '46260',  // Naruto (TMDB 46260)
-  '20',     // Naruto (AniList 20)
-  '31911',  // Naruto Shippuden (TMDB 31911)
-  '1735',   // Naruto Shippuden (AniList 1735)
-  '70881',  // Boruto (TMDB 70881)
-  '97938',  // Boruto (AniList 97938)
-  '12971',  // Dragon Ball Z (TMDB 12971)
-  '813',    // Dragon Ball Z (AniList 813)
-  '62710',  // Dragon Ball Super (TMDB 62710)
-  '21175',  // Dragon Ball Super (AniList 21175)
-  '85937',  // Demon Slayer (TMDB 85937)
-  '101922', // Demon Slayer (AniList 101922)
-  '95479',  // Jujutsu Kaisen (TMDB 95479)
-  '113415', // Jujutsu Kaisen (AniList 113415)
-  '127532', // Solo Leveling (TMDB 127532)
-  '151807', // Solo Leveling (AniList 151807)
-  '114410', // Chainsaw Man (TMDB 114410)
-  '127230', // Chainsaw Man (AniList 127230)
-  '120089', // Spy x Family (TMDB 120089)
-  '140960', // Spy x Family (AniList 140960)
-  '207347', // Kaiju No. 8 (TMDB 207347)
-  '153288', // Kaiju No. 8 (AniList 153288)
-  '37854',  // One Piece (TMDB 37854)
-  '21',     // One Piece (AniList 21)
-  '73223',  // Black Clover (TMDB 73223)
-  '97940',  // Black Clover (AniList 97940)
-  '30984',  // Bleach (TMDB 30984)
-  '269',    // Bleach (AniList 269)
-  '211684', // Bleach: TYBW (TMDB 211684)
-  '114446', // Bleach: TYBW (AniList 114446)
-  '13916',  // Death Note (TMDB 13916)
-  '1535',   // Death Note (AniList 1535)
-  '106063', // Tokyo Revengers (TMDB 106063)
-  '120120', // Tokyo Revengers (AniList 120120)
-  '1429',   // Attack on Titan (TMDB 1429)
-  '16498',  // Attack on Titan (AniList 16498)
-  '65930',  // My Hero Academia (TMDB 65930)
-  '21459',  // My Hero Academia (AniList 21459)
-  '136283', // Blue Lock (TMDB 136283)
-  '137822', // Blue Lock (AniList 137822)
-  '225016', // Wind Breaker (TMDB 225016)
-  '163270', // Wind Breaker (AniList 163270)
-  '205424', // Mashle: Magic and Muscles (TMDB 205424)
-  '151801', // Mashle (AniList 151801)
-  '114411', // Ranking of Kings (TMDB 114411)
-  '113717', // Ranking of Kings (AniList 113717)
-  '71370',  // Classroom of the Elite (TMDB 71370)
-  '98659',  // Classroom of the Elite (AniList 98659)
-  '83095',  // Vinland Saga (TMDB 83095)
-  '101348', // Vinland Saga (AniList 101348)
-  '46298',  // Hunter x Hunter (TMDB 46298)
-  '11061',  // Hunter x Hunter (AniList 11061)
-  '60625',  // Haikyu!! (TMDB 60625)
-  '20464',  // Haikyu!! (AniList 20464)
-  '117465', // Hell's Paradise (TMDB 117465)
-  '128893', // Hell's Paradise (AniList 128893)
-  '86031',  // Dr. STONE (TMDB 86031)
-  '105333', // Dr. STONE (AniList 105333)
-  '86717',  // Fire Force (TMDB 86717)
-  '105310', // Fire Force (AniList 105310)
-  '81356',  // Slime Isekai (TMDB 81356)
-  '101280', // Slime Isekai (AniList 101280)
-  '83097',  // Shield Hero (TMDB 83097)
-  '99263',  // Shield Hero (AniList 99263)
-  '94664',  // Mushoku Tensei (TMDB 94664)
-  '98322',  // Mushoku Tensei (TMDB 98322 alias)
-  '108465', // Mushoku Tensei (AniList 108465)
-  '39535',  // Mushoku Tensei (MAL 39535)
-  '63639',  // Overlord (TMDB 63639)
-  '20832',  // Overlord (AniList 20832)
-  '65942',  // Re:Zero (TMDB 65942)
-  '21355',  // Re:Zero (AniList 21355)
-  '209867', // Frieren (TMDB 209867)
-  '154587', // Frieren (AniList 154587)
-  '372058', // Your Name (TMDB 372058)
-  '568160', // Weathering with You (TMDB 568160)
-
-  // Major Indian / Hindi Cinema Hits
-  '579974', // RRR
-  '554600', // K.G.F: Chapter 1
-  '585268', // K.G.F: Chapter 2
-  '256040', // Baahubali: The Beginning
-  '350312', // Baahubali 2: The Conclusion
-  '872906', // Jawan
-  '781732', // Animal
-  '533642', // Stree
-  '1022789', // Stree 2
-  '360814', // Dangal
-  '693134', // Kalki 2898 AD
-  '626392', // Pushpa: The Rise
-  '889737', // Pushpa 2: The Rule
-  '792307', // Pathaan
-  '753342', // Tiger 3
-]);
-
-export const VERIFIED_ENGLISH_DUB_ANIME_IDS = new Set<string | number>([
-  // Major anime with verified English dub streaming support
-  '21',     // One Piece (AniList ID 21)
-  '37854',  // One Piece (TMDB ID 37854)
-  '16498',  // Attack on Titan (AniList 16498)
-  '1429',   // Attack on Titan (TMDB 1429)
-  '20',     // Naruto (AniList 20)
-  '46260',  // Naruto (TMDB 46260)
-  '1735',   // Naruto Shippuden (AniList 1735)
-  '31911',  // Naruto Shippuden (TMDB 31911)
-  '101922', // Demon Slayer (AniList 101922)
-  '85937',  // Demon Slayer (TMDB 85937)
-  '113415', // Jujutsu Kaisen (AniList 113415)
-  '95479',  // Jujutsu Kaisen (TMDB 95479)
-  '151807', // Solo Leveling (AniList 151807)
-  '127532', // Solo Leveling (TMDB 127532)
-  '127230', // Chainsaw Man (AniList 127230)
-  '114410', // Chainsaw Man (TMDB 114410)
-  '140960', // Spy x Family (AniList 140960)
-  '120089', // Spy x Family (TMDB 120089)
-  '154587', // Frieren (AniList 154587)
-  '209867', // Frieren (TMDB 209867)
-  '1535',   // Death Note (AniList 1535)
-  '13916',  // Death Note (TMDB 13916)
-  '20605',  // Tokyo Ghoul (AniList 20605)
-  '61223',  // Tokyo Ghoul (TMDB 61223)
-  '21459',  // My Hero Academia (AniList 21459)
-  '65930',  // My Hero Academia (TMDB 65930)
-  '30',     // Neon Genesis Evangelion
-  '269',    // Bleach (AniList 269)
-  '30984',  // Bleach (TMDB 30984)
-  '114446', // Bleach: TYBW (AniList 114446)
-  '211684', // Bleach: TYBW (TMDB 211684)
-  '11061',  // Hunter x Hunter (AniList 11061)
-  '46298',  // Hunter x Hunter (TMDB 46298)
-  '5114',   // Fullmetal Alchemist: Brotherhood
-  '101348', // Vinland Saga (AniList 101348)
-  '83095',  // Vinland Saga (TMDB 83095)
-  '120377', // Cyberpunk: Edgerunners (AniList 120377)
-  '105248', // Cyberpunk: Edgerunners (TMDB 105248)
-  '1',      // Cowboy Bebop (AniList 1)
-  '13850',  // Cowboy Bebop (TMDB 13850)
-  '9253',   // Steins;Gate (AniList 9253)
-  '34484',  // Steins;Gate (TMDB 34484)
-  '21507',  // Mob Psycho 100 (AniList 21507)
-  '67070',  // Mob Psycho 100 (TMDB 67070)
-  '11757',  // Sword Art Online (AniList 11757)
-  '45782',  // Sword Art Online (TMDB 45782)
-  '153288', // Kaiju No. 8 (AniList 153288)
-  '207347', // Kaiju No. 8 (TMDB 207347)
-  '137822', // Blue Lock (AniList 137822)
-  '136283', // Blue Lock (TMDB 136283)
-  '20832',  // Overlord (AniList 20832)
-  '63639',  // Overlord (TMDB 63639)
-  '21355',  // Re:Zero (AniList 21355)
-  '65942',  // Re:Zero (TMDB 65942)
-  '94664',  // Mushoku Tensei: Jobless Reincarnation (TMDB 94664)
-  '98322',  // Mushoku Tensei: Jobless Reincarnation (TMDB 98322 alias)
-  '108465', // Mushoku Tensei: Jobless Reincarnation (AniList 108465)
-  '39535',  // Mushoku Tensei: Jobless Reincarnation (MAL 39535)
-]);
-
 export function getLanguageMetadata(code?: string): { name: string; flag: string } {
   const norm = (code || 'en').toLowerCase().trim();
   return LANGUAGE_NAME_MAP[norm] || { name: norm.toUpperCase(), flag: '🌐' };
@@ -268,6 +76,7 @@ export function getLanguageMetadata(code?: string): { name: string; flag: string
 /**
  * Authoritative Synchronous Discovery-Level Audio Availability
  * Uses cached provider/voice actor resolutions and canonical capabilities.
+ * NEVER infers dubs from popularity or hardcoded ID lists.
  */
 export function getContentAudioAvailability(
   params: GetContentAudioAvailabilityParams
@@ -283,28 +92,18 @@ export function getContentAudioAvailability(
   const isOriginalHindi = origLang === 'hi';
   const isOriginalEnglish = !isAnime && origLang === 'en';
 
-  // Check known/cached dub languages from AniList or previous resolution
+  // Check known/cached dub languages dynamically discovered from AniList voice actors
   const cachedLangs =
     (params.aniListId ? AudioAvailabilityCache.getKnownDubLanguages(params.aniListId) : null) ||
     AudioAvailabilityCache.getKnownDubLanguages(idStr) ||
     (params.title ? AudioAvailabilityCache.getKnownDubLanguages(params.title) : null);
 
-  const isCatalogEnglish =
-    VERIFIED_ENGLISH_DUB_ANIME_IDS.has(idStr) ||
-    VERIFIED_ENGLISH_DUB_ANIME_IDS.has(Number(idStr)) ||
-    (params.aniListId ? VERIFIED_ENGLISH_DUB_ANIME_IDS.has(String(params.aniListId)) || VERIFIED_ENGLISH_DUB_ANIME_IDS.has(Number(params.aniListId)) : false);
-
-  const isCatalogHindi =
-    VERIFIED_HINDI_DUB_IDS.has(idStr) ||
-    VERIFIED_HINDI_DUB_IDS.has(Number(idStr)) ||
-    (params.aniListId ? VERIFIED_HINDI_DUB_IDS.has(String(params.aniListId)) || VERIFIED_HINDI_DUB_IDS.has(Number(params.aniListId)) : false);
-
-  let hasEnglishDub = isOriginalEnglish || isCatalogEnglish;
+  let hasEnglishDub = isOriginalEnglish;
   if (!hasEnglishDub && cachedLangs) {
     hasEnglishDub = cachedLangs.includes('English');
   }
 
-  let hasHindiDub = isOriginalHindi || isCatalogHindi;
+  let hasHindiDub = isOriginalHindi;
   if (!hasHindiDub && cachedLangs) {
     hasHindiDub = cachedLangs.includes('Hindi');
   }
@@ -321,17 +120,17 @@ export function getContentAudioAvailability(
     originalLanguage: origLang,
     isOriginalHindi,
     isOriginalEnglish,
-    verified: Boolean(cachedLangs),
+    verified: Boolean(cachedLangs || isOriginalHindi || isOriginalEnglish),
     providers: {
       en: hasEnglishDub
         ? isAnime
-          ? ['kuhi-hls', 'anivexa-hls', 'miruro-anime', '2embed-anime', 'nhd-anime', 'vidsrc-me']
-          : ['vidsrc', 'vidsrc-me', 'nhd-cinema', '2embed', 'vidfast']
+          ? ['vidlink-anime', 'screenscape-anime']
+          : ['vidlink', 'vidsrc-pm', 'autoembed-co', 'screenscape', '2embed-skin', 'vidsrc-su']
         : [],
       hi: hasHindiDub
         ? isAnime
-          ? ['nhd-anime', '2embed-anime']
-          : ['nhd-cinema', '2embed', 'vidsrc']
+          ? ['screenscape-anime']
+          : ['screenscape', 'autoembed-co']
         : [],
     },
   };
@@ -358,19 +157,9 @@ export async function getContentAudioAvailabilityAsync(
   const isOriginalHindi = origLang === 'hi';
   const isOriginalEnglish = !isAnime && origLang === 'en';
 
-  const isCatalogEnglish =
-    VERIFIED_ENGLISH_DUB_ANIME_IDS.has(idStr) ||
-    VERIFIED_ENGLISH_DUB_ANIME_IDS.has(Number(idStr)) ||
-    (params.aniListId ? VERIFIED_ENGLISH_DUB_ANIME_IDS.has(String(params.aniListId)) || VERIFIED_ENGLISH_DUB_ANIME_IDS.has(Number(params.aniListId)) : false);
-
-  const isCatalogHindi =
-    VERIFIED_HINDI_DUB_IDS.has(idStr) ||
-    VERIFIED_HINDI_DUB_IDS.has(Number(idStr)) ||
-    (params.aniListId ? VERIFIED_HINDI_DUB_IDS.has(String(params.aniListId)) || VERIFIED_HINDI_DUB_IDS.has(Number(params.aniListId)) : false);
-
-  let hasEnglishDub = isOriginalEnglish || isCatalogEnglish;
-  let hasHindiDub = isOriginalHindi || isCatalogHindi;
-  let isVerified = Boolean(isCatalogEnglish || isCatalogHindi);
+  let hasEnglishDub = isOriginalEnglish;
+  let hasHindiDub = isOriginalHindi;
+  let isVerified = Boolean(isOriginalHindi || isOriginalEnglish);
 
   // Check cached known dub languages across media ID, AniList ID, and title
   const cachedLangs =
@@ -419,13 +208,13 @@ export async function getContentAudioAvailabilityAsync(
     providers: {
       en: hasEnglishDub
         ? isAnime
-          ? ['kuhi-hls', 'anivexa-hls', 'miruro-anime', '2embed-anime', 'nhd-anime', 'vidsrc-me']
-          : ['vidsrc', 'vidsrc-me', 'nhd-cinema', '2embed', 'vidfast']
+          ? ['vidlink-anime', 'screenscape-anime']
+          : ['vidlink', 'vidsrc-pm', 'autoembed-co', 'screenscape', '2embed-skin', 'vidsrc-su']
         : [],
       hi: hasHindiDub
         ? isAnime
-          ? ['nhd-anime', '2embed-anime']
-          : ['nhd-cinema', '2embed', 'vidsrc']
+          ? ['screenscape-anime']
+          : ['screenscape', 'autoembed-co']
         : [],
     },
   };
@@ -507,14 +296,13 @@ export function filterContentByDub(
 
     const isOriginalHindi = origLang === 'hi';
     const isOriginalEnglish = !isAnime && origLang === 'en';
-    const hasHindiDub =
-      isOriginalHindi ||
-      VERIFIED_HINDI_DUB_IDS.has(idStr) ||
-      VERIFIED_HINDI_DUB_IDS.has(Number(item.id));
-    const hasEnglishDub =
-      isOriginalEnglish ||
-      VERIFIED_ENGLISH_DUB_ANIME_IDS.has(idStr) ||
-      VERIFIED_ENGLISH_DUB_ANIME_IDS.has(Number(item.id));
+
+    const cachedLangs =
+      AudioAvailabilityCache.getKnownDubLanguages(idStr) ||
+      (typeof item.title === 'string' ? AudioAvailabilityCache.getKnownDubLanguages(item.title) : null);
+
+    const hasHindiDub = isOriginalHindi || (cachedLangs ? cachedLangs.includes('Hindi') : false);
+    const hasEnglishDub = isOriginalEnglish || (cachedLangs ? cachedLangs.includes('English') : false);
 
     if (dubFilter === 'hindi') {
       return hasHindiDub;
@@ -673,29 +461,15 @@ export function getEpisodeAudioTracks(params: GetEpisodeAudioTracksParams): Epis
   const isOriginalHindi = origLang === 'hi';
   const isOriginalEnglish = !isAnime && origLang === 'en';
 
-  const isCatalogEnglish =
-    VERIFIED_ENGLISH_DUB_ANIME_IDS.has(idStr) ||
-    VERIFIED_ENGLISH_DUB_ANIME_IDS.has(Number(idStr)) ||
-    (aniListId ? VERIFIED_ENGLISH_DUB_ANIME_IDS.has(String(aniListId)) || VERIFIED_ENGLISH_DUB_ANIME_IDS.has(Number(aniListId)) : false);
-
-  const isCatalogHindi =
-    VERIFIED_HINDI_DUB_IDS.has(idStr) ||
-    VERIFIED_HINDI_DUB_IDS.has(Number(idStr)) ||
-    (aniListId ? VERIFIED_HINDI_DUB_IDS.has(String(aniListId)) || VERIFIED_HINDI_DUB_IDS.has(Number(aniListId)) : false);
-
   const cacheKey = AudioAvailabilityCache.makeKey(mediaType, mediaId, season, episode);
   const cached = AudioAvailabilityCache.get(cacheKey);
   if (cached && (!isAnime || cached.originalLanguage === 'ja')) {
-    const cachedEn = cached.tracks.find((t) => t.id === 'dub-en')?.available;
-    const cachedHi = cached.tracks.find((t) => t.id === 'dub-hi')?.available;
-    if ((!isCatalogEnglish || cachedEn) && (!isCatalogHindi || cachedHi)) {
-      return cached;
-    }
+    return cached;
   }
 
   // 1. Evaluate genuine English availability
-  let hasEnglishDub = isAnime ? isCatalogEnglish : isOriginalEnglish;
-  if (!hasEnglishDub) {
+  let hasEnglishDub = false;
+  if (!isOriginalEnglish) {
     if (params.verifiedEnglish === true) {
       hasEnglishDub = true;
     } else if (params.dubLanguages && params.dubLanguages.length > 0 && params.dubLanguages.includes('English')) {
@@ -712,7 +486,7 @@ export function getEpisodeAudioTracks(params: GetEpisodeAudioTracksParams): Epis
   }
 
   // 2. Evaluate genuine Hindi availability
-  let hasHindiDub = isOriginalHindi || isCatalogHindi;
+  let hasHindiDub = isOriginalHindi;
   if (!hasHindiDub) {
     if (params.verifiedHindi === true) {
       hasHindiDub = true;
@@ -740,6 +514,7 @@ export function getEpisodeAudioTracks(params: GetEpisodeAudioTracksParams): Epis
       provider: isAnime ? 'vidlink-anime' : 'vidlink',
       available: true,
       isOriginal: true,
+      evidenceLevel: 'PLAYBACK_VERIFIED',
     },
     // 2. English Track (Only when original is NOT English, e.g. Anime, Foreign)
     ...(!isOriginalEnglish || isAnime
@@ -753,6 +528,7 @@ export function getEpisodeAudioTracks(params: GetEpisodeAudioTracksParams): Epis
             provider: isAnime ? 'vidlink-anime' : 'vidlink',
             available: hasEnglishDub,
             isOriginal: isOriginalEnglish,
+            evidenceLevel: hasEnglishDub ? ('PROVIDER_CONFIRMED' as const) : ('UNKNOWN' as const),
           },
         ]
       : []),
@@ -766,6 +542,11 @@ export function getEpisodeAudioTracks(params: GetEpisodeAudioTracksParams): Epis
       provider: isAnime ? 'screenscape-anime' : 'autoembed-co',
       available: hasHindiDub,
       isOriginal: isOriginalHindi,
+      evidenceLevel: isOriginalHindi
+        ? ('PLAYBACK_VERIFIED' as const)
+        : hasHindiDub
+        ? ('PROVIDER_CONFIRMED' as const)
+        : ('UNKNOWN' as const),
     },
   ];
 
@@ -847,26 +628,12 @@ export async function getEpisodeAudioTracksAsync(
   const isAnime = params.mediaType === 'anime' || (params.originalLanguage && params.originalLanguage.toLowerCase().trim() === 'ja');
 
   if (isAnime) {
-    const idStr = String(params.mediaId);
-    const isCatalogEnglish =
-      VERIFIED_ENGLISH_DUB_ANIME_IDS.has(idStr) ||
-      VERIFIED_ENGLISH_DUB_ANIME_IDS.has(Number(idStr)) ||
-      (aniListId ? VERIFIED_ENGLISH_DUB_ANIME_IDS.has(String(aniListId)) || VERIFIED_ENGLISH_DUB_ANIME_IDS.has(Number(aniListId)) : false);
-    const isCatalogHindi =
-      VERIFIED_HINDI_DUB_IDS.has(idStr) ||
-      VERIFIED_HINDI_DUB_IDS.has(Number(idStr)) ||
-      (aniListId ? VERIFIED_HINDI_DUB_IDS.has(String(aniListId)) || VERIFIED_HINDI_DUB_IDS.has(Number(aniListId)) : false);
-
-    if (verifiedEnglish === undefined && isCatalogEnglish) {
-      verifiedEnglish = true;
-    }
-
-    if (verifiedEnglish === undefined || !aniListId || !malId) {
-      const queryTarget = aniListId || params.title || (isCatalogEnglish ? undefined : params.mediaId);
+    if (verifiedEnglish === undefined || !aniListId || !malId || !dubLanguages) {
+      const queryTarget = aniListId || params.title || params.mediaId;
       if (queryTarget) {
         const dubCheck = await checkAniListDubAvailability(queryTarget);
         if (verifiedEnglish === undefined) {
-          verifiedEnglish = dubCheck.hasEnglishDub || isCatalogEnglish;
+          verifiedEnglish = dubCheck.hasEnglishDub;
         }
         if (!dubLanguages) {
           dubLanguages = [...dubCheck.spokenLanguages];
@@ -878,16 +645,6 @@ export async function getEpisodeAudioTracksAsync(
           aniListId = dubCheck.id;
         }
       }
-    }
-
-    if (isCatalogEnglish) {
-      verifiedEnglish = true;
-      if (!dubLanguages) dubLanguages = ['Japanese', 'English'];
-      else if (!dubLanguages.includes('English')) dubLanguages = [...dubLanguages, 'English'];
-    }
-    if (isCatalogHindi) {
-      if (!dubLanguages) dubLanguages = ['Japanese', 'Hindi'];
-      else if (!dubLanguages.includes('Hindi')) dubLanguages = [...dubLanguages, 'Hindi'];
     }
   }
 

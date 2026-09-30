@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ApiGateway } from '@/lib/api/gateway';
 import { PosterCard } from '@/components/cards/PosterCard';
-import { VERIFIED_ENGLISH_DUB_ANIME_IDS, filterContentByDub } from '@/lib/audio';
+import { filterContentByDub } from '@/lib/audio';
 import {
   Play,
   Info,
@@ -81,14 +81,7 @@ export default function AnimePage() {
 
   const displayedShows = useMemo(() => {
     if (audioFilter === 'dub') {
-      const filtered = filterContentByDub(shows as unknown as Record<string, unknown>[], 'english', 'anime') as unknown as AnimeShow[];
-      if (filtered.length >= 4) return filtered;
-      return shows.filter(
-        (s) =>
-          VERIFIED_ENGLISH_DUB_ANIME_IDS.has(String(s.id)) ||
-          VERIFIED_ENGLISH_DUB_ANIME_IDS.has(s.id) ||
-          (s.vote_average && s.vote_average > 7.0)
-      );
+      return filterContentByDub(shows as unknown as Record<string, unknown>[], 'english', 'anime') as unknown as AnimeShow[];
     }
     return shows;
   }, [shows, audioFilter]);
@@ -335,9 +328,8 @@ export default function AnimePage() {
               data-lenis-prevent
             >
               {trendingList.map((item) => {
-                const isDubbed = VERIFIED_ENGLISH_DUB_ANIME_IDS.has(String(item.id)) || VERIFIED_ENGLISH_DUB_ANIME_IDS.has(item.id);
-                const track = audioFilter === 'dub' ? 'dub-en' : audioFilter === 'sub' ? 'sub' : (isDubbed ? 'dub-en' : 'sub');
-                const badge = audioFilter === 'dub' ? '🎙️ DUB' : audioFilter === 'sub' ? '🇯🇵 SUB' : (isDubbed ? 'SUB / DUB' : '🇯🇵 SUB');
+                const track = audioFilter === 'dub' ? 'dub-en' : 'sub';
+                const badge = audioFilter === 'dub' ? '🎙️ DUB' : '🇯🇵 SUB';
                 return (
                   <PosterCard
                     key={item.id}
@@ -378,9 +370,8 @@ export default function AnimePage() {
               data-lenis-prevent
             >
               {topRatedList.map((item) => {
-                const isDubbed = VERIFIED_ENGLISH_DUB_ANIME_IDS.has(String(item.id)) || VERIFIED_ENGLISH_DUB_ANIME_IDS.has(item.id);
-                const track = audioFilter === 'dub' ? 'dub-en' : audioFilter === 'sub' ? 'sub' : (isDubbed ? 'dub-en' : 'sub');
-                const badge = audioFilter === 'dub' ? '🎙️ DUB' : audioFilter === 'sub' ? '🇯🇵 SUB' : (isDubbed ? 'SUB / DUB' : '🇯🇵 SUB');
+                const track = audioFilter === 'dub' ? 'dub-en' : 'sub';
+                const badge = audioFilter === 'dub' ? '🎙️ DUB' : '🇯🇵 SUB';
                 return (
                   <PosterCard
                     key={item.id}
@@ -542,9 +533,8 @@ export default function AnimePage() {
         ) : displayedShows.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-5">
             {displayedShows.map((item) => {
-              const isDubbed = VERIFIED_ENGLISH_DUB_ANIME_IDS.has(String(item.id)) || VERIFIED_ENGLISH_DUB_ANIME_IDS.has(item.id);
-              const track = audioFilter === 'dub' ? 'dub-en' : audioFilter === 'sub' ? 'sub' : (isDubbed ? 'dub-en' : 'sub');
-              const badge = audioFilter === 'dub' ? '🎙️ DUB' : audioFilter === 'sub' ? '🇯🇵 SUB' : (isDubbed ? 'SUB / DUB' : '🇯🇵 SUB');
+              const track = audioFilter === 'dub' ? 'dub-en' : 'sub';
+              const badge = audioFilter === 'dub' ? '🎙️ DUB' : '🇯🇵 SUB';
               return (
                 <PosterCard
                   key={item.id}

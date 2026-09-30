@@ -20,6 +20,13 @@ export interface AniListMediaDetails {
 
 export type AudioTrackType = 'sub' | 'dub';
 
+export type LanguageEvidenceLevel =
+  | 'UNKNOWN'
+  | 'METADATA_ONLY'
+  | 'PROVIDER_CONFIRMED'
+  | 'SOURCE_CONFIRMED'
+  | 'PLAYBACK_VERIFIED';
+
 export interface AudioTrack {
   id: string; // e.g. 'sub', 'dub-en', 'dub-hi'
   language: string; // e.g. 'Japanese', 'English', 'Hindi'
@@ -31,6 +38,7 @@ export interface AudioTrack {
   sourceId?: string;
   available: boolean;
   isOriginal: boolean;
+  evidenceLevel?: LanguageEvidenceLevel;
 }
 
 export interface MediaPlaybackConfig {

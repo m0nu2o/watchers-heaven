@@ -1883,7 +1883,7 @@ export default function WatchPage() {
                   return isActuallyAnime
                     ? [
                         { id: 'sub', label: '🇯🇵 Japanese (SUB)', available: true, languageCode: 'ja' },
-                        { id: 'dub-en', label: '🇬🇧 English (DUB)', available: true, languageCode: 'en' },
+                        { id: 'dub-en', label: '🇬🇧 English (DUB)', available: false, languageCode: 'en' },
                         { id: 'dub-hi', label: '🇮🇳 Hindi (DUB)', available: false, languageCode: 'hi' },
                       ]
                     : [
