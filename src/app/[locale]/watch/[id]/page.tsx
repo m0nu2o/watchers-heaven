@@ -20,6 +20,9 @@ import {
 } from 'lucide-react';
 import { ApiGateway } from '@/lib/api/gateway';
 import { ProviderRegistry, ProviderTelemetry } from '@/lib/providers';
+import { UniversalPlayer } from '@/components/player/universal';
+import { UniversalPlayerEngine } from '@/lib/player/engine';
+import type { NormalizedPlaybackSource, PlayerAudioTrack } from '@/lib/player/types';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { DownloadModal } from '@/components/download/DownloadModal';
 import { supabase } from '@/lib/supabase/client';
@@ -780,6 +783,93 @@ export default function WatchPage() {
     handleSelectEpisode(season || 1, nextEp);
   }, [episode, season, handleSelectEpisode]);
 
+  const goToPrevEpisode = useCallback(() => {
+    if (!episode || episode <= 1) return;
+    handleSelectEpisode(season || 1, episode - 1);
+  }, [episode, season, handleSelectEpisode]);
+
+  const hasPrevEpisode = Boolean(isActuallyTv && episode !== undefined && episode > 1);
+  const hasNextEpisode = Boolean(
+    isActuallyTv &&
+      (episodes.length > 0
+        ? episodes.some((e) => e.episode_number === (episode || 1) + 1)
+        : true)
+  );
+
+  const nextEpisodeItem = useMemo(() => {
+    if (!isActuallyTv) return undefined;
+    return episodes.find((e) => e.episode_number === (episode || 1) + 1);
+  }, [isActuallyTv, episodes, episode]);
+
+  const availableProviders = useMemo(() => {
+    return ProviderRegistry.getRankedForMediaTypeAndAudio(currentMediaType, selectedAudioTrack);
+  }, [currentMediaType, selectedAudioTrack]);
+
+  // Ensure active provider is compatible with current media type AND selected audio track
+  useEffect(() => {
+    const isSupported = availableProviders.some((p) => p.id === provider);
+    if (!isSupported && availableProviders.length > 0) {
+      setProvider(availableProviders[0].id);
+    }
+  }, [availableProviders, provider]);
+
+  const normalizedSource: NormalizedPlaybackSource = useMemo(() => {
+    const streamType = UniversalPlayerEngine.detectStreamType(embedUrl || '', isDirectHls);
+    const activeAdapter = availableProviders.find((p) => p.id === provider);
+
+    const audioTracks: PlayerAudioTrack[] = (audioAvailability?.tracks || []).map((t) => ({
+      id: t.id,
+      label: t.label,
+      language: t.language,
+      languageCode: t.languageCode,
+      isOriginal: t.isOriginal,
+      available: t.available !== false,
+    }));
+
+    return {
+      sourceId: `${provider}-${id}-${season || 1}-${episode || 1}-${selectedAudioTrack}`,
+      providerId: provider,
+      providerName: activeAdapter?.name || provider,
+      type: streamType,
+      url: embedUrl || '',
+      quality: activeAdapter?.quality.split('/')[0].trim() || '1080p',
+      isDirect: streamType !== 'embed',
+      supportsSeek: true,
+      audioTracks: audioTracks.length > 0 ? audioTracks : undefined,
+      subtitleTracks: subtitles?.map((s, idx) => ({
+        id: String(idx),
+        label: s.label,
+        file: s.file,
+        default: s.default,
+      })),
+      skipTimestamps: skipTimestamps || undefined,
+    };
+  }, [
+    embedUrl,
+    isDirectHls,
+    provider,
+    availableProviders,
+    id,
+    season,
+    episode,
+    selectedAudioTrack,
+    audioAvailability,
+    subtitles,
+    skipTimestamps,
+  ]);
+
+  const handleProgressSave = useCallback(
+    (seconds: number) => {
+      if (typeof window === 'undefined' || seconds <= 0) return;
+      try {
+        localStorage.setItem(storageKey, JSON.stringify({ timestamp: Math.floor(seconds) }));
+      } catch {
+        // Ignore quota errors
+      }
+    },
+    [storageKey]
+  );
+
   // Load accent color from settings
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -1368,18 +1458,6 @@ export default function WatchPage() {
     };
   }, [isFullscreen]);
 
-  const availableProviders = useMemo(() => {
-    return ProviderRegistry.getRankedForMediaTypeAndAudio(currentMediaType, selectedAudioTrack);
-  }, [currentMediaType, selectedAudioTrack]);
-
-  // Ensure active provider is compatible with current media type AND selected audio track
-  useEffect(() => {
-    const isSupported = availableProviders.some((p) => p.id === provider);
-    if (!isSupported && availableProviders.length > 0) {
-      setProvider(availableProviders[0].id);
-    }
-  }, [availableProviders, provider]);
-
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#07090e] flex flex-col text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300 w-full max-w-full overflow-x-clip">
       {/* Top Controller Bar (Canonical Title, Reload & Fullscreen ONLY) */}
@@ -1508,299 +1586,50 @@ export default function WatchPage() {
         </div>
       )}
 
-      {/* Main Video Player Container (Dedicated Fullscreen Target) */}
-      <div
-        ref={playerContainerRef}
-        className={`relative bg-black flex items-center justify-center transition-all ${
-          isFullscreen
-            ? 'fixed inset-0 z-[9999] w-screen h-[100dvh] m-0 p-0 overflow-hidden'
-            : 'w-full aspect-video max-h-[75vh] sm:max-h-[80vh] min-h-[220px] sm:min-h-[360px] md:min-h-[480px]'
-        }`}
-      >
-        {/* On-Screen Seek Feedback HUD Toast */}
-        {seekFeedback && (
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none animate-in fade-in zoom-in-95 duration-150">
-            <div className="px-6 py-3 rounded-2xl bg-black/85 backdrop-blur-2xl border border-white/20 text-white font-black text-sm sm:text-base shadow-2xl flex items-center gap-2.5">
-              <span>{seekFeedback}</span>
-            </div>
-          </div>
-        )}
-        {/* Floating Exit Fullscreen Button */}
-        {isFullscreen && (
-          <button
-            onClick={toggleFullscreen}
-            className="absolute top-4 right-4 z-50 bg-black/80 hover:bg-black text-white p-2.5 rounded-xl backdrop-blur-md border border-white/20 shadow-2xl transition cursor-pointer"
-            title="Exit Fullscreen (ESC)"
-          >
-            <Minimize2 className="w-5 h-5" />
-          </button>
-        )}
-
-        {/* Resume Watching Prompt */}
-        {showResumePrompt && (
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm z-20 flex flex-col items-center justify-center p-6 animate-fade-in">
-            <div className="relative bg-slate-900/95 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 max-w-sm w-full shadow-2xl shadow-black/50 flex flex-col items-center space-y-6">
-              <button
-                onClick={handleSkipResume}
-                className="absolute top-4 right-4 p-1.5 rounded-full text-slate-500 hover:text-white hover:bg-slate-800 transition cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-
-              <div className="relative w-20 h-20">
-                <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
-                  <circle cx="40" cy="40" r="35" fill="none" stroke="#1e293b" strokeWidth="4" />
-                  <circle
-                    cx="40"
-                    cy="40"
-                    r="35"
-                    fill="none"
-                    stroke={`#${accentColor}`}
-                    strokeWidth="4"
-                    strokeLinecap="round"
-                    strokeDasharray={`${2 * Math.PI * 35}`}
-                    strokeDashoffset={`${2 * Math.PI * 35 * (1 - Math.min(savedProgress / 3600, 1))}`}
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <Play className="w-6 h-6 text-white fill-white" />
-                </div>
-              </div>
-
-              <div className="text-center">
-                <h3 className="text-xl font-black text-white mb-1">Resume Watching?</h3>
-                <p className="text-slate-400 text-sm">
-                  Pick up from{' '}
-                  <span className="text-white font-semibold">
-                    {Math.floor(savedProgress / 60)}m {savedProgress % 60}s
-                  </span>{' '}
-                  on{' '}
-                  <span className="text-white font-semibold">
-                    {availableProviders.find((p) => p.id === provider)?.name || provider}
-                  </span>
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-2.5 w-full">
-                <button
-                  onClick={handleResume}
-                  className="w-full flex items-center justify-center gap-2.5 hover:brightness-110 text-white font-bold py-3.5 px-4 rounded-2xl text-sm transition-all shadow-lg cursor-pointer"
-                  style={{ backgroundColor: `#${accentColor}` }}
-                >
-                  <Play className="w-4 h-4 fill-white" />
-                  Yes, Resume
-                </button>
-                <button
-                  onClick={handleSkipResume}
-                  className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold py-3 px-4 rounded-2xl text-sm transition-colors cursor-pointer"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  Start Over
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Next Episode Auto-play Popup */}
-        {showNextEpisodePopup && isActuallyTv && (
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm z-30 flex flex-col items-center justify-center p-6 animate-fade-in">
-            <div className="relative bg-slate-900/95 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 max-w-md w-full shadow-2xl shadow-black/50 flex flex-col items-center space-y-6">
-              <button
-                onClick={dismissNextPopup}
-                className="absolute top-4 right-4 p-1.5 rounded-full text-slate-500 hover:text-white hover:bg-slate-800 transition cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-
-              <div className="relative w-20 h-20">
-                <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
-                  <circle cx="40" cy="40" r="35" fill="none" stroke="#1e293b" strokeWidth="4" />
-                  <circle
-                    cx="40"
-                    cy="40"
-                    r="35"
-                    fill="none"
-                    stroke={`#${accentColor}`}
-                    strokeWidth="4"
-                    strokeLinecap="round"
-                    strokeDasharray={`${2 * Math.PI * 35}`}
-                    strokeDashoffset={`${2 * Math.PI * 35 * (nextEpisodeCountdown / 15)}`}
-                    className="transition-all duration-1000 ease-linear"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-2xl font-black text-white">{nextEpisodeCountdown}</span>
-                </div>
-              </div>
-
-              <div className="text-center">
-                <h3 className="text-xl font-black text-white mb-1">Episode Finished</h3>
-                <p className="text-slate-400 text-sm">
-                  Up next:{' '}
-                  <span className="text-white font-semibold">
-                    S{season}E{(episode || 1) + 1}
-                  </span>
-                </p>
-              </div>
-
-              <div className="w-full bg-slate-800 rounded-full h-1 overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all duration-1000 ease-linear"
-                  style={{
-                    width: `${((15 - nextEpisodeCountdown) / 15) * 100}%`,
-                    backgroundColor: `#${accentColor}`,
-                  }}
-                />
-              </div>
-
-              <div className="flex flex-col gap-2.5 w-full">
-                <button
-                  onClick={goToNextEpisode}
-                  className="w-full flex items-center justify-center gap-2.5 hover:brightness-110 text-white font-bold py-3.5 px-4 rounded-2xl text-sm transition-all shadow-lg cursor-pointer"
-                  style={{ backgroundColor: `#${accentColor}` }}
-                >
-                  <SkipForward className="w-4 h-4" />
-                  Play Next Episode
-                </button>
-
-                <div className="flex gap-2.5">
-                  <button
-                    onClick={rewatchEpisode}
-                    className="flex-1 flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold py-3 px-4 rounded-2xl text-sm transition-colors cursor-pointer"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    Rewatch
-                  </button>
-                  <button
-                    onClick={goBackToShow}
-                    className="flex-1 flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold py-3 px-4 rounded-2xl text-sm transition-colors cursor-pointer"
-                  >
-                    <ArrowLeftCircle className="w-3.5 h-3.5" />
-                    Show Details
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {playbackError || (!embedUrl && !isResolvingSource) ? (
-          <div className="w-full h-full min-h-[50vh] md:min-h-[70vh] lg:min-h-[75vh] flex flex-col items-center justify-center bg-[#07090e] p-6 text-center animate-fade-in z-20">
-            <div className="bg-[#0b0f17] border border-slate-800 rounded-3xl p-8 max-w-md w-full shadow-2xl flex flex-col items-center space-y-5">
-              <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center">
-                <AlertTriangle className="w-7 h-7 text-amber-400" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-white mb-1.5">Playback Unavailable</h3>
-                <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
-                  {playbackError || 'This streaming server is currently unreachable or does not have this title.'}
-                </p>
-              </div>
-              <div className="flex flex-col gap-2.5 w-full pt-2">
-                <button
-                  onClick={() => handleNextServerFallback(true)}
-                  className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-xl text-xs transition shadow-lg cursor-pointer"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  <span>Try Next Server</span>
-                </button>
-                {selectedAudioTrack !== 'sub' && (
-                  <button
-                    onClick={() => handleSelectAudioTrack('sub')}
-                    className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold py-2.5 px-4 rounded-xl text-xs transition cursor-pointer"
-                  >
-                    <span>Switch to Original / SUB</span>
-                  </button>
-                )}
-                <button
-                  onClick={() => {
-                    void resolveCurrentSource(selectedAudioTrack).then((r) => {
-                      if (r?.url) {
-                        setEmbedUrl(r.url);
-                        setPlaybackError(null);
-                      }
-                    });
-                  }}
-                  className="w-full text-slate-500 hover:text-slate-300 py-1.5 text-xs transition cursor-pointer"
-                >
-                  Retry Connection
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : isDirectHls && embedUrl ? (
-          <video
-            ref={videoRef}
-            controls
-            autoPlay
-            playsInline
-            className={`transition-all bg-black object-contain ${
-              isFullscreen
-                ? 'w-full h-full absolute inset-0'
-                : 'w-full h-full'
-            }`}
-            onTimeUpdate={(e) => {
-              const cur = e.currentTarget.currentTime;
-              setSavedProgress(cur);
-              if (
-                skipTimestamps?.outro?.start &&
-                cur >= skipTimestamps.outro.start &&
-                !hasTriggeredNextRef.current &&
-                autoNextEnabled &&
-                isActuallyTv
-              ) {
-                hasTriggeredNextRef.current = true;
-                setShowNextEpisodePopup(true);
+      {/* ── LUMINA UNIVERSAL CUSTOM STREAMING PLAYER ── */}
+      <div className="w-full max-w-7xl mx-auto px-0 sm:px-4 md:px-6 pt-0 sm:pt-2">
+        <UniversalPlayer
+          source={normalizedSource}
+          mediaTitle={mediaTitle || (isActuallyAnime ? `Anime #${id}` : isActuallyTv ? `Show #${id}` : `Movie #${id}`)}
+          season={season}
+          episode={episode}
+          episodeName={episodes.find((e) => e.episode_number === episode)?.name}
+          arcName={currentArc?.shortName}
+          mediaType={currentMediaType}
+          availableServers={availableProviders}
+          onSelectServer={handleSelectServer}
+          autoSwitchEnabled={autoSwitchEnabled}
+          onToggleAutoSwitch={handleToggleAutoSwitch}
+          onNextServerFallback={handleNextServerFallback}
+          onPreviousEpisode={hasPrevEpisode ? goToPrevEpisode : undefined}
+          onNextEpisode={hasNextEpisode ? goToNextEpisode : undefined}
+          hasPreviousEpisode={hasPrevEpisode}
+          hasNextEpisode={hasNextEpisode}
+          nextEpisodeMeta={
+            nextEpisodeItem
+              ? {
+                  season: season || 1,
+                  episode: (episode || 1) + 1,
+                  title: nextEpisodeItem.name,
+                }
+              : undefined
+          }
+          savedProgress={savedProgress}
+          onProgressSave={handleProgressSave}
+          accentColor={accentColor.startsWith('#') ? accentColor : `#${accentColor}`}
+          externalError={playbackError}
+          isLoadingSource={isResolvingSource}
+          activeAudioTrack={selectedAudioTrack}
+          onSelectAudioTrack={handleSelectAudioTrack}
+          onRetry={() => {
+            void resolveCurrentSource(selectedAudioTrack).then((result) => {
+              if (result?.url) {
+                setEmbedUrl(result.url);
+                setPlaybackError(null);
               }
-            }}
-            onEnded={() => {
-              if (autoNextEnabled && isActuallyTv) {
-                goToNextEpisode();
-              }
-            }}
-          >
-            {subtitles.map((sub, idx) => (
-              <track
-                key={idx}
-                kind="subtitles"
-                label={sub.label}
-                src={sub.file}
-                default={idx === 0}
-              />
-            ))}
-          </video>
-        ) : embedUrl ? (
-          <iframe
-            key={provider}
-            ref={iframeRef}
-            src={embedUrl}
-            className={`border-0 transition-all ${
-              isFullscreen
-                ? 'w-full h-full absolute inset-0'
-                : 'w-full h-full'
-            }`}
-            allowFullScreen
-            allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
-            referrerPolicy="no-referrer"
-            title="Lumina Stream Player"
-            style={{ border: 'none' }}
-            onLoad={() => {
-              streamConfirmedPlayingRef.current = true;
-              ProviderTelemetry.recordSuccess(provider);
-              if (watchdogTimerRef.current) {
-                clearTimeout(watchdogTimerRef.current);
-                watchdogTimerRef.current = null;
-              }
-            }}
-            onError={() => {
-              ProviderTelemetry.recordFailure(provider, 'Iframe connection error');
-              handleNextServerFallback();
-            }}
-          />
-        ) : (
-          <div className="w-full h-full bg-black" />
-        )}
+            });
+          }}
+        />
       </div>
 
       {/* ──────────────── APPLE-GRADE UNDER-PLAYER CONTROL DECK ──────────────── */}
