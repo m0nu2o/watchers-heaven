@@ -1,72 +1,10 @@
 'use client';
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { Tv, Search, Play, RefreshCw, Loader, AlertTriangle, Wifi } from 'lucide-react';
+import { Tv, Search, Play, RefreshCw, AlertTriangle, Wifi, Radio } from 'lucide-react';
 import Hls from 'hls.js';
+import { BASE_CHANNELS, type LiveChannelData } from '@/app/api/live/route';
 
-// ─── Channel Database ───────────────────────────────────────────────────────
-// Free public HLS streams from iptv-org and other open sources.
-// Primary: direct m3u8 HLS (played via Hls.js, no black screen).
-// Fallback: toustream iframe if HLS fails.
-
-interface LiveChannel {
-  id: string;
-  name: string;
-  category: 'news' | 'sports' | 'entertainment' | 'kids' | 'others';
-  logo?: string;
-  hlsUrl?: string;          // Direct HLS stream — preferred (Hls.js)
-  embedUrl?: string;        // iframe fallback
-  country?: string;
-}
-
-const CHANNELS: LiveChannel[] = [
-  // ── News ─────────────────────────────────────────────────────────────────
-  { id: 'aaj-tak', name: 'Aaj Tak HD', category: 'news', country: '🇮🇳',
-    hlsUrl: 'https://feeds.intoday.in/aajtak/api/master.m3u8' },
-  { id: 'abp-news', name: 'ABP News HD', category: 'news', country: '🇮🇳',
-    hlsUrl: 'https://d2l4ar6y3mrs4k.cloudfront.net/live-streaming/abpnews-livetv/master.m3u8' },
-  { id: 'republic-tv', name: 'Republic TV', category: 'news', country: '🇮🇳',
-    hlsUrl: 'https://vg-republictvlive.akamaized.net/v1/master/611d79b11b77e2f571934fd80ca1413453772ac7/vglive-sk-275673/main.m3u8' },
-  { id: 'wion', name: 'WION News HD', category: 'news', country: '🇮🇳',
-    hlsUrl: 'https://wion-klowdtv.amagi.tv/playlist.m3u8' },
-  { id: 'zee-news', name: 'Zee News', category: 'news', country: '🇮🇳',
-    hlsUrl: 'https://dt3lrqnyx3dks.cloudfront.net/index.m3u8' },
-  { id: 'euronews', name: 'Euronews English', category: 'news', country: '🇪🇺',
-    hlsUrl: 'https://cdn-euronews.akamaized.net/live/eds/euronews-en/25002/index.m3u8' },
-  { id: 'rt-news', name: 'RT News International', category: 'news', country: '🌍',
-    hlsUrl: 'https://rt-glb.rttv.com/live/rtnews/playlist.m3u8' },
-
-  // ── Sports ────────────────────────────────────────────────────────────────
-  { id: 'dd-sports', name: 'DD Sports Live', category: 'sports', country: '🇮🇳',
-    hlsUrl: 'https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/b17adfe543354fdd8d189b110617cddd/index.m3u8' },
-  { id: 'redbull-tv', name: 'Red Bull TV Sports', category: 'sports', country: '🌍',
-    hlsUrl: 'https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8' },
-
-  // ── Kids & Cartoons ───────────────────────────────────────────────────────
-  { id: 'pokemon-tv', name: 'Pokémon Live 24/7', category: 'kids', country: '🌍',
-    embedUrl: 'https://www.youtube.com/embed/86YLFOog4GM?autoplay=1' },
-  { id: 'tom-jerry', name: 'WB Kids · Tom & Jerry', category: 'kids', country: '🌍',
-    embedUrl: 'https://www.youtube.com/embed/Y0A-X0G483U?autoplay=1' },
-  { id: 'classic-cartoons', name: 'Classic Retro Cartoons 24/7', category: 'kids', country: '🌍',
-    embedUrl: 'https://www.youtube.com/embed/75x6DncZDZk?autoplay=1' },
-  { id: 'abc-kids', name: 'ABC Kids HD', category: 'kids', country: '🇦🇺',
-    hlsUrl: 'https://c.mjh.nz/abc-kids.m3u8' },
-  { id: '3abn-kids', name: '3ABN Kids TV', category: 'kids', country: '🇺🇸',
-    hlsUrl: 'https://3abn.bozztv.com/3abn2/Kids_live/smil:Kids_live.smil/playlist.m3u8' },
-
-  // ── Entertainment & Science ───────────────────────────────────────────────
-  { id: 'dd-national', name: 'DD National HD', category: 'entertainment', country: '🇮🇳',
-    hlsUrl: 'https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/40492a64c1db4a1385ba1a397d357d3a/index.m3u8' },
-  { id: 'dw-doc', name: 'DW Documentary Science HD', category: 'others', country: '🇩🇪',
-    embedUrl: 'https://www.youtube.com/embed/nv_m_yq9mvg?autoplay=1',
-    hlsUrl: 'https://dwamdstream104.akamaized.net/hls/live/2015530/dwstream104/index.m3u8' },
-  { id: 'nasa-live', name: 'NASA Earth & Space Station 24/7', category: 'others', country: '🚀',
-    embedUrl: 'https://www.youtube.com/embed/21X5lGlDOfg?autoplay=1' },
-  { id: 'nasa-tv', name: 'NASA TV Live HD', category: 'others', country: '🚀',
-    embedUrl: 'https://www.youtube.com/embed/xRPjKQtRXR8?autoplay=1',
-    hlsUrl: 'https://ntv1.akamaized.net/hls/live/2014075/NASA-NTV1-HLS/master.m3u8' },
-];
-
-type Category = 'all' | 'news' | 'sports' | 'entertainment' | 'kids' | 'others';
+type Category = 'all' | 'news' | 'sports' | 'entertainment' | 'kids' | 'science' | 'music' | 'gaming';
 
 const CATEGORY_LABELS: { id: Category; label: string; emoji: string }[] = [
   { id: 'all', label: 'All', emoji: '📺' },
@@ -74,7 +12,9 @@ const CATEGORY_LABELS: { id: Category; label: string; emoji: string }[] = [
   { id: 'sports', label: 'Sports', emoji: '⚽' },
   { id: 'entertainment', label: 'Entertainment', emoji: '🎬' },
   { id: 'kids', label: 'Kids & Cartoons', emoji: '🧒' },
-  { id: 'others', label: 'Science & Docs', emoji: '🔬' },
+  { id: 'science', label: 'Science & Docs', emoji: '🔬' },
+  { id: 'music', label: 'Music & Relax', emoji: '🎵' },
+  { id: 'gaming', label: 'Gaming & Tech', emoji: '🎮' },
 ];
 
 // ─── HLS Video Player Component ──────────────────────────────────────────────
@@ -88,7 +28,6 @@ function HlsPlayer({ src, onError }: { src: string; onError: () => void }) {
     const video = videoRef.current;
     if (!video || !src) return;
 
-    // Destroy any existing HLS instance
     if (hlsRef.current) {
       hlsRef.current.destroy();
       hlsRef.current = null;
@@ -113,7 +52,6 @@ function HlsPlayer({ src, onError }: { src: string; onError: () => void }) {
         }
       });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      // Safari native HLS
       video.src = src;
       video.muted = true;
       video.addEventListener('loadedmetadata', () => video.play().catch(() => {}), { once: true });
@@ -162,32 +100,65 @@ function HlsPlayer({ src, onError }: { src: string; onError: () => void }) {
 export default function LiveTvPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [category, setCategory] = useState<Category>('all');
-  const [selectedChannel, setSelectedChannel] = useState<LiveChannel>(CHANNELS[0]);
+  const [channels, setChannels] = useState<LiveChannelData[]>(BASE_CHANNELS);
+  const [selectedChannel, setSelectedChannel] = useState<LiveChannelData>(BASE_CHANNELS[0]);
   const [hlsFailed, setHlsFailed] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch dynamic channels from /api/live
+  useEffect(() => {
+    let isCancelled = false;
+    const fetchChannels = async () => {
+      setIsLoading(true);
+      try {
+        const params = new URLSearchParams();
+        if (category !== 'all') params.set('category', category);
+        if (searchQuery.trim()) params.set('q', searchQuery.trim());
+
+        const res = await fetch(`/api/live?${params.toString()}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (!isCancelled && Array.isArray(data.channels)) {
+            setChannels(data.channels);
+          }
+        }
+      } catch (err) {
+        console.warn('Could not fetch dynamic live channels, using baseline catalog:', err);
+      } finally {
+        if (!isCancelled) setIsLoading(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(fetchChannels, 150);
+    return () => {
+      isCancelled = true;
+      clearTimeout(debounceTimer);
+    };
+  }, [category, searchQuery]);
 
   // Reset HLS failure state when channel changes
   useEffect(() => {
     setHlsFailed(false);
   }, [selectedChannel.id]);
 
-  const filtered = CHANNELS.filter((ch) => {
-    const matchSearch = ch.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchCat = category === 'all' || ch.category === category;
-    return matchSearch && matchCat;
-  });
+  const filtered = channels;
 
-  const categoryCounts = CHANNELS.reduce<Record<Category, number>>(
+  const categoryCounts = BASE_CHANNELS.reduce<Record<Category, number>>(
     (acc, ch) => {
-      acc[ch.category] = (acc[ch.category] || 0) + 1;
+      const catKey = ch.category === 'others' ? 'science' : (ch.category as Category);
+      acc[catKey] = (acc[catKey] || 0) + 1;
       acc.all = (acc.all || 0) + 1;
       return acc;
     },
-    { all: 0, news: 0, sports: 0, entertainment: 0, kids: 0, others: 0 }
+    { all: 0, news: 0, sports: 0, entertainment: 0, kids: 0, science: 0, music: 0, gaming: 0 }
   );
 
-  // Prefer verified embed (YouTube iframe) — always works, zero CORS issues, zero black screen. HLS is fallback.
-  const useEmbed = Boolean(selectedChannel.embedUrl);
-  const useHls = !useEmbed && Boolean(selectedChannel.hlsUrl) && !hlsFailed;
+  // Fallback decision logic:
+  // 1. Direct HLS if available and not failed
+  // 2. YouTube Embed if HLS failed or if sourceType === 'youtube'
+  const isDirectHlsPreferred = selectedChannel.sourceType === 'hls' && Boolean(selectedChannel.hlsUrl) && !hlsFailed;
+  const useHls = isDirectHlsPreferred;
+  const useEmbed = !useHls && Boolean(selectedChannel.embedUrl);
   const handleHlsError = useCallback(() => setHlsFailed(true), []);
 
   return (
@@ -200,16 +171,16 @@ export default function LiveTvPage() {
             Live TV
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            {CHANNELS.length} channels · Stream live in your browser
+            {BASE_CHANNELS.length}+ verified 24/7 channels · Stream live in your browser
           </p>
         </div>
 
         {/* Search */}
-        <div className="relative w-full sm:w-72">
+        <div className="relative w-full sm:w-80">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Search channels…"
+            placeholder="Search channels, news, streams…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-4 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:outline-none focus:border-blue-500 text-slate-700 dark:text-slate-200 placeholder-slate-400 transition-colors"
@@ -223,7 +194,7 @@ export default function LiveTvPage() {
           <button
             key={id}
             onClick={() => setCategory(id)}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all border ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all border cursor-pointer ${
               category === id
                 ? 'bg-accent-blue text-white border-transparent shadow-sm'
                 : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -253,71 +224,99 @@ export default function LiveTvPage() {
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-md overflow-hidden">
             {/* Player Area */}
             <div className="relative aspect-video w-full bg-black">
-              {useEmbed && selectedChannel.embedUrl ? (
+              {useHls && selectedChannel.hlsUrl ? (
+                <HlsPlayer key={`hls-${selectedChannel.id}`} src={selectedChannel.hlsUrl} onError={handleHlsError} />
+              ) : useEmbed && selectedChannel.embedUrl ? (
                 <iframe
-                  key={selectedChannel.id}
+                  key={`embed-${selectedChannel.id}-${selectedChannel.embedUrl}`}
                   src={selectedChannel.embedUrl}
                   className="w-full h-full"
                   allowFullScreen
-                  allow="autoplay; fullscreen; picture-in-picture"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   title={`Live TV – ${selectedChannel.name}`}
                   style={{ border: 'none' }}
                 />
-              ) : useHls && selectedChannel.hlsUrl ? (
-                <HlsPlayer src={selectedChannel.hlsUrl} onError={handleHlsError} />
               ) : (
-                <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-400">
+                <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-400 p-6 text-center">
                   <AlertTriangle className="w-10 h-10 text-yellow-500" />
-                  <p className="text-sm font-semibold">Stream unavailable</p>
+                  <p className="text-sm font-semibold">Live broadcast temporarily unavailable</p>
+                  <p className="text-xs text-slate-500 max-w-sm">
+                    This stream might be offline or undergoing maintenance. Try selecting another channel or retry.
+                  </p>
                   <button
                     onClick={() => setHlsFailed(false)}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 transition-colors"
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 transition-colors cursor-pointer"
                   >
-                    <RefreshCw className="w-3.5 h-3.5" /> Retry
+                    <RefreshCw className="w-3.5 h-3.5" /> Retry Stream
                   </button>
                 </div>
               )}
             </div>
 
             {/* Channel Info Bar */}
-            <div className="px-5 py-4 flex items-center justify-between border-t border-slate-100 dark:border-slate-800">
-              <div>
-                <div className="flex items-center gap-2">
-                  {selectedChannel.country && (
-                    <span className="text-base">{selectedChannel.country}</span>
+            <div className="px-5 py-4 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    {selectedChannel.country && (
+                      <span className="text-lg">{selectedChannel.country}</span>
+                    )}
+                    <h2 className="text-lg font-bold text-slate-800 dark:text-white">
+                      {selectedChannel.name}
+                    </h2>
+                  </div>
+                  {selectedChannel.channelTitle && selectedChannel.channelTitle !== selectedChannel.name && (
+                    <p className="text-xs text-slate-400 font-medium mt-0.5">{selectedChannel.channelTitle}</p>
                   )}
-                  <h2 className="text-lg font-bold text-slate-800 dark:text-white">
-                    {selectedChannel.name}
-                  </h2>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-500/10 text-red-500 text-[10px] font-bold uppercase tracking-wider">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                      LIVE NOW
+                    </span>
+                    <span className="text-slate-300 dark:text-slate-600">·</span>
+                    <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 capitalize">
+                      <Wifi className="w-3 h-3 text-slate-400" />
+                      {selectedChannel.category}
+                    </span>
+                    <span className="text-slate-300 dark:text-slate-600">·</span>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                      {selectedChannel.sourceType === 'youtube' ? 'YouTube Live' : 'Direct HLS'}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                  <span className="text-xs text-red-500 font-bold uppercase tracking-wide">Live</span>
-                  <span className="text-slate-300 dark:text-slate-600 mx-1">·</span>
-                  <Wifi className="w-3 h-3 text-slate-400" />
-                  <span className="text-xs text-slate-500 dark:text-slate-400 capitalize">
-                    {selectedChannel.category}
+
+                {hlsFailed && selectedChannel.embedUrl && (
+                  <span className="self-start sm:self-center text-[11px] text-amber-600 dark:text-amber-400 font-semibold bg-amber-50 dark:bg-amber-900/20 px-2.5 py-1 rounded-full border border-amber-200/50 dark:border-amber-700/50">
+                    Switched to verified embed
                   </span>
-                </div>
+                )}
               </div>
-              {hlsFailed && selectedChannel.hlsUrl && selectedChannel.embedUrl && (
-                <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-full">
-                  Using embed fallback
-                </span>
+
+              {selectedChannel.description && (
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/60 line-clamp-2">
+                  {selectedChannel.description}
+                </p>
               )}
             </div>
           </div>
         </div>
 
         {/* Channel List */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-md p-4 max-h-[70vh] overflow-y-auto flex flex-col gap-2">
-          <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 px-2 pb-2 border-b border-slate-100 dark:border-slate-800 mb-1 flex items-center gap-2">
-            <span>Channels</span>
-            <span className="text-xs font-normal text-slate-400">({filtered.length})</span>
-          </h3>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-md p-4 max-h-[75vh] overflow-y-auto flex flex-col gap-2">
+          <div className="flex items-center justify-between px-2 pb-2 border-b border-slate-100 dark:border-slate-800 mb-1">
+            <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+              <Radio className="w-4 h-4 text-accent-blue" />
+              <span>Channels</span>
+              <span className="text-xs font-normal text-slate-400">({filtered.length})</span>
+            </h3>
+            {isLoading && (
+              <span className="text-[10px] text-accent-blue font-medium animate-pulse">Updating…</span>
+            )}
+          </div>
 
           {filtered.length > 0 ? (
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1.5">
               {filtered.map((ch) => {
                 const isActive = selectedChannel.id === ch.id;
                 return (
@@ -327,21 +326,47 @@ export default function LiveTvPage() {
                       setSelectedChannel(ch);
                       setHlsFailed(false);
                     }}
-                    className={`w-full flex items-center justify-between p-3 rounded-xl transition-all text-left border ${
+                    className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-all text-left border cursor-pointer ${
                       isActive
-                        ? 'bg-blue-50/80 dark:bg-blue-950/40 border-blue-100/50 dark:border-blue-900/50 text-accent-blue dark:text-blue-400'
-                        : 'bg-transparent border-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-50/70 dark:hover:bg-slate-800/40'
+                        ? 'bg-blue-50/90 dark:bg-blue-950/50 border-blue-200 dark:border-blue-800 text-accent-blue dark:text-blue-400 shadow-sm'
+                        : 'bg-transparent border-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-50/80 dark:hover:bg-slate-800/50'
                     }`}
                   >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      {ch.country && <span className="text-base shrink-0">{ch.country}</span>}
+                    <div className="flex items-center gap-3 min-w-0">
+                      {ch.thumbnail ? (
+                        <div className="relative w-12 h-8 rounded-lg overflow-hidden shrink-0 bg-slate-800">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={ch.thumbnail}
+                            alt={ch.name}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                          <span className="absolute bottom-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                        </div>
+                      ) : (
+                        <span className="text-base shrink-0">{ch.country || '📺'}</span>
+                      )}
+
                       <div className="min-w-0">
-                        <span className="font-semibold text-sm truncate block">{ch.name}</span>
-                        {ch.hlsUrl && (
-                          <span className="text-[10px] text-green-500 font-semibold">● Direct HLS</span>
-                        )}
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-semibold text-xs truncate block">{ch.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] text-red-500 font-bold uppercase tracking-tight">● LIVE</span>
+                          {ch.sourceType === 'hls' ? (
+                            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                              ● Direct HLS
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-rose-600 dark:text-rose-400 font-semibold">
+                              ● YouTube Live
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
+
                     {isActive && (
                       <Play className="w-4 h-4 fill-accent-blue dark:fill-blue-400 text-accent-blue dark:text-blue-400 shrink-0 ml-2" />
                     )}
@@ -350,8 +375,9 @@ export default function LiveTvPage() {
               })}
             </div>
           ) : (
-            <div className="text-center py-10 text-xs text-slate-400">
-              No channels match your search.
+            <div className="text-center py-12 text-xs text-slate-400 flex flex-col items-center gap-2">
+              <Tv className="w-8 h-8 text-slate-300 dark:text-slate-600" />
+              <span>No live channels match your search.</span>
             </div>
           )}
         </div>

@@ -22,8 +22,8 @@ const nextConfig: NextConfig = {
           { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
           // Prevent MIME sniffing
           { key: 'X-Content-Type-Options', value: 'nosniff' },
-          // Don't leak our URL in the Referer header to streaming servers
-          { key: 'Referrer-Policy', value: 'no-referrer-when-downgrade' },
+          // Send origin in Referer header to legitimate external embeds (e.g. YouTube, CDNs)
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           // Disable browser features that ads commonly abuse
           {
             key: 'Permissions-Policy',
