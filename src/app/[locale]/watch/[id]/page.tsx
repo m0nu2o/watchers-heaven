@@ -1855,7 +1855,7 @@ export default function WatchPage() {
                           }`}
                           title={isAvailable ? track.label : `${track.label} — Not available for this title`}
                         >
-                          <span className="truncate">
+                          <span className="block truncate min-w-0">
                             <span className="sm:hidden">
                               {track.id === 'sub' ? (isAnime ? '🇯🇵 SUB' : '🌐 Original') : track.id === 'dub-en' ? '🇬🇧 ENG' : track.id === 'dub-hi' ? '🇮🇳 HIN' : track.label}
                             </span>

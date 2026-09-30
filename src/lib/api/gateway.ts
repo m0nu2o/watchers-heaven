@@ -298,11 +298,11 @@ export const ApiGateway = {
       : `https://vidsrc.pm/embed/tv/${tmdbId}/${season || 1}/${episode || 1}`;
   },
 
-  // --- VidSrc Dev (vidsrc.dev) — Fast Multi-Language & Dubbed Server ---
+  // --- VidSrc Dev (redirected to AutoEmbed / VidSrc PM, 0 dead domains) ---
   getVidSrcDevUrl: (tmdbId: string | number, type: 'movie' | 'tv', season?: number, episode?: number, isDub: boolean = false) => {
     return type === 'movie'
-      ? `https://vidsrc.dev/embed/movie/${tmdbId}${isDub ? '?dub=1' : ''}`
-      : `https://vidsrc.dev/embed/tv/${tmdbId}/${season || 1}/${episode || 1}${isDub ? '?dub=1' : ''}`;
+      ? `https://vidsrc.pm/embed/movie/${tmdbId}`
+      : `https://vidsrc.pm/embed/tv/${tmdbId}/${season || 1}/${episode || 1}`;
   },
 
   // --- AutoEmbed CO (autoembed.co) — Working 200 OK AutoEmbed replacement ---
@@ -361,12 +361,12 @@ export const ApiGateway = {
     episode?: number,
     aniListId?: number | null
   ) => {
-    if (type === 'anime' && aniListId) {
-      return `https://vidlink.pro/anime/${id}/${season || 1}/${episode || 1}?primaryColor=3b82f6&autoplay=true&dub=true`;
+    if (type === 'anime') {
+      return `https://screenscape.me/embed?tmdb=${id}&type=tv&s=${season || 1}&e=${episode || 1}`;
     }
     return type === 'movie'
-      ? `https://vidsrc.dev/embed/movie/${id}?dub=1`
-      : `https://vidsrc.dev/embed/tv/${id}/${season || 1}/${episode || 1}?dub=1`;
+      ? `https://autoembed.co/movie/tmdb/${id}`
+      : `https://autoembed.co/tv/tmdb/${id}-${season || 1}-${episode || 1}`;
   },
 
   // --- Embed.su (redirected to VidSrc PM) ---
