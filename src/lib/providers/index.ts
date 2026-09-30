@@ -1,4 +1,5 @@
 import { ApiGateway } from '@/lib/api/gateway';
+import { ProviderTelemetry } from './telemetry';
 import type { MediaType, MediaPlaybackConfig, ProviderAdapter } from '@/types/media';
 
 export type { MediaType, MediaPlaybackConfig, ProviderAdapter };
@@ -319,8 +320,31 @@ export const ProviderRegistry = {
     });
   },
 
-  getDefault: (mediaType: MediaType, audioTrackId?: string): ProviderAdapter => {
+  getRankedForMediaTypeAndAudio: (mediaType: MediaType, audioTrackId?: string): ProviderAdapter[] => {
     const list = ProviderRegistry.getForMediaTypeAndAudio(mediaType, audioTrackId);
+    return [...list].sort((a, b) => {
+      const aCooldown = ProviderTelemetry.isInCooldown(a.id);
+      const bCooldown = ProviderTelemetry.isInCooldown(b.id);
+      if (aCooldown && !bCooldown) return 1;
+      if (!aCooldown && bCooldown) return -1;
+
+      const aHealth = ProviderTelemetry.getHealth(a.id);
+      const bHealth = ProviderTelemetry.getHealth(b.id);
+
+      if (aHealth.failureCount !== bHealth.failureCount) {
+        return aHealth.failureCount - bHealth.failureCount;
+      }
+      if (aHealth.avgLatencyMs !== null && bHealth.avgLatencyMs !== null) {
+        return aHealth.avgLatencyMs - bHealth.avgLatencyMs;
+      }
+      return 0;
+    });
+  },
+
+  getDefault: (mediaType: MediaType, audioTrackId?: string): ProviderAdapter => {
+    const list = ProviderRegistry.getRankedForMediaTypeAndAudio(mediaType, audioTrackId);
+    const nonCooldown = list.find((p) => !ProviderTelemetry.isInCooldown(p.id));
+    if (nonCooldown) return nonCooldown;
     if (list.length > 0) return list[0];
     return ProviderRegistry.getForMediaType(mediaType)[0] || PROVIDER_ADAPTERS[0];
   },
@@ -353,17 +377,20 @@ export const ProviderRegistry = {
     mediaType: MediaType,
     audioTrackId?: string
   ): ProviderAdapter | null => {
-    const compatible = ProviderRegistry.getForMediaTypeAndAudio(mediaType, audioTrackId);
+    const compatible = ProviderRegistry.getRankedForMediaTypeAndAudio(mediaType, audioTrackId);
     const canonicalId = PROVIDER_ALIASES[currentProviderId] || currentProviderId;
-    const currentIndex = compatible.findIndex((p) => p.id === canonicalId);
-    if (currentIndex >= 0 && currentIndex < compatible.length - 1) {
-      return compatible[currentIndex + 1];
-    }
-    if (compatible.length > 0 && compatible[0].id !== canonicalId) {
-      return compatible[0];
-    }
-    return null;
+    
+    // 1. Try first candidate not currently in cooldown
+    const nextHealthy = compatible.find((p) => p.id !== canonicalId && !ProviderTelemetry.isInCooldown(p.id));
+    if (nextHealthy) return nextHealthy;
+
+    // 2. Try any other compatible provider
+    const nextCandidate = compatible.find((p) => p.id !== canonicalId);
+    return nextCandidate || null;
   },
 };
 
+export { ProviderTelemetry } from './telemetry';
+export type { ProviderStatus, ProviderHealthRecord } from './telemetry';
 export default ProviderRegistry;
+

@@ -19,7 +19,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { ApiGateway } from '@/lib/api/gateway';
-import { ProviderRegistry } from '@/lib/providers';
+import { ProviderRegistry, ProviderTelemetry } from '@/lib/providers';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { DownloadModal } from '@/components/download/DownloadModal';
 import { supabase } from '@/lib/supabase/client';
@@ -598,6 +598,7 @@ export default function WatchPage() {
     watchdogTimerRef.current = setTimeout(() => {
       if (!streamConfirmedPlayingRef.current) {
         console.warn(`[Watchdog] Stream on server "${provider}" did not start within 15s. Auto-switching...`);
+        ProviderTelemetry.recordFailure(provider, 'Stream watchdog timed out');
         handleNextServerFallback(false, true);
       }
     }, 15000);
@@ -1368,7 +1369,7 @@ export default function WatchPage() {
   }, [isFullscreen]);
 
   const availableProviders = useMemo(() => {
-    return ProviderRegistry.getForMediaTypeAndAudio(currentMediaType, selectedAudioTrack);
+    return ProviderRegistry.getRankedForMediaTypeAndAudio(currentMediaType, selectedAudioTrack);
   }, [currentMediaType, selectedAudioTrack]);
 
   // Ensure active provider is compatible with current media type AND selected audio track
@@ -1786,12 +1787,16 @@ export default function WatchPage() {
             style={{ border: 'none' }}
             onLoad={() => {
               streamConfirmedPlayingRef.current = true;
+              ProviderTelemetry.recordSuccess(provider);
               if (watchdogTimerRef.current) {
                 clearTimeout(watchdogTimerRef.current);
                 watchdogTimerRef.current = null;
               }
             }}
-            onError={() => handleNextServerFallback()}
+            onError={() => {
+              ProviderTelemetry.recordFailure(provider, 'Iframe connection error');
+              handleNextServerFallback();
+            }}
           />
         ) : (
           <div className="w-full h-full bg-black" />
