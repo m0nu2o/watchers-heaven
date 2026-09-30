@@ -145,23 +145,46 @@ async function verifyUserFixes(baseUrl) {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Test 4: Stream Watchdog Auto-Switching Verification
+    // Test 4: Dedicated Auto-Switch Toggle & Error Fallback Verification
     // ─────────────────────────────────────────────────────────────────────────
     {
-      console.log('\n⏳ Testing Auto Server Switching Watchdog (12s user-configured timer)...');
+      console.log('\n⏳ Testing Dedicated Auto Server Switching Toggle & Fallback...');
       const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
       await page.goto(`${baseUrl}/en/watch/550?type=movie`, { waitUntil: 'domcontentloaded', timeout: 25000 });
       await page.waitForTimeout(1500);
 
+      // Verify dedicated Auto-Switch button exists
+      const autoSwitchBtn = page.locator('button:has-text("Auto-Switch")').first();
+      const isAutoSwitchVisible = await autoSwitchBtn.isVisible();
+      record(isAutoSwitchVisible, 'Dedicated Auto-Switch button is rendered and visible');
+
+      // Verify default ON state
+      const initialText = await autoSwitchBtn.textContent();
+      record(Boolean(initialText && initialText.includes('ON')), `Auto-Switch button defaults to ON (${initialText?.trim()})`);
+
+      // Toggle to OFF
+      await autoSwitchBtn.click();
+      await page.waitForTimeout(500);
+      const offText = await autoSwitchBtn.textContent();
+      record(Boolean(offText && offText.includes('OFF')), `Auto-Switch button toggles cleanly to OFF (${offText?.trim()})`);
+
+      // Toggle back to ON
+      await autoSwitchBtn.click();
+      await page.waitForTimeout(500);
+      const onAgainText = await autoSwitchBtn.textContent();
+      record(Boolean(onAgainText && onAgainText.includes('ON')), `Auto-Switch button toggles back to ON (${onAgainText?.trim()})`);
+
+      // Verify error-triggered auto-fallback
       const startSrc = await page.locator('iframe').first().getAttribute('src');
+      await page.evaluate(() => {
+        window.postMessage({ type: 'PLAYER_ERROR', event: 'error' }, '*');
+      });
+      await page.waitForTimeout(1500);
 
-      // Emulate a stalled stream where no postMessage arrives for 13.5 seconds (> 12s watchdog)
-      await page.waitForTimeout(13500);
-
-      const afterWatchdogSrc = await page.locator('iframe').first().getAttribute('src');
+      const afterErrorSrc = await page.locator('iframe').first().getAttribute('src');
       record(
-        Boolean(afterWatchdogSrc && afterWatchdogSrc !== startSrc),
-        `Watchdog successfully auto-switches stalled stream (From: ${startSrc?.slice(0, 25)}... To: ${afterWatchdogSrc?.slice(0, 25)}...)`
+        Boolean(afterErrorSrc && afterErrorSrc !== startSrc),
+        `Playback error triggers automatic fallback to next server (From: ${startSrc?.slice(0, 25)}... To: ${afterErrorSrc?.slice(0, 25)}...)`
       );
 
       await page.close();

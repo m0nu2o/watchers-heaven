@@ -615,6 +615,9 @@ export default function WatchPage() {
 
       if (!cancelled) {
         if (result?.url) {
+          if (result.provider && result.provider !== provider) {
+            setProvider(result.provider);
+          }
           setEmbedUrl(result.url);
           setIsDirectHls(Boolean(result.isHls || result.url.includes('.m3u8')));
           if (result.subtitles) setSubtitles(result.subtitles);
@@ -705,14 +708,18 @@ export default function WatchPage() {
       // Auto-route to the correct DUB-capable provider
       let overrideProv: string | undefined = undefined;
       if (trackId === 'dub-en' || trackId === 'dub') {
-        // For anime, vidlink-anime is the only verified English DUB provider
+        // For anime, vidlink-anime is the verified English DUB provider
         overrideProv = isAnime ? 'vidlink-anime' : (provider === 'vidlink' ? 'vidlink' : 'vidsrc-pm');
       } else if (trackId === 'dub-hi') {
-        // Hindi DUB: autoembed-co for movies/TV. Anime Hindi DUB not reliably available.
-        overrideProv = isAnime ? undefined : 'autoembed-co';
+        // Hindi DUB: screenscape-anime for anime, autoembed-co for movies/TV
+        overrideProv = isAnime ? 'screenscape-anime' : 'autoembed-co';
       } else {
-        // SUB: stay on current provider if compatible, otherwise switch to default
-        overrideProv = undefined;
+        // SUB: default provider for media type
+        overrideProv = isAnime ? 'vidlink-anime' : 'vidlink';
+      }
+
+      if (overrideProv && overrideProv !== provider) {
+        setProvider(overrideProv);
       }
 
       const result = await resolveCurrentSource(trackId, overrideProv);
