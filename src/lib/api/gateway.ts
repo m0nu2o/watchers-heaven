@@ -276,10 +276,20 @@ export const ApiGateway = {
       : `https://vidlink.pro/tv/${tmdbId}/${season || 1}/${episode || 1}?autoplay=true&primaryColor=3b82f6`;
   },
 
+
   // --- VidLink Anime (vidlink.pro/anime) — Dedicated Anime Player with Real Sub/Dub Switching ---
-  getVidLinkAnimeUrl: (tmdbId: string | number, season: number = 1, episode: number = 1, isDub: boolean = false) => {
-    return `https://vidlink.pro/anime/${tmdbId}/${season}/${episode}?primaryColor=3b82f6&autoplay=true${isDub ? '&dub=true' : ''}`;
+  // VidLink anime accepts both MAL ID and TMDB ID with ?dub=true for English dub
+  getVidLinkAnimeUrl: (
+    malIdOrTmdbId: string | number,
+    season: number = 1,
+    episode: number = 1,
+    isDub: boolean = false,
+    malId?: number | null
+  ) => {
+    const animeId = (malId && malId > 0) ? malId : malIdOrTmdbId;
+    return `https://vidlink.pro/anime/${animeId}/${season}/${episode}?primaryColor=3b82f6&autoplay=true${isDub ? '&dub=true' : ''}`;
   },
+
 
   // --- VidSrc PM (vidsrc.pm) — 1080p Ultra HD, High Uptime, Clean Stream ---
   getVidSrcPmUrl: (tmdbId: string | number, type: 'movie' | 'tv', season?: number, episode?: number) => {
@@ -291,7 +301,7 @@ export const ApiGateway = {
   // --- VidSrc Dev (vidsrc.dev) — Fast Multi-Language & Dubbed Server ---
   getVidSrcDevUrl: (tmdbId: string | number, type: 'movie' | 'tv', season?: number, episode?: number, isDub: boolean = false) => {
     return type === 'movie'
-      ? `https://vidsrc.dev/embed/movie/${tmdbId}`
+      ? `https://vidsrc.dev/embed/movie/${tmdbId}${isDub ? '?dub=1' : ''}`
       : `https://vidsrc.dev/embed/tv/${tmdbId}/${season || 1}/${episode || 1}${isDub ? '?dub=1' : ''}`;
   },
 

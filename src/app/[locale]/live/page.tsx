@@ -112,8 +112,11 @@ export default function LiveTvPage() {
       setIsLoading(true);
       try {
         const params = new URLSearchParams();
-        if (category !== 'all') params.set('category', category);
-        if (searchQuery.trim()) params.set('q', searchQuery.trim());
+        if (searchQuery.trim()) {
+          params.set('q', searchQuery.trim());
+        } else if (category !== 'all') {
+          params.set('category', category);
+        }
 
         const res = await fetch(`/api/live?${params.toString()}`);
         if (res.ok) {
@@ -193,6 +196,7 @@ export default function LiveTvPage() {
         {CATEGORY_LABELS.map(({ id, label, emoji }) => (
           <button
             key={id}
+            data-category={id}
             onClick={() => setCategory(id)}
             className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all border cursor-pointer ${
               category === id

@@ -275,34 +275,34 @@ export function Navbar() {
 
       {/* ──────────────── Mobile Navigation (Top Slim Bar + iOS Native Bottom Bar) ──────────────── */}
       {/* Mobile Top Header */}
-      <header className="lg:hidden fixed top-0 inset-x-0 z-50 h-14 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-b border-black/[0.08] dark:border-white/[0.08] px-4 flex items-center justify-between transition-colors duration-300">
-        <LuminaLogo variant="compact" size="sm" href={localePath('/')} />
-        <div className="flex items-center gap-1">
+      <header className="lg:hidden fixed top-0 inset-x-0 z-50 h-14 bg-white/85 dark:bg-black/85 backdrop-blur-xl border-b border-black/[0.08] dark:border-white/[0.08] px-3 sm:px-4 flex items-center justify-between transition-colors duration-300">
+        <LuminaLogo variant="compact" size="sm" href={localePath('/')} className="shrink-0" />
+        <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
           <button
             onClick={() => setIsAiChatOpen(true)}
             aria-label="Lumina AI"
-            className="p-2 rounded-full text-blue-500 hover:text-blue-400"
+            className="p-2 rounded-full text-blue-500 hover:text-blue-400 active:scale-95 transition-transform"
           >
             <Bot className="w-4 h-4" />
           </button>
           <Link
             href={localePath('/search')}
             aria-label="Search"
-            className="p-2 rounded-full text-slate-600 dark:text-slate-300 hover:text-black dark:hover:text-white"
+            className="p-2 rounded-full text-slate-600 dark:text-slate-300 hover:text-black dark:hover:text-white active:scale-95 transition-transform"
           >
             <Search className="w-4 h-4" />
           </Link>
           <button
             onClick={toggleTheme}
             aria-label="Theme"
-            className="p-2 rounded-full text-slate-600 dark:text-slate-300 hover:text-black dark:hover:text-white"
+            className="p-2 rounded-full text-slate-600 dark:text-slate-300 hover:text-black dark:hover:text-white active:scale-95 transition-transform"
           >
             {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-600" />}
           </button>
           <Link
             href={localePath('/settings')}
             aria-label="Settings"
-            className="p-2 rounded-full text-slate-600 dark:text-slate-300 hover:text-black dark:hover:text-white"
+            className="p-2 rounded-full text-slate-600 dark:text-slate-300 hover:text-black dark:hover:text-white active:scale-95 transition-transform"
           >
             <Settings className="w-4 h-4" />
           </Link>

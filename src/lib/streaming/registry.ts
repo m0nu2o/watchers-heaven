@@ -44,25 +44,6 @@ export const STREAMING_PROVIDERS: StreamingProvider[] = [
     },
   },
 
-  // ─── 3. VidSrc Dev HD (1080p, Sub+Dub Fast, English & Hindi Dub Support) ───
-  {
-    id: 'vidsrc-dev',
-    name: 'VidSrc Dev HD',
-    quality: '1080p / Sub+Dub Fast',
-    badge: '🌟',
-    priority: 3,
-    supportsMovie: true,
-    supportsTV: true,
-    supportsAnime: true,
-    supportsEnglishDub: true,
-    supportsHindiDub: true,
-    getPlaybackUrl: (cfg: StreamPlaybackConfig) => {
-      const type = cfg.mediaType === 'movie' ? 'movie' : 'tv';
-      const isDub = cfg.audioTrackId?.startsWith('dub') ?? false;
-      return ApiGateway.getVidSrcDevUrl(cfg.tmdbId, type, cfg.season || 1, cfg.episode || 1, isDub);
-    },
-  },
-
   // ─── 4. AutoEmbed HD (1080p, Fast Multi-Audio) ───
   {
     id: 'autoembed-co',
@@ -74,9 +55,29 @@ export const STREAMING_PROVIDERS: StreamingProvider[] = [
     supportsTV: true,
     supportsAnime: true,
     supportsEnglishDub: true,
+    supportsHindiDub: true,
     getPlaybackUrl: (cfg: StreamPlaybackConfig) => {
       const type = cfg.mediaType === 'movie' ? 'movie' : 'tv';
       return ApiGateway.getAutoEmbedCoUrl(cfg.tmdbId, type, cfg.season || 1, cfg.episode || 1);
+    },
+  },
+
+  // ─── 4.5 ScreenScape HD (1080p, Authentic Multi-Audio, Hindi Dub) ───
+  {
+    id: 'screenscape',
+    name: 'ScreenScape HD',
+    quality: '1080p / Multi-Audio / Clean',
+    badge: '🌐',
+    priority: 4.5,
+    supportsMovie: true,
+    supportsTV: true,
+    supportsAnime: true,
+    supportsEnglishDub: true,
+    supportsHindiDub: true,
+    getPlaybackUrl: (cfg: StreamPlaybackConfig) => {
+      const type = cfg.mediaType === 'movie' ? 'movie' : 'tv';
+      const lan = cfg.audioTrackId === 'dub-hi' ? 'hi' : (cfg.audioTrackId === 'dub-en' || cfg.audioTrackId === 'dub') ? 'eng' : (cfg.mediaType === 'anime' ? 'jap' : 'eng');
+      return ApiGateway.getScreenScapeUrl(cfg.tmdbId, type, cfg.season || 1, cfg.episode || 1, lan);
     },
   },
 
@@ -138,11 +139,12 @@ const STREAMING_ALIASES: Record<string, string> = {
   'autoembed': 'autoembed-co',
   '2embed': '2embed-skin',
   '2embed-cc': '2embed-skin',
-  'rivestream': 'vidsrc-dev',
+  'rivestream': 'autoembed-co',
   '111movies': 'vidlink',
   'videasy': 'vidlink',
-  'nhd-cinema': 'vidsrc-dev',
-  'nhd-anime': 'vidsrc-dev',
+  'nhd-cinema': 'autoembed-co',
+  'nhd-anime': 'vidlink',
+  'vidsrc-dev': 'autoembed-co',
   'miruro-anime': 'vidlink',
   'vidlink-anime': 'vidlink',
 };

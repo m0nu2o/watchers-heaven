@@ -108,8 +108,7 @@ async function runLiveTvTestSuite() {
     record(await pokemonIframe.isVisible(), 'Pokémon player iframe mounted successfully');
 
     // 7. Test Real-time Channel Search
-    console.log('\n📌 Test 7: Live Channel Search Functionality');
-    const allCategoryBtn = page.locator('button:has-text("All")').first();
+    const allCategoryBtn = page.locator('button[data-category="all"], button:has-text("All")').first();
     await allCategoryBtn.click();
     await page.waitForTimeout(500);
 

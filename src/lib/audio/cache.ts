@@ -21,11 +21,11 @@ const DISCOVERY_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export const AudioAvailabilityCache = {
   makeKey: (mediaType: string, id: string | number, season?: number, episode?: number): string => {
-    return `audio-avail:v3:${mediaType}:${id}:${season ?? 0}:${episode ?? 0}`;
+    return `audio-avail:v5:${mediaType}:${id}:${season ?? 0}:${episode ?? 0}`;
   },
 
   makeDiscoveryKey: (mediaType: string, id: string | number): string => {
-    return `audio-discovery:v3:${mediaType}:${id}`;
+    return `audio-discovery:v5:${mediaType}:${id}`;
   },
 
   getDiscovery: (key: string): NormalizedAudioAvailability | null => {
@@ -143,7 +143,7 @@ export const AudioAvailabilityCache = {
 
   // Authoritative Spoken Dub Languages per media (24-hour TTL)
   getKnownDubLanguages: (mediaIdOrAniListId: string | number): string[] | null => {
-    const key = `known-dub-langs:v3:${mediaIdOrAniListId}`;
+    const key = `known-dub-langs:v5:${mediaIdOrAniListId}`;
     const mem = inMemoryCache.get(key) as unknown as { langs?: string[]; expiresAt?: number } | undefined;
     if (mem && mem.expiresAt && Date.now() < mem.expiresAt && mem.langs) {
       return mem.langs;
@@ -168,7 +168,7 @@ export const AudioAvailabilityCache = {
   },
 
   setKnownDubLanguages: (mediaIdOrAniListId: string | number, langs: string[], ttlMs = 24 * 60 * 60 * 1000): void => {
-    const key = `known-dub-langs:v3:${mediaIdOrAniListId}`;
+    const key = `known-dub-langs:v5:${mediaIdOrAniListId}`;
     const entry = { langs, expiresAt: Date.now() + ttlMs };
     inMemoryCache.set(key, entry as unknown as CacheEntry);
     if (typeof window !== 'undefined') {

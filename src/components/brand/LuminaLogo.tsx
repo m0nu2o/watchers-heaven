@@ -16,13 +16,13 @@ export function LuminaLogo({
   className = '',
 }: LuminaLogoProps) {
   const iconDimensions = {
-    sm: { size: 'w-6 h-6' },
+    sm: { size: 'w-7 h-7 sm:w-8 sm:h-8' },
     md: { size: 'w-8 h-8' },
     lg: { size: 'w-10 h-10' },
   }[size];
 
   const textStyles = {
-    sm: { title: 'text-xs tracking-[0.22em]', subtitle: 'text-[9px] tracking-[0.25em]' },
+    sm: { title: 'text-xs tracking-wider sm:tracking-[0.2em]', subtitle: 'text-[9px] tracking-wider' },
     md: { title: 'text-sm tracking-[0.25em]', subtitle: 'text-[10px] tracking-[0.3em]' },
     lg: { title: 'text-lg tracking-[0.28em]', subtitle: 'text-xs tracking-[0.35em]' },
   }[size];
@@ -35,7 +35,7 @@ export function LuminaLogo({
         viewBox="0 0 32 32"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className="w-full h-full"
+        className="w-full h-full aspect-square"
       >
         <defs>
           <linearGradient id="lumina-lens-glow" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -75,12 +75,12 @@ export function LuminaLogo({
   );
 
   const content = (
-    <div className={`group inline-flex items-center gap-2.5 select-none ${className}`}>
+    <div className={`group inline-flex items-center gap-2 select-none shrink-0 whitespace-nowrap ${className}`}>
       {LogoIcon}
 
       {variant !== 'icon' && (
-        <div className="flex flex-col leading-none">
-          <div className="flex items-center gap-1">
+        <div className="flex flex-col leading-none shrink-0">
+          <div className="flex items-center gap-1 whitespace-nowrap">
             <span
               className={`font-black uppercase text-slate-900 dark:text-white ${textStyles.title}`}
             >
@@ -94,7 +94,7 @@ export function LuminaLogo({
           </div>
           {variant === 'full' && (
             <span
-              className={`font-medium uppercase text-slate-500 dark:text-slate-400 mt-0.5 ${textStyles.subtitle}`}
+              className={`font-medium uppercase text-slate-500 dark:text-slate-400 mt-0.5 whitespace-nowrap ${textStyles.subtitle}`}
             >
               Vision &bull; Stream &bull; Anime
             </span>
@@ -106,7 +106,7 @@ export function LuminaLogo({
 
   if (href) {
     return (
-      <Link href={href} className="inline-flex items-center">
+      <Link href={href} className="inline-flex items-center shrink-0">
         {content}
       </Link>
     );

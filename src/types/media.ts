@@ -58,6 +58,8 @@ export interface ProviderAdapter {
   supportsMovie: boolean;
   supportsTV: boolean;
   supportsAnime: boolean;
+  supportsEnglishDub?: boolean;
+  supportsHindiDub?: boolean;
   requiresApiKey: boolean;
   isConfigured: () => boolean;
   getPlaybackUrl: (config: MediaPlaybackConfig) => string;

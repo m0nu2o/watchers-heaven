@@ -18,26 +18,15 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     supportsMovie: false,
     supportsTV: false,
     supportsAnime: true,
+    supportsEnglishDub: true,
+    supportsHindiDub: false, // VidLink anime does not provide Hindi dub audio
     requiresApiKey: false,
     isConfigured: () => true,
     getPlaybackUrl: (cfg) => {
-      const isDub = cfg.audioTrackId?.startsWith('dub') ?? false;
-      return ApiGateway.getVidLinkAnimeUrl(cfg.tmdbId, cfg.season || 1, cfg.episode || 1, isDub);
-    },
-  },
-  {
-    id: 'vidsrc-dev-anime',
-    name: 'VidSrc Dev Anime',
-    quality: '1080p / Sub+Dub Fast',
-    badge: '🌟',
-    supportsMovie: false,
-    supportsTV: false,
-    supportsAnime: true,
-    requiresApiKey: false,
-    isConfigured: () => true,
-    getPlaybackUrl: (cfg) => {
-      const isDub = cfg.audioTrackId?.startsWith('dub') ?? false;
-      return ApiGateway.getVidSrcDevUrl(cfg.tmdbId, 'tv', cfg.season || 1, cfg.episode || 1, isDub);
+      // Only English DUB is triggered via isDub=true — Hindi dub not available on VidLink anime
+      const isDub = cfg.audioTrackId === 'dub-en' || cfg.audioTrackId === 'dub';
+      // Pass malId as 4th arg so the URL uses MAL ID (VidLink requirement)
+      return ApiGateway.getVidLinkAnimeUrl(cfg.tmdbId, cfg.season || 1, cfg.episode || 1, isDub, cfg.malId);
     },
   },
   {
@@ -48,6 +37,8 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     supportsMovie: false,
     supportsTV: false,
     supportsAnime: true,
+    supportsEnglishDub: false,
+    supportsHindiDub: false,
     requiresApiKey: false,
     isConfigured: () => true,
     getPlaybackUrl: (cfg) => {
@@ -62,6 +53,8 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     supportsMovie: false,
     supportsTV: false,
     supportsAnime: true,
+    supportsEnglishDub: false,
+    supportsHindiDub: false,
     requiresApiKey: false,
     isConfigured: () => true,
     getPlaybackUrl: (cfg) => {
@@ -76,10 +69,29 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     supportsMovie: false,
     supportsTV: false,
     supportsAnime: true,
+    supportsEnglishDub: false,
+    supportsHindiDub: false,
     requiresApiKey: false,
     isConfigured: () => true,
     getPlaybackUrl: (cfg) => {
       return ApiGateway.get2EmbedSkinUrl(cfg.tmdbId, 'tv', cfg.season || 1, cfg.episode || 1);
+    },
+  },
+  {
+    id: 'screenscape-anime',
+    name: 'ScreenScape Anime',
+    quality: '1080p / Multi-Audio / Clean',
+    badge: '🌐',
+    supportsMovie: false,
+    supportsTV: false,
+    supportsAnime: true,
+    supportsEnglishDub: true,
+    supportsHindiDub: true,
+    requiresApiKey: false,
+    isConfigured: () => true,
+    getPlaybackUrl: (cfg) => {
+      const lan = cfg.audioTrackId === 'dub-hi' ? 'hi' : (cfg.audioTrackId === 'dub-en' || cfg.audioTrackId === 'dub') ? 'eng' : 'jap';
+      return ApiGateway.getScreenScapeUrl(cfg.tmdbId, 'tv', cfg.season || 1, cfg.episode || 1, lan);
     },
   },
   {
@@ -90,6 +102,8 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     supportsMovie: false,
     supportsTV: false,
     supportsAnime: true,
+    supportsEnglishDub: false,
+    supportsHindiDub: false,
     requiresApiKey: false,
     isConfigured: () => true,
     getPlaybackUrl: (cfg) => {
@@ -118,6 +132,8 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     supportsMovie: true,
     supportsTV: true,
     supportsAnime: false,
+    supportsEnglishDub: true,
+    supportsHindiDub: false,
     requiresApiKey: false,
     isConfigured: () => true,
     getPlaybackUrl: (cfg) => {
@@ -137,6 +153,8 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     supportsMovie: true,
     supportsTV: true,
     supportsAnime: false,
+    supportsEnglishDub: true,
+    supportsHindiDub: false,
     requiresApiKey: false,
     isConfigured: () => true,
     getPlaybackUrl: (cfg) => {
@@ -149,27 +167,6 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     },
   },
   {
-    id: 'vidsrc-dev',
-    name: 'VidSrc Dev HD',
-    quality: '1080p / Multi-Audio / Dub',
-    badge: '🌟',
-    supportsMovie: true,
-    supportsTV: true,
-    supportsAnime: false,
-    requiresApiKey: false,
-    isConfigured: () => true,
-    getPlaybackUrl: (cfg) => {
-      const isDub = cfg.audioTrackId?.startsWith('dub') ?? false;
-      return ApiGateway.getVidSrcDevUrl(
-        cfg.tmdbId,
-        cfg.mediaType === 'tv' ? 'tv' : 'movie',
-        cfg.season,
-        cfg.episode,
-        isDub
-      );
-    },
-  },
-  {
     id: 'autoembed-co',
     name: 'AutoEmbed HD',
     quality: '1080p / Fast Multi-Audio',
@@ -177,6 +174,8 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     supportsMovie: true,
     supportsTV: true,
     supportsAnime: false,
+    supportsEnglishDub: true,
+    supportsHindiDub: true,
     requiresApiKey: false,
     isConfigured: () => true,
     getPlaybackUrl: (cfg) => {
@@ -189,6 +188,29 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     },
   },
   {
+    id: 'screenscape',
+    name: 'ScreenScape HD',
+    quality: '1080p / Multi-Audio / Clean',
+    badge: '🌐',
+    supportsMovie: true,
+    supportsTV: true,
+    supportsAnime: false,
+    supportsEnglishDub: true,
+    supportsHindiDub: true,
+    requiresApiKey: false,
+    isConfigured: () => true,
+    getPlaybackUrl: (cfg) => {
+      const lan = cfg.audioTrackId === 'dub-hi' ? 'hi' : (cfg.audioTrackId === 'dub-en' || cfg.audioTrackId === 'dub') ? 'eng' : 'eng';
+      return ApiGateway.getScreenScapeUrl(
+        cfg.tmdbId,
+        cfg.mediaType === 'tv' ? 'tv' : 'movie',
+        cfg.season,
+        cfg.episode,
+        lan
+      );
+    },
+  },
+  {
     id: '2embed-skin',
     name: '2Embed Direct',
     quality: '1080p / Wide Catalog',
@@ -196,6 +218,8 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     supportsMovie: true,
     supportsTV: true,
     supportsAnime: false,
+    supportsEnglishDub: true,
+    supportsHindiDub: false,
     requiresApiKey: false,
     isConfigured: () => true,
     getPlaybackUrl: (cfg) => {
@@ -215,6 +239,8 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     supportsMovie: true,
     supportsTV: true,
     supportsAnime: false,
+    supportsEnglishDub: true,
+    supportsHindiDub: false,
     requiresApiKey: false,
     isConfigured: () => true,
     getPlaybackUrl: (cfg) => {
@@ -254,15 +280,17 @@ const PROVIDER_ALIASES: Record<string, string> = {
   'autoembed': 'autoembed-co',
   '2embed': '2embed-skin',
   '2embed-cc': '2embed-skin',
-  'rivestream': 'vidsrc-dev',
+  'rivestream': 'autoembed-co',
   '111movies': 'vidlink',
   'videasy': 'vidlink',
-  'nhd-cinema': 'vidsrc-dev',
+  'nhd-cinema': 'autoembed-co',
+  'vidsrc-dev': 'autoembed-co',
 
   // Anime legacy aliases
-  'nhd-anime': 'vidsrc-dev-anime',
+  'nhd-anime': 'vidlink-anime',
   '2embed-anime': '2embed-skin-anime',
-  'rivestream-anime': 'vidsrc-dev-anime',
+  'rivestream-anime': 'vidlink-anime',
+  'vidsrc-dev-anime': 'vidlink-anime',
   '111movies-anime': 'vidlink-anime',
   'videasy-anime': 'vidlink-anime',
   'vidsrc-cc-anime': 'vidsrc-pm-anime',
@@ -283,28 +311,28 @@ export const ProviderRegistry = {
     });
   },
 
+  getForMediaTypeAndAudio: (mediaType: MediaType, audioTrackId?: string): ProviderAdapter[] => {
+    return PROVIDER_ADAPTERS.filter((p) => {
+      if (p.requiresApiKey && !p.isConfigured()) return false;
+      const typeMatch =
+        mediaType === 'anime' ? p.supportsAnime : mediaType === 'tv' ? p.supportsTV : p.supportsMovie;
+      if (!typeMatch) return false;
+
+      if (audioTrackId === 'dub-hi' || audioTrackId === 'hindi') {
+        return Boolean(p.supportsHindiDub);
+      }
+      if (audioTrackId === 'dub-en' || audioTrackId === 'dub') {
+        return Boolean(p.supportsEnglishDub);
+      }
+      // 'sub' or default: all providers that support this media type support original/sub
+      return true;
+    });
+  },
+
   getDefault: (mediaType: MediaType, audioTrackId?: string): ProviderAdapter => {
-    if (mediaType === 'anime') {
-      return (
-        PROVIDER_ADAPTERS.find((p) => p.id === 'vidlink-anime') ||
-        PROVIDER_ADAPTERS.find((p) => p.id === 'vidsrc-dev-anime') ||
-        PROVIDER_ADAPTERS.find((p) => p.id === 'vidsrc-pm-anime') ||
-        PROVIDER_ADAPTERS[0]
-      );
-    }
-    if (audioTrackId === 'dub-hi') {
-      return (
-        PROVIDER_ADAPTERS.find((p) => p.id === 'vidsrc-dev') ||
-        PROVIDER_ADAPTERS.find((p) => p.id === 'vidlink') ||
-        PROVIDER_ADAPTERS[0]
-      );
-    }
-    return (
-      PROVIDER_ADAPTERS.find((p) => p.id === 'vidlink') ||
-      PROVIDER_ADAPTERS.find((p) => p.id === 'vidsrc-pm') ||
-      PROVIDER_ADAPTERS.find((p) => p.id === 'vidsrc-dev') ||
-      PROVIDER_ADAPTERS[0]
-    );
+    const list = ProviderRegistry.getForMediaTypeAndAudio(mediaType, audioTrackId);
+    if (list.length > 0) return list[0];
+    return ProviderRegistry.getForMediaType(mediaType)[0] || PROVIDER_ADAPTERS[0];
   },
 
   getById: (id: string): ProviderAdapter | undefined => {
@@ -326,12 +354,16 @@ export const ProviderRegistry = {
         return adapter.getPlaybackUrl(config);
       }
     }
-    const defaultAdapter = ProviderRegistry.getDefault(config.mediaType);
+    const defaultAdapter = ProviderRegistry.getDefault(config.mediaType, config.audioTrackId);
     return defaultAdapter.getPlaybackUrl(config);
   },
 
-  getFallbackProvider: (currentProviderId: string, mediaType: MediaType): ProviderAdapter | null => {
-    const compatible = ProviderRegistry.getForMediaType(mediaType);
+  getFallbackProvider: (
+    currentProviderId: string,
+    mediaType: MediaType,
+    audioTrackId?: string
+  ): ProviderAdapter | null => {
+    const compatible = ProviderRegistry.getForMediaTypeAndAudio(mediaType, audioTrackId);
     const canonicalId = PROVIDER_ALIASES[currentProviderId] || currentProviderId;
     const currentIndex = compatible.findIndex((p) => p.id === canonicalId);
     if (currentIndex >= 0 && currentIndex < compatible.length - 1) {
