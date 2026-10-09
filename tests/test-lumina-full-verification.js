@@ -138,12 +138,13 @@ async function runLuminaVerification() {
     const playerContainer = await page.$('[aria-label="Universal Video Player"]');
     assert(playerContainer !== null, 'Universal Player mounted on movie watch page');
 
-    // Controls
-    const playPauseBtn = await page.$('button[aria-label="Play"], button[aria-label="Pause"]');
-    assert(playPauseBtn !== null, 'Play/Pause control button exists');
+    // Verified embed iframe mounting without duplicate overlapping controls
+    const iframe = await page.$('[aria-label="Universal Video Player"] iframe');
+    assert(iframe !== null, 'Third-party streaming provider iframe mounted in viewport');
 
-    const serverMenuBtn = await page.$('button[title="Select Streaming Server"]');
-    assert(serverMenuBtn !== null, 'Server switching menu trigger exists in bottom bar');
+    // Zero duplicate controls over third-party iframe
+    const centerPlayBtn = await page.$('[aria-label="Universal Video Player"] button[aria-label="Play"]');
+    assert(centerPlayBtn === null, 'No duplicate center play button obscuring the iframe');
 
     // Movie servers should be listed in under-player control deck
     const serverDeck = await page.$('text=Movie Servers');
@@ -176,9 +177,9 @@ async function runLuminaVerification() {
     const seriesDeck = await page.$('text=Series Servers');
     assert(seriesDeck !== null, 'Squid Game displays "Series Servers"');
 
-    // Next Episode button in center controls
-    const nextEpBtn = await page.$('button[aria-label="Next Episode"]');
-    assert(nextEpBtn !== null, 'Next Episode button is present for TV series');
+    // Episode Navigator below player renders episodes
+    const epNavigator = await page.$('text=Episode 1');
+    assert(epNavigator !== null, 'Episode Navigator is present and active for TV series');
 
     // ── TEST GROUP 7: Anime Watch Page & Isolation (Attack on Titan) ──
     console.log('\n📌 Test Group 7: Anime Watch Page & Dedicated Servers (Attack on Titan)');
@@ -222,8 +223,11 @@ async function runLuminaVerification() {
     const mobilePlayer = await page.$('[aria-label="Universal Video Player"]');
     assert(mobilePlayer !== null, 'Universal Player renders cleanly on mobile screen');
 
-    const mobilePlay = await page.$('button[aria-label="Play"], button[aria-label="Pause"]');
-    assert(mobilePlay !== null, 'Mobile center play toggle is accessible');
+    const mobileServers = await page.$('text=Anime Servers');
+    assert(mobileServers !== null, 'Mobile server selector is fully visible and accessible');
+
+    const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+    assert(!hasHorizontalOverflow, 'Zero horizontal overflow on mobile viewport (390px)');
 
   } catch (err) {
     console.error('💥 Test suite execution error:', err);

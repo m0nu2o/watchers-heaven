@@ -39,159 +39,96 @@ async function runUniversalPlayerTests() {
     const playerContainer = await page.$('[aria-label="Universal Video Player"]');
     assert(playerContainer !== null, 'Universal Player container with aria-label mounted');
 
-    // PlayerTimeline renders an <input type="range"> — check via parent structure
-    const timelineRange = await page.$('input[type="range"]');
-    assert(timelineRange !== null, 'Timeline range input (scrubber or volume) is present');
+    // Provider iframe is mounted in viewport
+    const iframeEl = await page.$('[aria-label="Universal Video Player"] iframe');
+    assert(iframeEl !== null, 'Streaming provider iframe mounted in viewport');
 
-    // Center play/pause button (aria-label="Play" or "Pause")
-    const playPauseBtn = await page.$('button[aria-label="Play"], button[aria-label="Pause"]');
-    assert(playPauseBtn !== null, 'Center Play/Pause toggle is present');
+    // Zero duplicate controls obscuring the iframe
+    const centerBtn = await page.$('[aria-label="Universal Video Player"] button[aria-label="Play"]');
+    assert(centerBtn === null, 'No duplicate center play button obscuring the iframe');
 
-    // Seek buttons: aria-label="Replay 10 Seconds" and "Forward 10 Seconds"
-    const seekBackBtn = await page.$('button[aria-label="Replay 10 Seconds"]');
-    assert(seekBackBtn !== null, 'Replay 10s button is present');
-
-    const seekFwdBtn = await page.$('button[aria-label="Forward 10 Seconds"]');
-    assert(seekFwdBtn !== null, 'Forward 10s button is present');
-
-    // ── Test 2: Audio Track Button in Bottom Controls ──
+    // ── Test 2: Audio Track Selection Under Player ──
     console.log('\n📌 Test 2: Audio Track Selection Menu');
-    // Audio button has title="Select Audio Language"
-    const audioBtn = await page.$('button[title="Select Audio Language"]');
-    assert(audioBtn !== null, 'Audio menu trigger button exists in bottom controls');
+    const audioPills = await page.$$('button:has-text("Original"), button:has-text("Hindi"), button:has-text("English")');
+    assert(audioPills.length > 0, 'Audio Track selector pills exist and are accessible');
 
-    if (audioBtn) {
-      await audioBtn.click();
-      await page.waitForTimeout(600);
-      // PlayerAudioMenu renders "Audio Track" heading
-      const audioMenuVisible = await page.$('text=Audio Track');
-      assert(audioMenuVisible !== null, 'Audio Track selector menu opened');
-      // Close it
-      await audioBtn.click();
-      await page.waitForTimeout(300);
-    }
+    // ── Test 3: Streaming Server Switching Under Player ──
+    console.log('\n📌 Test 3: Server Switching Under Player');
+    const serverButtons = await page.$$('button:has-text("VidSrc"), button:has-text("AutoEmbed"), button:has-text("Embed"), button:has-text("ScreenScape")');
+    assert(serverButtons.length > 0, 'Server switching pills exist in under-player deck');
 
-    // ── Test 3: Subtitle Menu Button ──
-    console.log('\n📌 Test 3: Subtitle Menu');
-    const subBtn = await page.$('button[title="Subtitles / Captions"]');
-    if (subBtn) {
-      assert(true, 'Subtitle menu trigger button exists (subtitles available)');
-      await subBtn.click();
-      await page.waitForTimeout(600);
-      const subMenuVisible = await page.$('text=Subtitles');
-      assert(subMenuVisible !== null, 'Subtitles menu opened');
-      await subBtn.click();
-      await page.waitForTimeout(300);
-    } else {
-      // No subtitle tracks available for this source — correct behavior
-      assert(true, 'Subtitle button correctly hidden (no subtitle tracks from this source)');
-    }
+    // ── Test 4: Apple-Grade Player Header HUD ──
+    console.log('\n📌 Test 4: Apple-Grade Player Header HUD');
+    const reloadBtn = await page.$('button[aria-label="Reload Stream"], button[title="Reload Stream"]');
+    assert(reloadBtn !== null, 'Reload Stream button exists in player HUD');
 
-    // ── Test 4: Server Switching Menu ──
-    console.log('\n📌 Test 4: Server Switching Menu');
-    const serverBtn = await page.$('button[title="Select Streaming Server"]');
-    assert(serverBtn !== null, 'Server menu trigger button exists in bottom controls');
+    const fullscreenBtn = await page.$('button[aria-label="Fullscreen"], button[aria-label="Toggle Fullscreen"]');
+    assert(fullscreenBtn !== null, 'Fullscreen button exists in player HUD');
 
-    if (serverBtn) {
-      await serverBtn.click();
-      await page.waitForTimeout(600);
-      const serverMenuVisible = await page.$('text=Streaming Servers');
-      assert(serverMenuVisible !== null, 'Streaming Servers menu opened');
-      await serverBtn.click();
-      await page.waitForTimeout(300);
-    }
-
-    // ── Test 5: Settings Modal ──
-    console.log('\n📌 Test 5: Unified Settings Modal');
-    const settingsBtn = await page.$('button[title="Player Settings"]');
-    assert(settingsBtn !== null, 'Settings trigger button exists');
-
-    if (settingsBtn) {
-      await settingsBtn.click();
-      await page.waitForTimeout(800);
-      // Settings modal content: look for "Speed" or "Quality" text
-      const settingsVisible = await page.$('text=Speed') || await page.$('text=Quality') || await page.$('text=Auto-Next');
-      assert(settingsVisible !== null, 'Settings modal opened with player settings options');
-      // Close by clicking button again
-      await settingsBtn.click();
-      await page.waitForTimeout(300);
-    }
-
-    // ── Test 6: Theater Mode Toggle ──
-    console.log('\n📌 Test 6: Theater Mode Toggle');
-    const theaterBtn = await page.$('button[title="Theater Mode (T)"], button[title="Exit Theater Mode (T)"]');
-    assert(theaterBtn !== null, 'Theater mode toggle button is present');
-
-    // ── Test 7: Fullscreen Button ──
-    console.log('\n📌 Test 7: Fullscreen Button');
-    const fullscreenBtn = await page.$('button[aria-label="Fullscreen"], button[aria-label="Exit Fullscreen"]');
-    assert(fullscreenBtn !== null, 'Fullscreen toggle button is present');
-
-    // ── Test 8: Keyboard Shortcuts ──
-    console.log('\n📌 Test 8: Keyboard Shortcuts');
+    // ── Test 5: Keyboard Shortcuts Handled Non-Intrusively ──
+    console.log('\n📌 Test 5: Keyboard Shortcuts');
     if (playerContainer) {
       await playerContainer.click();
       await page.waitForTimeout(200);
 
-      // Space to toggle play/pause
+      // Space to toggle play/pause handled gracefully
       await page.keyboard.press('Space');
       await page.waitForTimeout(300);
       assert(true, 'Spacebar shortcut handled without error');
 
-      // ArrowRight to seek +10s
+      // Arrow keys do not crash page
       await page.keyboard.press('ArrowRight');
       await page.waitForTimeout(300);
       assert(true, 'ArrowRight seek shortcut handled without error');
 
-      // ArrowLeft to seek -10s
       await page.keyboard.press('ArrowLeft');
       await page.waitForTimeout(300);
       assert(true, 'ArrowLeft seek shortcut handled without error');
 
-      // M to toggle mute
-      await page.keyboard.press('m');
+      // Fullscreen shortcut F
+      await page.keyboard.press('f');
       await page.waitForTimeout(300);
-      assert(true, 'M key mute shortcut handled without error');
+      assert(true, 'F key fullscreen toggle handled without error');
 
-      // T to toggle theater mode
-      await page.keyboard.press('t');
+      // Exit fullscreen with Escape
+      await page.keyboard.press('Escape');
       await page.waitForTimeout(300);
-      assert(true, 'T key theater mode shortcut handled without error');
+      assert(true, 'Escape key handled cleanly without error');
     }
 
-    // ── Test 9: Mobile Viewport & Responsive Layout ──
-    console.log('\n📌 Test 9: Mobile Viewport & Responsive Layout');
-    try {
-      await page.setViewportSize({ width: 390, height: 844 });
-      await page.waitForTimeout(1000);
+    // ── Test 6: Page Scrolling During Playback ──
+    console.log('\n📌 Test 6: Page Scrolling During Playback');
+    const scrollInitial = await page.evaluate(() => window.scrollY);
+    await page.evaluate(() => window.scrollBy({ top: 500, behavior: 'instant' }));
+    await page.waitForTimeout(500);
+    const scrollAfter = await page.evaluate(() => window.scrollY);
+    assert(scrollAfter > scrollInitial, 'Page scrolls freely during video playback');
 
-      const mobilePlayer = await page.$('[aria-label="Universal Video Player"]');
-      assert(mobilePlayer !== null, 'Universal Player renders on mobile viewport');
+    // ── Test 7: Mobile Viewport & Responsive Layout ──
+    console.log('\n📌 Test 7: Mobile Viewport & Responsive Layout');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(1000);
 
-      const mobilePlayBtn = await page.$('button[aria-label="Play"], button[aria-label="Pause"]');
-      assert(mobilePlayBtn !== null, 'Mobile center play button is accessible');
-    } catch (viewportErr) {
-      console.log('  ⚠️  Viewport resize skipped (window state conflict)');
-      assert(true, 'Mobile viewport test skipped (fullscreen state conflict)');
-    }
+    const mobilePlayer = await page.$('[aria-label="Universal Video Player"]');
+    assert(mobilePlayer !== null, 'Universal Player renders on mobile viewport');
 
-    // ── Test 10: Anime Media Type ──
-    console.log('\n📌 Test 10: Anime Streaming Page');
-    try {
-      await page.setViewportSize({ width: 1280, height: 800 });
-    } catch { /* viewport may already be desktop */ }
+    const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+    assert(!hasHorizontalOverflow, 'Zero horizontal overflow on mobile screen (390px)');
+
+    // ── Test 8: Anime Media Type ──
+    console.log('\n📌 Test 8: Anime Streaming Page');
+    await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto(`${BASE_URL}/en/watch/1429?s=1&e=1&type=anime`, { waitUntil: 'domcontentloaded', timeout: 20000 });
     await page.waitForTimeout(4000);
 
     const animePlayer = await page.$('[aria-label="Universal Video Player"]');
     assert(animePlayer !== null, 'Universal Player mounted on Anime watch page');
 
-    // Check for Anime badge in the page header
     const animeBadge = await page.$('text=Anime');
     assert(animeBadge !== null, 'Anime media type badge displayed');
 
-    // ── Test 11: Movie Page ──
-    console.log('\n📌 Test 11: Movie Watch Page');
+    // ── Test 9: Movie Page ──
+    console.log('\n📌 Test 9: Movie Watch Page');
     await page.goto(`${BASE_URL}/en/watch/550`, { waitUntil: 'domcontentloaded', timeout: 20000 });
     await page.waitForTimeout(4000);
 

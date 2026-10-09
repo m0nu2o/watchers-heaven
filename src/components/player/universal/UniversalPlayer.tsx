@@ -83,6 +83,8 @@ export function UniversalPlayer({
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const engineRef = useRef<UniversalPlayerEngine>(new UniversalPlayerEngine());
 
+  const isEmbed = source.type === 'embed';
+
   // Player Preferences
   const [preferences, setPreferences] = useState<PlayerPreferences>(() =>
     PlayerPreferencesStore.get()
@@ -111,7 +113,7 @@ export function UniversalPlayer({
     isTheaterMode: preferences.theaterMode || false,
     isPip: false,
     error: null,
-    statusMessage: 'Connecting to server...',
+    statusMessage: `Connecting to ${source.providerName || 'Server'}...`,
   });
 
   // UI Interactive States
@@ -133,12 +135,12 @@ export function UniversalPlayer({
     setState((prev) => ({ ...prev, ...patch }));
   }, []);
 
-  // Check resume prompt on source load
+  // Check resume prompt on source load (only for direct streams)
   useEffect(() => {
-    if (savedProgress > 15) {
+    if (!isEmbed && savedProgress > 15) {
       setShowResumePrompt(true);
     }
-  }, [savedProgress, source.sourceId]);
+  }, [savedProgress, source.sourceId, isEmbed]);
 
   // Sync external active audio track if provided
   useEffect(() => {
@@ -153,8 +155,7 @@ export function UniversalPlayer({
     if (!container) return;
 
     let isCancelled = false;
-    const mediaEl =
-      source.type === 'embed' ? iframeRef.current : videoRef.current;
+    const mediaEl = isEmbed ? iframeRef.current : videoRef.current;
 
     if (!mediaEl) return;
 
@@ -191,7 +192,7 @@ export function UniversalPlayer({
               }
             },
           },
-          savedProgress > 15 ? 0 : savedProgress
+          savedProgress > 15 && !isEmbed ? 0 : savedProgress
         );
       } catch (err: unknown) {
         if (!isCancelled) {
@@ -206,17 +207,17 @@ export function UniversalPlayer({
     return () => {
       isCancelled = true;
     };
-  }, [source, onNextServerFallback, hasNextEpisode, preferences.autoNext, savedProgress, handleStateChange]);
+  }, [source, onNextServerFallback, hasNextEpisode, preferences.autoNext, savedProgress, isEmbed, handleStateChange]);
 
-  // Periodic Progress Reporting (every 5 seconds)
+  // Periodic Progress Reporting (every 5 seconds for direct playback)
   useEffect(() => {
-    if (!state.playing || state.currentTime <= 0 || !onProgressSave) return;
+    if (!state.playing || state.currentTime <= 0 || !onProgressSave || isEmbed) return;
     const now = Date.now();
     if (now - lastProgressSaveRef.current > 5000) {
       lastProgressSaveRef.current = now;
       onProgressSave(state.currentTime);
     }
-  }, [state.currentTime, state.playing, onProgressSave]);
+  }, [state.currentTime, state.playing, onProgressSave, isEmbed]);
 
   // Next Episode Countdown Timer
   useEffect(() => {
@@ -242,19 +243,17 @@ export function UniversalPlayer({
     if (controlsTimeoutRef.current) {
       clearTimeout(controlsTimeoutRef.current);
     }
-    // Only auto-hide when actively playing and no modals open
-    if (state.playing && !showResumePrompt && nextCountdown === null) {
-      controlsTimeoutRef.current = setTimeout(() => {
-        setControlsVisible(false);
-      }, 3200);
-    }
-  }, [state.playing, showResumePrompt, nextCountdown]);
+    // Auto-hide when mouse is stationary
+    controlsTimeoutRef.current = setTimeout(() => {
+      setControlsVisible(false);
+    }, 3200);
+  }, []);
 
-  const handleMouseMove = () => {
+  const handleMouseMove = useCallback(() => {
     resetControlsTimeout();
-  };
+  }, [resetControlsTimeout]);
 
-  // Playback Control Actions
+  // Play / Pause Toggle
   const togglePlay = useCallback(() => {
     const adapter = engineRef.current.getAdapter();
     if (!adapter) return;
@@ -263,176 +262,248 @@ export function UniversalPlayer({
     } else {
       void adapter.play();
     }
-    resetControlsTimeout();
-  }, [state.playing, resetControlsTimeout]);
+  }, [state.playing]);
 
-  const seekRelative = useCallback((seconds: number) => {
-    const adapter = engineRef.current.getAdapter();
-    if (!adapter) return;
-    const target = Math.max(0, Math.min(state.currentTime + seconds, state.duration || 9999));
-    adapter.seekTo(target);
-    resetControlsTimeout();
-  }, [state.currentTime, state.duration, resetControlsTimeout]);
+  // Seek relative
+  const seekRelative = useCallback(
+    (seconds: number) => {
+      const adapter = engineRef.current.getAdapter();
+      if (!adapter) return;
+      const target = Math.max(0, Math.min(state.duration || Infinity, state.currentTime + seconds));
+      adapter.seekTo(target);
+    },
+    [state.currentTime, state.duration]
+  );
 
+  // Seek to absolute time
   const seekTo = useCallback((seconds: number) => {
     const adapter = engineRef.current.getAdapter();
     if (!adapter) return;
     adapter.seekTo(seconds);
-    resetControlsTimeout();
-  }, [resetControlsTimeout]);
+  }, []);
 
-  const handleVolumeChange = useCallback((vol: number) => {
-    const adapter = engineRef.current.getAdapter();
-    if (adapter) adapter.setVolume(vol);
-    const updated = PlayerPreferencesStore.set({ volume: vol, muted: vol === 0 });
-    setPreferences(updated);
-    handleStateChange({ volume: vol, muted: vol === 0 });
-  }, [handleStateChange]);
+  // Volume Change
+  const handleVolumeChange = useCallback(
+    (vol: number) => {
+      const adapter = engineRef.current.getAdapter();
+      if (!adapter) return;
+      adapter.setVolume(vol);
+      PlayerPreferencesStore.set({ volume: vol, muted: vol === 0 });
+      setPreferences((prev) => ({ ...prev, volume: vol, muted: vol === 0 }));
+    },
+    []
+  );
 
+  // Toggle Mute
   const toggleMute = useCallback(() => {
     const adapter = engineRef.current.getAdapter();
-    const nextMuted = !state.muted;
-    if (adapter) adapter.setMuted(nextMuted);
-    const updated = PlayerPreferencesStore.set({ muted: nextMuted });
-    setPreferences(updated);
-    handleStateChange({ muted: nextMuted });
-  }, [state.muted, handleStateChange]);
+    if (!adapter) return;
+    const newMuted = !state.muted;
+    adapter.setMuted(newMuted);
+    PlayerPreferencesStore.set({ muted: newMuted });
+    setPreferences((prev) => ({ ...prev, muted: newMuted }));
+  }, [state.muted]);
 
-  const handleSelectQuality = useCallback((qId: string) => {
+  // Change Playback Speed
+  const handleSelectSpeed = useCallback((speed: number) => {
     const adapter = engineRef.current.getAdapter();
-    if (adapter) adapter.setQuality(qId);
-    handleStateChange({ quality: qId });
-    PlayerPreferencesStore.set({ preferredQuality: qId });
-  }, [handleStateChange]);
-
-  const handleSelectAudio = useCallback((trackId: string) => {
-    const adapter = engineRef.current.getAdapter();
-    if (adapter) adapter.setAudioTrack(trackId);
-    handleStateChange({ activeAudioTrack: trackId });
-    PlayerPreferencesStore.set({ preferredAudio: trackId });
-    if (onSelectAudioTrack) {
-      onSelectAudioTrack(trackId);
-    }
-  }, [handleStateChange, onSelectAudioTrack]);
-
-  const handleSelectSubtitle = useCallback((subId: string) => {
-    const adapter = engineRef.current.getAdapter();
-    if (adapter) adapter.setSubtitleTrack(subId);
-    handleStateChange({ activeSubtitleTrack: subId });
-    PlayerPreferencesStore.set({ preferredSubtitle: subId });
-  }, [handleStateChange]);
-
-  const handleSelectSpeed = useCallback((spd: number) => {
-    const adapter = engineRef.current.getAdapter();
-    if (adapter) adapter.setSpeed(spd);
-    handleStateChange({ playbackSpeed: spd });
-    PlayerPreferencesStore.set({ speed: spd });
-  }, [handleStateChange]);
-
-  const handleUpdatePreferences = useCallback((prefs: Partial<PlayerPreferences>) => {
-    const updated = PlayerPreferencesStore.set(prefs);
-    setPreferences(updated);
+    if (!adapter) return;
+    adapter.setSpeed(speed);
+    PlayerPreferencesStore.set({ speed });
+    setPreferences((prev) => ({ ...prev, speed }));
   }, []);
 
-  const handleUpdateSubtitleStyles = useCallback((styles: Partial<PlayerPreferences['subtitleStyles']>) => {
-    const current = PlayerPreferencesStore.get();
-    const updatedStyles = { ...current.subtitleStyles, ...styles };
-    const updated = PlayerPreferencesStore.set({ subtitleStyles: updatedStyles });
-    setPreferences(updated);
+  // Quality Change
+  const handleSelectQuality = useCallback((qualityId: string) => {
+    const adapter = engineRef.current.getAdapter();
+    if (!adapter) return;
+    adapter.setQuality(qualityId);
+    PlayerPreferencesStore.set({ preferredQuality: qualityId });
+    setPreferences((prev) => ({ ...prev, preferredQuality: qualityId }));
   }, []);
 
-  // Fullscreen Handler
+  // Audio Track Change
+  const handleSelectAudio = useCallback(
+    (trackId: string) => {
+      if (onSelectAudioTrack) {
+        onSelectAudioTrack(trackId);
+      } else {
+        const adapter = engineRef.current.getAdapter();
+        if (adapter) adapter.setAudioTrack(trackId);
+      }
+      PlayerPreferencesStore.set({ preferredAudio: trackId });
+      setPreferences((prev) => ({ ...prev, preferredAudio: trackId }));
+      handleStateChange({ activeAudioTrack: trackId });
+    },
+    [onSelectAudioTrack, handleStateChange]
+  );
+
+  // Subtitle Track Change
+  const handleSelectSubtitle = useCallback(
+    (subId: string) => {
+      const adapter = engineRef.current.getAdapter();
+      if (adapter) adapter.setSubtitleTrack(subId);
+      PlayerPreferencesStore.set({ preferredSubtitle: subId });
+      setPreferences((prev) => ({ ...prev, preferredSubtitle: subId }));
+      handleStateChange({ activeSubtitleTrack: subId });
+    },
+    [handleStateChange]
+  );
+
+  // Subtitle Style Customization
+  const handleUpdateSubtitleStyles = useCallback(
+    (styles: Partial<PlayerPreferences['subtitleStyles']>) => {
+      const updated = { ...preferences.subtitleStyles, ...styles };
+      PlayerPreferencesStore.set({ subtitleStyles: updated });
+      setPreferences((prev) => ({ ...prev, subtitleStyles: updated }));
+    },
+    [preferences.subtitleStyles]
+  );
+
+  // Toggle Theater Mode
+  const toggleTheaterMode = useCallback(() => {
+    const next = !state.isTheaterMode;
+    handleStateChange({ isTheaterMode: next });
+    PlayerPreferencesStore.set({ theaterMode: next });
+    setPreferences((prev) => ({ ...prev, theaterMode: next }));
+  }, [state.isTheaterMode, handleStateChange]);
+
+  // Toggle Fullscreen & Sync Body Scroll Lock
   const toggleFullscreen = useCallback(async () => {
-    const el = containerRef.current;
-    if (!el) return;
+    const container = containerRef.current;
+    if (!container) return;
 
     if (!document.fullscreenElement) {
       try {
-        await el.requestFullscreen();
+        await container.requestFullscreen();
         handleStateChange({ isFullscreen: true });
+        document.body.style.overflow = 'hidden';
       } catch {
-        handleStateChange({ isFullscreen: true });
+        // CSS Fullscreen fallback
+        const next = !state.isFullscreen;
+        handleStateChange({ isFullscreen: next });
+        if (next) {
+          document.body.style.overflow = 'hidden';
+        } else {
+          document.body.style.overflow = '';
+        }
       }
     } else {
       try {
         await document.exitFullscreen();
-        handleStateChange({ isFullscreen: false });
       } catch {
-        handleStateChange({ isFullscreen: false });
+        // Ignore
       }
+      handleStateChange({ isFullscreen: false });
+      document.body.style.overflow = '';
     }
-  }, [handleStateChange]);
+  }, [state.isFullscreen, handleStateChange]);
 
-  // Sync fullscreen change event
+  // Sync fullscreen state with native browser events
   useEffect(() => {
-    const onFsChange = () => {
-      handleStateChange({ isFullscreen: Boolean(document.fullscreenElement) });
+    const onFullscreenChange = () => {
+      const isFs = Boolean(
+        document.fullscreenElement ||
+          (document as unknown as { webkitFullscreenElement?: Element }).webkitFullscreenElement
+      );
+      handleStateChange({ isFullscreen: isFs });
+      if (isFs) {
+        document.body.style.overflow = 'hidden';
+      } else {
+        document.body.style.overflow = '';
+      }
     };
-    document.addEventListener('fullscreenchange', onFsChange);
-    return () => document.removeEventListener('fullscreenchange', onFsChange);
+
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', onFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
+      document.body.style.overflow = '';
+    };
   }, [handleStateChange]);
 
-  // Theater Mode Handler
-  const toggleTheaterMode = useCallback(() => {
-    const nextTheater = !state.isTheaterMode;
-    handleStateChange({ isTheaterMode: nextTheater });
-    PlayerPreferencesStore.set({ theaterMode: nextTheater });
-  }, [state.isTheaterMode, handleStateChange]);
-
-  // Picture in Picture
+  // Picture in Picture (direct streams only)
   const togglePip = useCallback(async () => {
-    if (videoRef.current && document.pictureInPictureEnabled) {
-      if (document.pictureInPictureElement) {
-        await document.exitPictureInPicture();
-        handleStateChange({ isPip: false });
-      } else {
-        await videoRef.current.requestPictureInPicture();
-        handleStateChange({ isPip: true });
-      }
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (document.pictureInPictureElement) {
+      await document.exitPictureInPicture();
+      handleStateChange({ isPip: false });
+    } else if (document.pictureInPictureEnabled) {
+      await video.requestPictureInPicture();
+      handleStateChange({ isPip: true });
     }
   }, [handleStateChange]);
 
-  // Keyboard Shortcuts Listener
+  // Keyboard Shortcuts Listener (Non-Intrusive, never intercepts page scroll!)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       // Don't intercept if user is typing in an input
       if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
 
+      const container = containerRef.current;
+      const isContainerFocused =
+        container && (container === document.activeElement || container.contains(document.activeElement));
+
+      // In embed mode or when outside fullscreen, let arrows and space scroll the webpage freely!
+      if (isEmbed && !state.isFullscreen) {
+        if (['ArrowUp', 'ArrowDown', ' ', 'PageUp', 'PageDown'].includes(e.key)) return;
+      }
+
       switch (e.key) {
         case ' ':
-          e.preventDefault();
-          togglePlay();
+          if ((isContainerFocused || state.isFullscreen) && !isEmbed) {
+            e.preventDefault();
+            togglePlay();
+          }
           break;
         case 'ArrowLeft':
-          e.preventDefault();
-          seekRelative(-10);
+          if ((isContainerFocused || state.isFullscreen) && !isEmbed) {
+            e.preventDefault();
+            seekRelative(-10);
+          }
           break;
         case 'ArrowRight':
-          e.preventDefault();
-          seekRelative(10);
+          if ((isContainerFocused || state.isFullscreen) && !isEmbed) {
+            e.preventDefault();
+            seekRelative(10);
+          }
           break;
         case 'ArrowUp':
-          e.preventDefault();
-          handleVolumeChange(Math.min(1, state.volume + 0.1));
+          if ((isContainerFocused || state.isFullscreen) && !isEmbed) {
+            e.preventDefault();
+            handleVolumeChange(Math.min(1, state.volume + 0.1));
+          }
           break;
         case 'ArrowDown':
-          e.preventDefault();
-          handleVolumeChange(Math.max(0, state.volume - 0.1));
+          if ((isContainerFocused || state.isFullscreen) && !isEmbed) {
+            e.preventDefault();
+            handleVolumeChange(Math.max(0, state.volume - 0.1));
+          }
           break;
         case 'f':
         case 'F':
-          e.preventDefault();
-          void toggleFullscreen();
+          if (isContainerFocused || state.isFullscreen) {
+            e.preventDefault();
+            void toggleFullscreen();
+          }
           break;
         case 't':
         case 'T':
-          e.preventDefault();
-          toggleTheaterMode();
+          if (isContainerFocused || state.isFullscreen) {
+            e.preventDefault();
+            toggleTheaterMode();
+          }
           break;
         case 'm':
         case 'M':
-          e.preventDefault();
-          toggleMute();
+          if ((isContainerFocused || state.isFullscreen) && !isEmbed) {
+            e.preventDefault();
+            toggleMute();
+          }
           break;
         case 'Escape':
           if (state.isFullscreen) {
@@ -444,10 +515,21 @@ export function UniversalPlayer({
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [togglePlay, seekRelative, handleVolumeChange, toggleFullscreen, toggleTheaterMode, toggleMute, state.volume, state.isFullscreen]);
+  }, [
+    state.isFullscreen,
+    state.volume,
+    isEmbed,
+    togglePlay,
+    seekRelative,
+    handleVolumeChange,
+    toggleFullscreen,
+    toggleTheaterMode,
+    toggleMute,
+  ]);
 
-  // Touch & Double-Tap Detection for Mobile
-  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+  // Touch Handlers for Mobile (direct streams only)
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (isEmbed) return;
     const now = Date.now();
     const touch = e.touches[0];
     const rect = containerRef.current?.getBoundingClientRect();
@@ -456,14 +538,11 @@ export function UniversalPlayer({
     const x = touch.clientX - rect.left;
     const width = rect.width;
 
-    if (now - lastTapTimeRef.current < 280) {
-      // Double tap detected!
+    if (now - lastTapTimeRef.current < 300) {
       if (x < width * 0.35) {
-        // Left double tap: -10s
         seekRelative(-10);
         setDoubleTapFeedback({ side: 'left', count: 1 });
       } else if (x > width * 0.65) {
-        // Right double tap: +10s
         seekRelative(10);
         setDoubleTapFeedback({ side: 'right', count: 1 });
       }
@@ -471,7 +550,6 @@ export function UniversalPlayer({
       if (doubleTapTimeoutRef.current) clearTimeout(doubleTapTimeoutRef.current);
       doubleTapTimeoutRef.current = setTimeout(() => setDoubleTapFeedback(null), 800);
     } else {
-      // Single tap: toggle controls
       setControlsVisible((prev) => !prev);
     }
     lastTapTimeRef.current = now;
@@ -482,13 +560,18 @@ export function UniversalPlayer({
     seekRelative(85);
   };
 
+  const handleUpdatePreferences = (prefs: Partial<PlayerPreferences>) => {
+    PlayerPreferencesStore.set(prefs);
+    setPreferences((prev) => ({ ...prev, ...prefs }));
+  };
+
   return (
     <div
       ref={containerRef}
       onMouseMove={handleMouseMove}
       onTouchStart={handleTouchStart}
       aria-label="Universal Video Player"
-      className={`relative bg-black flex items-center justify-center overflow-hidden select-none transition-all duration-300 ${
+      className={`relative bg-black flex items-center justify-center overflow-hidden select-none transition-all duration-300 isolation-isolate ${
         state.isFullscreen
           ? 'fixed inset-0 z-[9999] w-screen h-[100dvh] m-0 p-0'
           : state.isTheaterMode
@@ -497,12 +580,12 @@ export function UniversalPlayer({
       }`}
     >
       {/* ── 1. Video / Iframe Stream Element ── */}
-      {source.type === 'embed' ? (
+      {isEmbed ? (
         <iframe
           key={source.url}
           ref={iframeRef}
           src={source.url}
-          className="w-full h-full border-0 absolute inset-0 bg-black"
+          className="w-full h-full border-0 absolute inset-0 bg-black pointer-events-auto z-0"
           allowFullScreen
           allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
           referrerPolicy="no-referrer"
@@ -514,11 +597,11 @@ export function UniversalPlayer({
           ref={videoRef}
           playsInline
           autoPlay={preferences.autoPlay}
-          className="w-full h-full object-contain absolute inset-0 bg-black"
+          className="w-full h-full object-contain absolute inset-0 bg-black z-0 pointer-events-auto"
         />
       )}
 
-      {/* ── 2. Top Header HUD Overlay ── */}
+      {/* ── 2. Top Header HUD Overlay (Apple-Grade Minimalist Frame) ── */}
       <PlayerHeader
         title={mediaTitle}
         season={season}
@@ -532,84 +615,107 @@ export function UniversalPlayer({
         autoSwitchEnabled={autoSwitchEnabled}
         onToggleAutoSwitch={onToggleAutoSwitch}
         onReload={() => {
-          seekTo(state.currentTime);
+          if (isEmbed && iframeRef.current) {
+            iframeRef.current.src = source.url;
+          } else {
+            seekTo(state.currentTime);
+          }
         }}
         onSkipIntro={handleSkipIntro}
         hasIntro={Boolean(source.skipTimestamps?.intro || episode)}
-      />
-
-      {/* ── 3. Center Controls (Play, Seek, Prev/Next) ── */}
-      <PlayerCenterControls
-        playing={state.playing}
-        onTogglePlay={togglePlay}
-        onSeekRelative={seekRelative}
-        onPreviousEpisode={onPreviousEpisode}
-        onNextEpisode={onNextEpisode}
-        hasPreviousEpisode={hasPreviousEpisode}
-        hasNextEpisode={hasNextEpisode}
-        doubleTapFeedback={doubleTapFeedback}
-        visible={controlsVisible}
-      />
-
-      {/* ── 4. Bottom Control Deck (Timeline, Audio, Subtitles, Quality, Server, Speed) ── */}
-      <PlayerControls
-        playing={state.playing}
-        onTogglePlay={togglePlay}
-        onSeekRelative={seekRelative}
-        onSeekTo={seekTo}
-        currentTime={state.currentTime}
-        duration={state.duration}
-        bufferedPercent={state.bufferedPercent}
-        skipTimestamps={source.skipTimestamps}
-        volume={state.volume}
-        muted={state.muted}
-        onVolumeChange={handleVolumeChange}
-        onToggleMute={toggleMute}
-        activeQuality={state.quality}
-        qualities={state.availableQualities}
-        onSelectQuality={handleSelectQuality}
-        activeAudioId={state.activeAudioTrack}
-        audioTracks={state.availableAudioTracks}
-        onSelectAudio={handleSelectAudio}
-        activeSubtitleId={state.activeSubtitleTrack}
-        subtitles={state.availableSubtitleTracks}
-        onSelectSubtitle={handleSelectSubtitle}
-        subtitleStyles={preferences.subtitleStyles}
-        onUpdateSubtitleStyles={handleUpdateSubtitleStyles}
-        availableServers={availableServers}
-        activeServerId={source.providerId}
-        onSelectServer={onSelectServer}
-        playbackSpeed={state.playbackSpeed}
-        onSelectSpeed={handleSelectSpeed}
+        isEmbed={isEmbed}
         isFullscreen={state.isFullscreen}
         onToggleFullscreen={toggleFullscreen}
         isTheaterMode={state.isTheaterMode}
         onToggleTheaterMode={toggleTheaterMode}
-        onTogglePip={source.type !== 'embed' ? togglePip : undefined}
-        preferences={preferences}
-        onUpdatePreferences={handleUpdatePreferences}
-        visible={controlsVisible}
-        accentColor={accentColor}
       />
 
-      {/* ── 5. Status & Loading Overlay ── */}
+      {/* ── 3. Direct Playback Custom Controls (ONLY for direct/HLS streams — Never over third-party iframes!) ── */}
+      {!isEmbed && (
+        <>
+          {/* Center Play, Seek, Prev/Next Controls */}
+          <PlayerCenterControls
+            playing={state.playing}
+            onTogglePlay={togglePlay}
+            onSeekRelative={seekRelative}
+            onPreviousEpisode={onPreviousEpisode}
+            onNextEpisode={onNextEpisode}
+            hasPreviousEpisode={hasPreviousEpisode}
+            hasNextEpisode={hasNextEpisode}
+            doubleTapFeedback={doubleTapFeedback}
+            visible={controlsVisible}
+          />
+
+          {/* Bottom Control Deck (Timeline, Audio, Subtitles, Quality, Server, Speed) */}
+          <PlayerControls
+            playing={state.playing}
+            onTogglePlay={togglePlay}
+            onSeekRelative={seekRelative}
+            onSeekTo={seekTo}
+            currentTime={state.currentTime}
+            duration={state.duration}
+            bufferedPercent={state.bufferedPercent}
+            skipTimestamps={source.skipTimestamps}
+            volume={state.volume}
+            muted={state.muted}
+            onVolumeChange={handleVolumeChange}
+            onToggleMute={toggleMute}
+            activeQuality={state.quality}
+            qualities={state.availableQualities}
+            onSelectQuality={handleSelectQuality}
+            activeAudioId={state.activeAudioTrack}
+            audioTracks={state.availableAudioTracks}
+            onSelectAudio={handleSelectAudio}
+            activeSubtitleId={state.activeSubtitleTrack}
+            subtitles={state.availableSubtitleTracks}
+            onSelectSubtitle={handleSelectSubtitle}
+            subtitleStyles={preferences.subtitleStyles}
+            onUpdateSubtitleStyles={handleUpdateSubtitleStyles}
+            availableServers={availableServers}
+            activeServerId={source.providerId}
+            onSelectServer={onSelectServer}
+            playbackSpeed={state.playbackSpeed}
+            onSelectSpeed={handleSelectSpeed}
+            isFullscreen={state.isFullscreen}
+            onToggleFullscreen={toggleFullscreen}
+            isTheaterMode={state.isTheaterMode}
+            onToggleTheaterMode={toggleTheaterMode}
+            onTogglePip={togglePip}
+            preferences={preferences}
+            onUpdatePreferences={handleUpdatePreferences}
+            visible={controlsVisible}
+            accentColor={accentColor}
+          />
+        </>
+      )}
+
+      {/* ── 4. Status & Loading Overlay (Apple Blur with Spinner) ── */}
       {(state.loading || isLoadingSource) && !state.error && !externalError && (
         <PlayerLoadingOverlay statusMessage={state.statusMessage} />
       )}
 
-      {/* ── 6. Error & Recovery Overlay ── */}
+      {/* ── 5. Error & Recovery Overlay ── */}
       {(state.error || externalError) && (
         <PlayerErrorOverlay
           error={state.error || externalError || 'Playback unavailable'}
           onTryNextServer={() => onNextServerFallback(true)}
           onSwitchToSub={() => handleSelectAudio('sub')}
-          onRetry={onRetry || (() => seekTo(state.currentTime))}
+          onRetry={
+            onRetry ||
+            (() => {
+              if (isEmbed && iframeRef.current) {
+                iframeRef.current.src = source.url;
+              } else {
+                seekTo(state.currentTime);
+              }
+            })
+          }
           isDubActive={state.activeAudioTrack !== 'sub'}
         />
       )}
 
-      {/* ── 7. Resume Watching Modal ── */}
-      {showResumePrompt && (
+      {/* ── 6. Resume Watching Modal (Direct streams only) ── */}
+      {!isEmbed && showResumePrompt && (
         <PlayerResumePrompt
           timestamp={savedProgress}
           onResume={() => {
@@ -626,7 +732,7 @@ export function UniversalPlayer({
         />
       )}
 
-      {/* ── 8. Next Episode Auto-Countdown Overlay ── */}
+      {/* ── 7. Next Episode Auto-Countdown Overlay ── */}
       {nextCountdown !== null && nextEpisodeMeta && (
         <PlayerNextEpisodeOverlay
           nextSeason={nextEpisodeMeta.season}

@@ -942,63 +942,7 @@ export default function WatchPage() {
       return;
     };
 
-    // 3. Block middle-click pop-unders (mouse button 1) and auxiliary clicks
-    const handleMouseDown = (e: MouseEvent) => {
-      if (e.button === 1) {
-        const el = e.target as HTMLElement;
-        if (!el.closest('a[href], button')) {
-          e.preventDefault();
-          e.stopPropagation();
-        }
-      }
-    };
-
-    const handleAuxClick = (e: MouseEvent) => {
-      const el = e.target as HTMLElement;
-      if (!el.closest('a[href], button')) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    };
-
-    // 4. Anti-hijack protection: prevent third-party iframes from redirecting the top window
-    const handleUserClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (target?.closest('a') || target?.closest('button')) {
-        isUserNavigating = true;
-        if (navTimer) clearTimeout(navTimer);
-        navTimer = setTimeout(() => {
-          isUserNavigating = false;
-        }, 3000);
-      }
-    };
-
-    // 5. Pop-under defense: if page blurs without user navigation, refocus top window
-    let blurTimer: NodeJS.Timeout | null = null;
-    const handleBlur = () => {
-      if (!isUserNavigating) {
-        blurTimer = setTimeout(() => {
-          window.focus();
-        }, 80);
-      }
-    };
-    const handleFocus = () => {
-      if (blurTimer) {
-        clearTimeout(blurTimer);
-        blurTimer = null;
-      }
-    };
-
-    // 6. Anti-hijack beforeunload guard
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (!isUserNavigating) {
-        e.preventDefault();
-        e.returnValue = '';
-        return '';
-      }
-    };
-
-    // 7. MutationObserver to instantly strip malicious injected ad tags
+    // 3. MutationObserver to strip malicious injected ad tags
     const observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         for (const node of Array.from(mutation.addedNodes)) {
@@ -1028,25 +972,11 @@ export default function WatchPage() {
       // Ignored in non-browser environments
     }
 
-    window.addEventListener('click', handleUserClick, { capture: true });
-    window.addEventListener('mousedown', handleMouseDown, { capture: true });
-    window.addEventListener('auxclick', handleAuxClick, { capture: true });
-    window.addEventListener('blur', handleBlur);
-    window.addEventListener('focus', handleFocus);
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
     return () => {
       window.open = originalOpen;
       HTMLAnchorElement.prototype.click = originalAnchorClick;
       if (navTimer) clearTimeout(navTimer);
-      if (blurTimer) clearTimeout(blurTimer);
       observer.disconnect();
-      window.removeEventListener('click', handleUserClick, { capture: true });
-      window.removeEventListener('mousedown', handleMouseDown, { capture: true });
-      window.removeEventListener('auxclick', handleAuxClick, { capture: true });
-      window.removeEventListener('blur', handleBlur);
-      window.removeEventListener('focus', handleFocus);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [triggerSeekFeedback]);
 
