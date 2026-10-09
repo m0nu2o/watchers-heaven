@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ApiGateway } from '@/lib/api/gateway';
 import { PosterCard } from '@/components/cards/PosterCard';
 import { filterContentByDub } from '@/lib/audio';
+import { isJapaneseAnime, type ClassifiableMedia } from '@/lib/classification';
 import {
   Play,
   Info,
@@ -140,7 +141,7 @@ export default function AnimePage() {
         );
         if (data.results) {
           const filtered = data.results.filter(
-            (item) => item.original_language === 'ja'
+            (item) => isJapaneseAnime(item as ClassifiableMedia)
           );
           setShows(filtered.slice(0, ITEMS_PER_PAGE));
           setTotalPages(Math.min(data.total_pages || 1, 500));

@@ -5,6 +5,8 @@ import { ApiGateway } from '@/lib/api/gateway';
 import { useState, useEffect, useMemo } from 'react';
 import { PosterCard } from '@/components/cards/PosterCard';
 
+import { isJapaneseAnime, classifyContent } from '@/lib/classification';
+
 interface PersonDetails {
   id: number;
   name: string;
@@ -27,16 +29,11 @@ interface CreditItem {
   media_type: 'movie' | 'tv';
   genre_ids?: number[];
   original_language?: string;
+  origin_country?: string[];
 }
 
-// Known anime TMDB IDs genre pattern: animation (16) + Japanese origin
 function isAnime(item: CreditItem): boolean {
-  return (
-    item.media_type === 'tv' &&
-    Array.isArray(item.genre_ids) &&
-    item.genre_ids.includes(16) &&
-    item.original_language === 'ja'
-  );
+  return isJapaneseAnime(item);
 }
 
 // K-Drama: Korean TV
@@ -232,7 +229,8 @@ export default function PersonPage() {
                   posterPath={item.poster_path ?? ''}
                   rating={item.vote_average}
                   year={(item.release_date || item.first_air_date || '').slice(0, 4)}
-                  type={isAnime(item) ? 'anime' : item.media_type === 'tv' ? 'tv' : 'movie'}
+                  type={isAnime(item) ? (item.media_type === 'movie' ? 'movie' : 'anime') : item.media_type === 'tv' ? 'tv' : 'movie'}
+                  category={classifyContent(item)}
                 />
                 {item.character && (
                   <p className="text-[9px] text-slate-400 dark:text-slate-500 text-center truncate px-1">

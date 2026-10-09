@@ -12,9 +12,6 @@ export async function GET(
     const season = searchParams.get('s') ? parseInt(searchParams.get('s')!, 10) : undefined;
     const episode = searchParams.get('e') ? parseInt(searchParams.get('e')!, 10) : undefined;
     const originalLanguage = searchParams.get('origLang') || (mediaType === 'anime' ? 'ja' : 'en');
-    if (mediaType !== 'anime' && (originalLanguage === 'ja' || originalLanguage.toLowerCase().trim() === 'ja')) {
-      mediaType = 'anime';
-    }
     const title = searchParams.get('title') || undefined;
     const aniListId = searchParams.get('aniListId') ? parseInt(searchParams.get('aniListId')!, 10) : undefined;
     const malId = searchParams.get('malId') ? parseInt(searchParams.get('malId')!, 10) : undefined;

@@ -39,6 +39,15 @@ import {
 import { getCurrentArcForEpisode } from '@/lib/anime/arcs';
 
 import type { MediaType, SubtitleTrack, SkipTimestamps } from '@/types/media';
+import {
+  classifyContent,
+  resolveFormat,
+  isJapaneseAnime,
+  getPlaybackMediaType,
+  getCategoryBadge,
+  type ClassifiableMedia,
+  type ContentCategory,
+} from '@/lib/classification';
 
 export default function WatchPage() {
   const params = useParams();
@@ -73,7 +82,7 @@ export default function WatchPage() {
 
   const [mediaTitle, setMediaTitle] = useState<string>('');
   const [mediaOriginalLang, setMediaOriginalLang] = useState<string>(isAnime ? 'ja' : 'en');
-  const isActuallyAnime = isAnime || resolvedContentType === 'anime' || mediaOriginalLang === 'ja';
+  const isActuallyAnime = resolvedContentType === 'anime';
   const currentMediaType: MediaType = isActuallyAnime ? 'anime' : isActuallyTv ? 'tv' : 'movie';
   const [audioInfo, setAudioInfo] = useState<ContentAudioInfo | null>(null);
   const [audioAvailability, setAudioAvailability] = useState<EpisodeAudioAvailability | null>(() => {
@@ -201,22 +210,33 @@ export default function WatchPage() {
         const origLang = (data.original_language as string) || (isAnime ? 'ja' : 'en');
         setMediaOriginalLang(origLang);
 
-        const isGenreAnimation = Array.isArray(data.genres) && data.genres.some((g: { id?: number }) => g.id === 16);
-        const isOriginJapan = Array.isArray(data.origin_country) && data.origin_country.includes('JP');
-        const isDetectedAnime = isAnime || origLang === 'ja' || (origLang === 'ja' && (isGenreAnimation || isOriginJapan));
+        const classifiable: ClassifiableMedia = {
+          id,
+          media_type: isTvResult ? 'tv' : 'movie',
+          genres: data.genres as Array<{ id: number }> | undefined,
+          original_language: origLang,
+          origin_country: data.origin_country as string[] | undefined,
+          production_countries: data.production_countries as Array<{ iso_3166_1?: string }> | undefined,
+        };
 
-        setIsActuallyTv(isTvResult || isDetectedAnime);
-        setResolvedContentType(isDetectedAnime ? 'anime' : isTvResult ? 'tv' : 'movie');
+        const category = classifyContent(classifiable);
+        const isDetectedAnimeSeries = category === 'anime';
+        const isDetectedAnimeMovie = category === 'anime-movie';
+        const isDetectedAnime = isDetectedAnimeSeries || isDetectedAnimeMovie;
+        const isDetectedTv = isTvResult && !isDetectedAnimeMovie;
+
+        setIsActuallyTv(isDetectedTv);
+        setResolvedContentType(isDetectedAnimeSeries ? 'anime' : isDetectedTv ? 'tv' : 'movie');
 
         const title =
           (data.name as string) ||
           (data.title as string) ||
           (data.original_name as string) ||
           (data.original_title as string) ||
-          (isDetectedAnime ? `Anime #${id}` : isTvResult ? `Show #${id}` : `Movie #${id}`);
+          (isDetectedAnime ? `Anime #${id}` : isDetectedTv ? `Show #${id}` : `Movie #${id}`);
         setMediaTitle(title);
 
-        if (isTvResult || isDetectedAnime) {
+        if (isDetectedTv) {
           const rawSeasons = (data.seasons as SeasonSummary[]) || [];
           const validSeasons = rawSeasons.filter((s) => (s.episode_count ?? 1) > 0);
           setSeasons(

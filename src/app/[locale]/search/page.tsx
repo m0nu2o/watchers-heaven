@@ -7,6 +7,7 @@ import { PosterCard } from '@/components/cards/PosterCard';
 import { useTranslations } from 'next-intl';
 import { filterContentByDubAsync } from '@/lib/audio';
 import { AiChatModal } from '@/components/chat/AiChatModal';
+import { classifyContent, resolveFormat, getPlaybackMediaType, type ClassifiableMedia } from '@/lib/classification';
 
 const normalizeString = (str: string) => {
   return str.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -306,10 +307,10 @@ export default function SearchPage() {
               return (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                   {filteredResults.map((item) => {
-                    const isItemAnime =
-                      item.original_language === 'ja' ||
-                      (item.genre_ids as number[] | undefined)?.includes(16);
-                    const itemType = isItemAnime ? 'anime' : item.media_type === 'tv' ? 'tv' : 'movie';
+                    const classifiable = item as ClassifiableMedia;
+                    const category = classifyContent(classifiable);
+                    const format = resolveFormat(classifiable);
+                    const itemType = getPlaybackMediaType(category, format);
 
                     return (
                       <PosterCard
@@ -326,6 +327,7 @@ export default function SearchPage() {
                             : ''
                         }
                         type={itemType}
+                        category={category}
                       />
                     );
                   })}

@@ -18,9 +18,6 @@ export async function GET(
     const startTime = searchParams.get('startTime') ? parseFloat(searchParams.get('startTime')!) : 0;
     const accentColor = searchParams.get('accentColor') || undefined;
     const originalLanguage = searchParams.get('origLang') || (type === 'anime' ? 'ja' : 'en');
-    if (type !== 'anime' && (originalLanguage === 'ja' || originalLanguage.toLowerCase().trim() === 'ja')) {
-      type = 'anime';
-    }
     const title = searchParams.get('title') || undefined;
 
     const result = await resolveAudioSourceAsync({
@@ -68,9 +65,6 @@ export async function POST(
     } = body;
     let type = (body.type || 'movie') as 'movie' | 'tv' | 'anime';
     const originalLanguage = body.originalLanguage || (type === 'anime' ? 'ja' : 'en');
-    if (type !== 'anime' && (originalLanguage === 'ja' || originalLanguage.toLowerCase().trim() === 'ja')) {
-      type = 'anime';
-    }
 
     const result = await resolveAudioSourceAsync({
       mediaType: type,

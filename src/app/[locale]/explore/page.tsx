@@ -5,6 +5,12 @@ import { ApiGateway } from '@/lib/api/gateway';
 import { PosterCard } from '@/components/cards/PosterCard';
 import { SlidersHorizontal, Loader, Search, X, ChevronLeft, ChevronRight, Compass } from 'lucide-react';
 import { filterContentByDubAsync } from '@/lib/audio';
+import {
+  classifyContent,
+  resolveFormat,
+  getPlaybackMediaType,
+  type ClassifiableMedia,
+} from '@/lib/classification';
 
 interface MediaItem {
   id: number;
@@ -16,14 +22,19 @@ interface MediaItem {
   first_air_date?: string;
   media_type?: string;
   original_language?: string;
+  genre_ids?: number[];
+  origin_country?: string[];
 }
 
 const CATEGORIES = [
   { id: 'all', label: 'All Content' },
   { id: 'movie', label: 'Movies' },
   { id: 'tv', label: 'TV Shows' },
-  { id: 'anime', label: 'Anime' },
+  { id: 'anime', label: 'Anime Series' },
+  { id: 'anime-movie', label: 'Anime Movies' },
+  { id: 'animation', label: 'Animation & Cartoons' },
   { id: 'kdrama', label: 'K-Drama' },
+  { id: 'cdrama', label: 'C-Drama' },
   { id: 'bollywood', label: 'Bollywood' },
   { id: 'hollywood', label: 'Hollywood' },
 ];
@@ -98,9 +109,20 @@ function ExploreContent() {
           endpoint = '/discover/tv';
           queryParams.with_genres = '16';
           queryParams.with_original_language = 'ja';
+        } else if (activeType === 'anime-movie') {
+          endpoint = '/discover/movie';
+          queryParams.with_genres = '16';
+          queryParams.with_original_language = 'ja';
+        } else if (activeType === 'animation' || activeType === 'cartoon') {
+          endpoint = '/discover/movie';
+          queryParams.with_genres = '16';
+          queryParams.without_original_language = 'ja';
         } else if (activeType === 'kdrama') {
           endpoint = '/discover/tv';
           queryParams.with_original_language = 'ko';
+        } else if (activeType === 'cdrama') {
+          endpoint = '/discover/tv';
+          queryParams.with_original_language = 'zh';
         } else if (activeType === 'bollywood') {
           endpoint = '/discover/movie';
           queryParams.with_original_language = 'hi';
@@ -336,7 +358,11 @@ function ExploreContent() {
           <>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
               {displayedItems.map((item) => {
-                const isTvShow = activeType === 'tv' || activeType === 'anime' || activeType === 'kdrama' || item.media_type === 'tv' || Boolean(item.first_air_date);
+                const classifiable = item as ClassifiableMedia;
+                const category = classifyContent(classifiable);
+                const format = resolveFormat(classifiable);
+                const itemType = getPlaybackMediaType(category, format);
+
                 return (
                   <PosterCard
                     key={item.id}
@@ -345,7 +371,8 @@ function ExploreContent() {
                     posterPath={item.poster_path || ''}
                     rating={item.vote_average}
                     year={item.release_date ? item.release_date.split('-')[0] : (item.first_air_date ? item.first_air_date.split('-')[0] : '')}
-                    type={activeType === 'anime' ? 'anime' : isTvShow ? 'tv' : 'movie'}
+                    type={itemType}
+                    category={category}
                   />
                 );
               })}

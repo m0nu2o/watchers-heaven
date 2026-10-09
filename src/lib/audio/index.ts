@@ -87,7 +87,7 @@ export function getContentAudioAvailability(
   const cached = AudioAvailabilityCache.getDiscovery(cacheKey);
   if (cached) return cached;
 
-  const isAnime = mediaType === 'anime' || params.originalLanguage === 'ja';
+  const isAnime = mediaType === 'anime';
   const origLang = (params.originalLanguage || (isAnime ? 'ja' : 'en')).toLowerCase().trim();
   const isOriginalHindi = origLang === 'hi';
   const isOriginalEnglish = !isAnime && origLang === 'en';
@@ -625,7 +625,7 @@ export async function getEpisodeAudioTracksAsync(
   let aniListId = params.aniListId;
   let dubLanguages = params.dubLanguages;
   let malId = params.malId ?? null;
-  const isAnime = params.mediaType === 'anime' || (params.originalLanguage && params.originalLanguage.toLowerCase().trim() === 'ja');
+  const isAnime = params.mediaType === 'anime';
 
   if (isAnime) {
     if (verifiedEnglish === undefined || !aniListId || !malId || !dubLanguages) {
@@ -705,7 +705,7 @@ export function resolveAudioSource(params: ResolveAudioSourceParams): ResolveAud
     title,
   } = params;
 
-  const isAnime = mediaType === 'anime' || (originalLanguage && originalLanguage.toLowerCase().trim() === 'ja');
+  const isAnime = mediaType === 'anime';
   const effectiveMediaType = isAnime ? 'anime' : mediaType;
 
   // Get verified tracks for this episode
@@ -784,7 +784,7 @@ export async function resolveAudioSourceAsync(
     title,
   } = params;
 
-  const isAnime = mediaType === 'anime' || (originalLanguage && originalLanguage.toLowerCase().trim() === 'ja');
+  const isAnime = mediaType === 'anime';
   const effectiveMediaType = isAnime ? 'anime' : mediaType;
 
   let resolvedAniListId = params.aniListId;

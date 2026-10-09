@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiGateway } from '@/lib/api/gateway';
 import { getContentAudioAvailabilityAsync } from '@/lib/audio';
+import { isJapaneseAnime, type ClassifiableMedia } from '@/lib/classification';
 
 export async function POST(request: NextRequest) {
   try {
@@ -152,7 +153,7 @@ export async function POST(request: NextRequest) {
 
     const items = await Promise.all(
       hits.map(async (item) => {
-        const isAnime = item.original_language === 'ja';
+        const isAnime = isJapaneseAnime(item as ClassifiableMedia);
         const mediaType = isAnime ? 'anime' : item.media_type === 'tv' ? 'tv' : 'movie';
         const title = (item.title as string) || (item.name as string) || '';
 

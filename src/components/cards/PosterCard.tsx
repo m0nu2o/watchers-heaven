@@ -3,6 +3,8 @@ import { Star, Image as ImageIcon, Play } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+import { ContentCategory, getCategoryBadge } from '@/lib/classification';
+
 interface PosterCardProps {
   id: number;
   title: string;
@@ -11,18 +13,29 @@ interface PosterCardProps {
   year?: string;
   className?: string;
   type?: 'movie' | 'tv' | 'anime';
+  category?: ContentCategory;
   extraBadge?: string;
   hrefOverride?: string;
 }
 
-export function PosterCard({ id, title, posterPath, rating, year, className, type = 'movie', extraBadge, hrefOverride }: PosterCardProps) {
+export function PosterCard({ id, title, posterPath, rating, year, className, type = 'movie', category, extraBadge, hrefOverride }: PosterCardProps) {
   const pathname = usePathname() || '/';
   const currentLocale = pathname.split('/').filter(Boolean)[0];
   const locale = ['en', 'am', 'om', 'ti', 'so'].includes(currentLocale) ? currentLocale : 'en';
-  const defaultHref = type === 'anime'
-    ? `/${locale}/tv/${id}?from=anime`
-    : `/${locale}/${type}/${id}`;
+
+  const defaultHref = (() => {
+    if (category === 'anime') return `/${locale}/tv/${id}?from=anime`;
+    if (category === 'anime-movie') return `/${locale}/movie/${id}?from=anime`;
+    if (category === 'cartoon') return type === 'tv' ? `/${locale}/tv/${id}` : `/${locale}/movie/${id}`;
+    if (category === 'kdrama' || category === 'cdrama' || category === 'asian-drama' || category === 'tv') {
+      return `/${locale}/tv/${id}`;
+    }
+    if (type === 'anime') return `/${locale}/tv/${id}?from=anime`;
+    return `/${locale}/${type}/${id}`;
+  })();
+
   const href = hrefOverride || defaultHref;
+  const badgeInfo = category ? getCategoryBadge(category) : null;
 
   const posterUrl = posterPath
     ? posterPath.startsWith('http')
@@ -45,16 +58,20 @@ export function PosterCard({ id, title, posterPath, rating, year, className, typ
           </div>
         ) : <div />}
 
-        {/* Type / Extra Badge */}
+        {/* Type / Category / Extra Badge */}
         <div className="flex items-center gap-1">
           {extraBadge ? (
             <span className="text-[9px] font-black px-2 py-0.5 rounded-md shadow-md uppercase tracking-wider backdrop-blur-xl border border-white/15 bg-indigo-600/90 text-white shadow-indigo-600/30">
               {extraBadge}
             </span>
+          ) : badgeInfo ? (
+            <span className={`text-[9px] font-black px-2 py-0.5 rounded-md shadow-md uppercase tracking-wider backdrop-blur-xl border ${badgeInfo.badgeClass}`}>
+              {badgeInfo.shortLabel}
+            </span>
           ) : (
             <span className={`text-[9px] font-black px-2 py-0.5 rounded-md shadow-md uppercase tracking-wider backdrop-blur-xl border border-white/10 ${
               type === 'anime' 
-                ? 'bg-blue-500/80 text-white shadow-blue-500/20' 
+                ? 'bg-rose-500/80 text-white shadow-rose-500/20' 
                 : type === 'tv' 
                 ? 'bg-indigo-500/80 text-white shadow-indigo-500/20' 
                 : 'bg-white/10 text-slate-200'
