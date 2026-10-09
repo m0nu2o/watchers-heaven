@@ -157,8 +157,6 @@ export default async function Home(props: { params: Promise<{ locale?: string }>
             title="Top 10 Worldwide Today"
             badge="LIVE RANKINGS • WORLDWIDE"
             subtitle="The 10 most-streamed films and series trending across the globe today"
-            seeMoreHref={`/${locale}/movies`}
-            exploreHref={`/${locale}/explore?sort=popularity.desc`}
           >
             {top10Ranked.map(({ item, type }, index) => {
               const year = item.release_date

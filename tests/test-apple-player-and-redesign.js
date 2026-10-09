@@ -72,6 +72,14 @@ async function runAuditTests() {
     assert(top10Data.liveBeacon, 'Live beacon badge (LIVE RANKINGS • WORLDWIDE) is rendered');
     assert(top10Data.numerals.some(n => n.includes('1') && n.includes('10')), 'Rank numerals include 1 through 10');
 
+    const hasTop10SeeMore = await page.evaluate(() => {
+      const h2 = Array.from(document.querySelectorAll('h2')).find(el => el.textContent.includes('Top 10 Worldwide Today'));
+      if (!h2) return false;
+      const headerContainer = h2.closest('.flex.items-end.justify-between') || h2.parentElement?.parentElement;
+      return headerContainer ? headerContainer.querySelector('a') !== null : false;
+    });
+    assert(!hasTop10SeeMore, 'Top 10 Worldwide Today has zero "See More" / "See All" button');
+
     // 2. Removal of Spotlight Cinema
     console.log(`\n📌 2. Verification of Spotlight Cinema Removal:`);
     const spotlightHeading = await page.$('text=Spotlight Cinema');
