@@ -52,8 +52,8 @@ async function runAuditTests() {
     await page.goto(`${BASE_URL}/en`, { waitUntil: 'domcontentloaded', timeout: 30000 });
     await page.waitForTimeout(3000);
 
-    // 1. Top 10 Worldwide Today
-    console.log(`\n📌 1. Top 10 Worldwide Today Rail:`);
+    // 1. Redesigned Top 10 Worldwide Today
+    console.log(`\n📌 1. Redesigned Top 10 Worldwide Today Rail:`);
     const top10Heading = await page.$('text=Top 10 Worldwide Today');
     assert(top10Heading !== null, 'Top 10 Worldwide Today heading exists');
 
@@ -61,38 +61,26 @@ async function runAuditTests() {
       const numerals = Array.from(document.querySelectorAll('.font-black.italic.tracking-tighter')).map((el) =>
         el.textContent.trim()
       );
-      const top1Crown = document.querySelector('svg.lucide-crown') !== null || document.body.innerText.includes('#1 Worldwide');
+      const top1Crown = document.querySelector('svg.lucide-crown') !== null || document.body.innerText.includes('#1 Hit');
+      const liveBeacon = document.body.innerText.includes('LIVE RANKINGS');
       const posterCards = document.querySelectorAll('.card-snap .aspect-\\[2\\/3\\]');
-      return { numerals, top1Crown, count: posterCards.length };
+      return { numerals, top1Crown, liveBeacon, count: posterCards.length };
     });
 
     assert(top10Data.count >= 10, `Found ${top10Data.count} ranked cards (Expected: 10)`);
-    assert(top10Data.top1Crown, 'Prestige #1 Worldwide Crown badge is present on Rank #1');
+    assert(top10Data.top1Crown, 'Prestige #1 Crown badge is present on Rank #1');
+    assert(top10Data.liveBeacon, 'Live beacon badge (LIVE RANKINGS • WORLDWIDE) is rendered');
     assert(top10Data.numerals.some(n => n.includes('1') && n.includes('10')), 'Rank numerals include 1 through 10');
 
-    // 2. Spotlight Cinema
-    console.log(`\n📌 2. Spotlight Cinema 16:9 Widescreen Showcase:`);
+    // 2. Removal of Spotlight Cinema
+    console.log(`\n📌 2. Verification of Spotlight Cinema Removal:`);
     const spotlightHeading = await page.$('text=Spotlight Cinema');
-    assert(spotlightHeading !== null, 'Spotlight Cinema heading exists');
+    assert(spotlightHeading === null, 'Spotlight Cinema heading is completely removed');
 
-    const spotlightData = await page.evaluate(() => {
-      const cards = Array.from(document.querySelectorAll('.aspect-video.rounded-2xl, .aspect-video.rounded-3xl'));
-      const textContent = document.body.innerText;
-      const hasMasterpieceOrCritics =
-        textContent.includes('Masterpiece') ||
-        textContent.includes('Critics\' Choice') ||
-        textContent.includes('Featured');
-      const has4kBadge = textContent.includes('4K HDR');
-      return {
-        cardCount: cards.length,
-        hasMasterpieceOrCritics,
-        has4kBadge,
-      };
+    const hasSpotlightText = await page.evaluate(() => {
+      return document.body.innerText.includes('Spotlight Cinema');
     });
-
-    assert(spotlightData.cardCount >= 4, `Found ${spotlightData.cardCount} 16:9 widescreen Spotlight cards`);
-    assert(spotlightData.hasMasterpieceOrCritics, 'Prestige badges (Masterpiece / Critics\' Choice) are rendered');
-    assert(spotlightData.has4kBadge, '4K HDR format badge is rendered');
+    assert(!hasSpotlightText, 'No Spotlight Cinema references remain on homepage');
 
     // ─────────────────────────────────────────────────────────────
     // PART B: PLAYER ARCHITECTURE & ZERO DUPLICATION

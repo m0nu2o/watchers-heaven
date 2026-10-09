@@ -30,7 +30,6 @@ async function testEditorialAndCatalog() {
 
       return {
         hasTop10: headings.some(h => h.includes('Top 10')),
-        hasSpotlight: headings.some(h => h.includes('Spotlight')),
         hasTrendingMovies: headings.some(h => h.includes('Trending Movies')),
         hasAnime: headings.some(h => h.includes('Popular Anime')),
         hasBollywood: headings.some(h => h.includes('Bollywood')),
@@ -42,7 +41,6 @@ async function testEditorialAndCatalog() {
 
     console.log(`   Homepage Modules Status:`, homepageAudit);
     if (!homepageAudit.hasTop10) console.warn('   ⚠️ Top 10 heading not found');
-    if (!homepageAudit.hasSpotlight) console.warn('   ⚠️ Spotlight heading not found');
     console.log(`   ✓ Found ${homepageAudit.rankCardsCount} rank elements, ${homepageAudit.aspectVideosCount} 16:9 widescreen cards, ${homepageAudit.posterCardsCount} 2:3 posters`);
 
     // 2. Movies Catalog & Deep Pagination Audit

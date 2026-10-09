@@ -5,13 +5,15 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface CarouselRowProps {
   title: string;
+  subtitle?: string;
+  badge?: string;
   children: React.ReactNode;
   className?: string;
   seeMoreHref?: string;
   exploreHref?: string;
 }
 
-export function CarouselRow({ title, children, className, seeMoreHref }: CarouselRowProps) {
+export function CarouselRow({ title, subtitle, badge, children, className, seeMoreHref }: CarouselRowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
@@ -170,16 +172,34 @@ export function CarouselRow({ title, children, className, seeMoreHref }: Carouse
   return (
     <section className={`w-full py-4 ${className || ''}`}>
       {/* Row Header */}
-      <div className="flex items-center justify-between gap-3 mb-3 px-4 sm:px-6">
-        <h2 className="text-lg sm:text-xl md:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-          {title}
-        </h2>
+      <div className="flex items-end justify-between gap-3 mb-3 px-4 sm:px-6">
+        <div>
+          {badge && (
+            <div className="flex items-center gap-2 mb-1">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+              </span>
+              <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-rose-500 dark:text-rose-400">
+                {badge}
+              </span>
+            </div>
+          )}
+          <h2 className="text-lg sm:text-xl md:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+            {title}
+          </h2>
+          {subtitle && (
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+              {subtitle}
+            </p>
+          )}
+        </div>
 
         {/* Apple-style See All */}
         {seeMoreHref && (
           <Link
             href={seeMoreHref}
-            className="group/btn inline-flex items-center gap-1 text-xs sm:text-sm font-semibold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors cursor-pointer"
+            className="group/btn inline-flex items-center gap-1 text-xs sm:text-sm font-semibold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors cursor-pointer shrink-0 pb-0.5"
             title={`See all ${title}`}
           >
             <span>See All</span>

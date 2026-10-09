@@ -2,7 +2,6 @@ import process from 'node:process';
 import { HeroFeature } from '@/components/hero/HeroFeature';
 import { CarouselRow } from '@/components/cards/CarouselRow';
 import { PosterCard } from '@/components/cards/PosterCard';
-import { FeatureCard } from '@/components/cards/FeatureCard';
 import { RankCard } from '@/components/cards/RankCard';
 import { tmdbCache } from '@/lib/cache';
 
@@ -147,20 +146,17 @@ export default async function Home(props: { params: Promise<{ locale?: string }>
     if (tvList[i] && top10Ranked.length < 10) top10Ranked.push({ item: tvList[i], type: 'tv' });
   }
 
-  // Widescreen Spotlight Selection (high-res backdrops)
-  const spotlightBackdrops = [...nowPlayingList, ...topRatedList]
-    .filter((item) => item.backdrop_path && (item.vote_average ?? 0) >= 7.0)
-    .slice(0, 8);
-
   return (
     <main className="min-h-screen pb-20 bg-[var(--color-main)] text-slate-800 dark:text-white transition-colors duration-300">
       <HeroFeature movies={heroSlides} />
       
       <div className="mt-8 space-y-8 animate-fadeIn">
-        {/* ── 1. Top 10 Worldwide Today (Editorial Ranked Rail) ── */}
+        {/* ── 1. Top 10 Worldwide Today (Redesigned Editorial Ranked Rail) ── */}
         {top10Ranked.length > 0 && (
           <CarouselRow
             title="Top 10 Worldwide Today"
+            badge="LIVE RANKINGS • WORLDWIDE"
+            subtitle="The 10 most-streamed films and series trending across the globe today"
             seeMoreHref={`/${locale}/movies`}
             exploreHref={`/${locale}/explore?sort=popularity.desc`}
           >
@@ -185,34 +181,7 @@ export default async function Home(props: { params: Promise<{ locale?: string }>
           </CarouselRow>
         )}
 
-        {/* ── 2. Spotlight Cinema Rail (16:9 Widescreen) ── */}
-        {spotlightBackdrops.length > 0 && (
-          <CarouselRow
-            title="Spotlight Cinema"
-            seeMoreHref={`/${locale}/movies`}
-            exploreHref={`/${locale}/explore?sort=vote_average.desc`}
-          >
-            {spotlightBackdrops.map((item) => {
-              const year = item.release_date
-                ? item.release_date.split('-')[0]
-                : (item.first_air_date ? item.first_air_date.split('-')[0] : '');
-              return (
-                <FeatureCard
-                  key={`feature-${item.id}`}
-                  id={item.id}
-                  title={item.title ?? item.name ?? ''}
-                  backdropPath={item.backdrop_path ?? ''}
-                  category={item.vote_average && item.vote_average >= 8 ? 'Masterpiece' : 'Featured'}
-                  rating={item.vote_average}
-                  year={year}
-                  type="movie"
-                />
-              );
-            })}
-          </CarouselRow>
-        )}
-
-        {/* ── 3. Trending Movies ── */}
+        {/* ── 2. Trending Movies ── */}
         <CarouselRow
           title="Trending Movies"
           seeMoreHref={`/${locale}/movies`}
