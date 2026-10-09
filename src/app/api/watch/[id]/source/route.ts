@@ -18,7 +18,25 @@ export async function GET(
     const startTime = searchParams.get('startTime') ? parseFloat(searchParams.get('startTime')!) : 0;
     const accentColor = searchParams.get('accentColor') || undefined;
     const originalLanguage = searchParams.get('origLang') || (type === 'anime' ? 'ja' : 'en');
-    const title = searchParams.get('title') || undefined;
+    let title = searchParams.get('title') || undefined;
+
+    if (!title && !aniListId) {
+      try {
+        const apiKey = process.env.TMDB_API_KEY;
+        if (apiKey) {
+          const tmdbEndpoint = type === 'movie' ? `/movie/${id}` : `/tv/${id}`;
+          const res = await fetch(`https://api.tmdb.org/3${tmdbEndpoint}?api_key=${apiKey}`, {
+            next: { revalidate: 3600 },
+          });
+          if (res.ok) {
+            const data = await res.json();
+            title = data.name || data.title || data.original_name || data.original_title;
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
 
     const result = await resolveAudioSourceAsync({
       mediaType: type,
@@ -65,6 +83,25 @@ export async function POST(
     } = body;
     let type = (body.type || 'movie') as 'movie' | 'tv' | 'anime';
     const originalLanguage = body.originalLanguage || (type === 'anime' ? 'ja' : 'en');
+    let resolvedTitle = title;
+
+    if (!resolvedTitle && !aniListId) {
+      try {
+        const apiKey = process.env.TMDB_API_KEY;
+        if (apiKey) {
+          const tmdbEndpoint = type === 'movie' ? `/movie/${id}` : `/tv/${id}`;
+          const res = await fetch(`https://api.tmdb.org/3${tmdbEndpoint}?api_key=${apiKey}`, {
+            next: { revalidate: 3600 },
+          });
+          if (res.ok) {
+            const data = await res.json();
+            resolvedTitle = data.name || data.title || data.original_name || data.original_title;
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
 
     const result = await resolveAudioSourceAsync({
       mediaType: type,
@@ -78,7 +115,7 @@ export async function POST(
       startTime,
       accentColor,
       originalLanguage,
-      title,
+      title: resolvedTitle,
     });
 
     return NextResponse.json(result);

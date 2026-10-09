@@ -12,9 +12,27 @@ export async function GET(
     const season = searchParams.get('s') ? parseInt(searchParams.get('s')!, 10) : undefined;
     const episode = searchParams.get('e') ? parseInt(searchParams.get('e')!, 10) : undefined;
     const originalLanguage = searchParams.get('origLang') || (mediaType === 'anime' ? 'ja' : 'en');
-    const title = searchParams.get('title') || undefined;
+    let title = searchParams.get('title') || undefined;
     const aniListId = searchParams.get('aniListId') ? parseInt(searchParams.get('aniListId')!, 10) : undefined;
     const malId = searchParams.get('malId') ? parseInt(searchParams.get('malId')!, 10) : undefined;
+
+    if (!title && !aniListId) {
+      try {
+        const apiKey = process.env.TMDB_API_KEY;
+        if (apiKey) {
+          const endpoint = mediaType === 'movie' ? `/movie/${id}` : `/tv/${id}`;
+          const res = await fetch(`https://api.tmdb.org/3${endpoint}?api_key=${apiKey}`, {
+            next: { revalidate: 3600 },
+          });
+          if (res.ok) {
+            const data = await res.json();
+            title = data.name || data.title || data.original_name || data.original_title;
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
 
     const availability = await getEpisodeAudioTracksAsync({
       mediaId: id,

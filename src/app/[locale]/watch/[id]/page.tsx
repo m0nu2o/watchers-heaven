@@ -1593,7 +1593,7 @@ export default function WatchPage() {
             <div className="flex flex-col gap-1.5 flex-1 min-w-0 max-w-full">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  {currentMediaType === 'anime' ? '🎌 Anime Servers' : currentMediaType === 'tv' ? '📺 Series Servers' : '🎬 Movie Servers'} ({availableProviders.length} Available)
+                  {currentMediaType === 'anime' ? '🎌 Anime Streaming Servers' : currentMediaType === 'tv' ? '📺 Series Streaming Servers' : '🎬 Movie Streaming Servers'} ({availableProviders.length} Available)
                 </span>
                 <span className="text-[10px] text-blue-500 font-semibold truncate max-w-[160px]">
                   {availableProviders.find((p) => p.id === provider)?.quality || '1080p'}

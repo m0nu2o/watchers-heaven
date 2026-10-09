@@ -8,7 +8,7 @@ import {
   NormalizedAudioAvailability,
   GetContentAudioAvailabilityParams,
 } from './types';
-import { AudioAvailabilityCache } from './cache';
+import { AudioAvailabilityCache, isKnownTheatricalHindiDub, KNOWN_HINDI_DUBBED_TMDB_IDS } from './cache';
 import { PROVIDER_AUDIO_CAPABILITIES } from './providers';
 
 export * from './types';
@@ -104,8 +104,12 @@ export function getContentAudioAvailability(
   }
 
   let hasHindiDub = isOriginalHindi;
-  if (!hasHindiDub && cachedLangs) {
-    hasHindiDub = cachedLangs.includes('Hindi');
+  if (!hasHindiDub) {
+    if (isKnownTheatricalHindiDub(params.id, params.title)) {
+      hasHindiDub = true;
+    } else if (cachedLangs) {
+      hasHindiDub = cachedLangs.includes('Hindi');
+    }
   }
 
   const result: NormalizedAudioAvailability = {
@@ -120,7 +124,7 @@ export function getContentAudioAvailability(
     originalLanguage: origLang,
     isOriginalHindi,
     isOriginalEnglish,
-    verified: Boolean(cachedLangs || isOriginalHindi || isOriginalEnglish),
+    verified: Boolean(cachedLangs || isOriginalHindi || isOriginalEnglish || hasHindiDub),
     providers: {
       en: hasEnglishDub
         ? isAnime
@@ -159,7 +163,10 @@ export async function getContentAudioAvailabilityAsync(
 
   let hasEnglishDub = isOriginalEnglish;
   let hasHindiDub = isOriginalHindi;
-  let isVerified = Boolean(isOriginalHindi || isOriginalEnglish);
+  if (!hasHindiDub && isKnownTheatricalHindiDub(params.id, params.title)) {
+    hasHindiDub = true;
+  }
+  let isVerified = Boolean(isOriginalHindi || isOriginalEnglish || hasHindiDub);
 
   // Check cached known dub languages across media ID, AniList ID, and title
   const cachedLangs =
@@ -492,6 +499,8 @@ export function getEpisodeAudioTracks(params: GetEpisodeAudioTracksParams): Epis
       hasHindiDub = true;
     } else if (params.dubLanguages && params.dubLanguages.length > 0 && params.dubLanguages.includes('Hindi')) {
       hasHindiDub = true;
+    } else if (isKnownTheatricalHindiDub(mediaId, title)) {
+      hasHindiDub = true;
     } else {
       const cachedLangs =
         (aniListId ? AudioAvailabilityCache.getKnownDubLanguages(aniListId) : null) ||
@@ -629,7 +638,20 @@ export async function getEpisodeAudioTracksAsync(
 
   if (isAnime) {
     if (verifiedEnglish === undefined || !aniListId || !malId || !dubLanguages) {
-      const queryTarget = aniListId || params.title || params.mediaId;
+      let queryTarget: string | number | undefined = aniListId || params.title;
+      if (!queryTarget && params.mediaId) {
+        try {
+          const tmdbMedia = await ApiGateway.getMediaDetails(params.mediaId, 'tv');
+          if (tmdbMedia?.data) {
+            queryTarget = (tmdbMedia.data.name ||
+              tmdbMedia.data.title ||
+              tmdbMedia.data.original_name ||
+              tmdbMedia.data.original_title) as string | undefined;
+          }
+        } catch {
+          // ignore
+        }
+      }
       if (queryTarget) {
         const dubCheck = await checkAniListDubAvailability(queryTarget);
         if (verifiedEnglish === undefined) {
@@ -791,10 +813,25 @@ export async function resolveAudioSourceAsync(
   let resolvedMalId = params.malId;
 
   if (isAnime && (!resolvedAniListId || !resolvedMalId)) {
-    const queryTarget = resolvedAniListId || title || id;
-    const dubCheck = await checkAniListDubAvailability(queryTarget);
-    if (!resolvedAniListId && dubCheck.id) resolvedAniListId = dubCheck.id;
-    if (!resolvedMalId && dubCheck.malId) resolvedMalId = dubCheck.malId;
+    let queryTarget: string | number | undefined = resolvedAniListId || title;
+    if (!queryTarget && id) {
+      try {
+        const tmdbMedia = await ApiGateway.getMediaDetails(id, 'tv');
+        if (tmdbMedia?.data) {
+          queryTarget = (tmdbMedia.data.name ||
+            tmdbMedia.data.title ||
+            tmdbMedia.data.original_name ||
+            tmdbMedia.data.original_title) as string | undefined;
+        }
+      } catch {
+        // ignore
+      }
+    }
+    if (queryTarget) {
+      const dubCheck = await checkAniListDubAvailability(queryTarget);
+      if (!resolvedAniListId && dubCheck.id) resolvedAniListId = dubCheck.id;
+      if (!resolvedMalId && dubCheck.malId) resolvedMalId = dubCheck.malId;
+    }
   }
 
   // Dynamically resolve audio tracks for this episode
