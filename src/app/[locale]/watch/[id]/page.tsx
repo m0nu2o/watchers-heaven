@@ -21,6 +21,7 @@ import {
 import { ApiGateway } from '@/lib/api/gateway';
 import { ProviderRegistry, ProviderTelemetry } from '@/lib/providers';
 import { UniversalPlayer } from '@/components/player/universal';
+import { LuminaServerDeck } from '@/components/player/universal/LuminaServerDeck';
 import { UniversalPlayerEngine } from '@/lib/player/engine';
 import type { NormalizedPlaybackSource, PlayerAudioTrack } from '@/lib/player/types';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -81,6 +82,7 @@ export default function WatchPage() {
   const [isCreatingParty, setIsCreatingParty] = useState(false);
 
   const [mediaTitle, setMediaTitle] = useState<string>('');
+  const [imdbId, setImdbId] = useState<string | null>(() => ApiGateway.getCachedImdbId(id) || null);
   const [mediaOriginalLang, setMediaOriginalLang] = useState<string>(isAnime ? 'ja' : 'en');
   const isActuallyAnime = resolvedContentType === 'anime';
   const currentMediaType: MediaType = isActuallyAnime ? 'anime' : isActuallyTv ? 'tv' : 'movie';
@@ -235,6 +237,21 @@ export default function WatchPage() {
           (data.original_title as string) ||
           (isDetectedAnime ? `Anime #${id}` : isDetectedTv ? `Show #${id}` : `Movie #${id}`);
         setMediaTitle(title);
+
+        const directImdb = (data.imdb_id as string) || null;
+        if (directImdb) {
+          setImdbId(directImdb);
+          ApiGateway.setCachedImdbId(id, directImdb);
+        } else {
+          ApiGateway.getImdbId(id, isTvResult ? 'tv' : 'movie')
+            .then((resolved) => {
+              if (resolved) {
+                setImdbId(resolved);
+                ApiGateway.setCachedImdbId(id, resolved);
+              }
+            })
+            .catch(() => {});
+        }
 
         if (isDetectedTv) {
           const rawSeasons = (data.seasons as SeasonSummary[]) || [];
@@ -446,6 +463,7 @@ export default function WatchPage() {
       return ProviderRegistry.resolvePlaybackUrl(defaultProvider, {
         mediaType,
         tmdbId: id,
+        imdbId: ApiGateway.getCachedImdbId(id) || undefined,
         season,
         episode,
         audioTrackId: 'sub',
@@ -466,9 +484,11 @@ export default function WatchPage() {
         setIsResolvingSource(true);
         setAudioError(null);
 
+        const effectiveImdb = imdbId || ApiGateway.getCachedImdbId(id) || undefined;
         const qParams = new URLSearchParams({
           type: mediaType,
           track: trackId,
+          ...(effectiveImdb ? { imdbId: effectiveImdb } : {}),
           ...(season !== undefined ? { s: String(season) } : {}),
           ...(episode !== undefined ? { e: String(episode) } : {}),
           ...(aniListId && aniListId > 0 ? { aniListId: String(aniListId) } : {}),
@@ -530,6 +550,7 @@ export default function WatchPage() {
       provider,
       accentColor,
       id,
+      imdbId,
     ]
   );
 
@@ -542,9 +563,11 @@ export default function WatchPage() {
 
       try {
         const mediaType = isActuallyAnime ? 'anime' : isActuallyTv ? 'tv' : 'movie';
+        const effectiveImdb = imdbId || ApiGateway.getCachedImdbId(id) || undefined;
         const instantUrl = ProviderRegistry.resolvePlaybackUrl(newProviderId, {
           mediaType,
           tmdbId: id,
+          imdbId: effectiveImdb,
           season,
           episode,
           title: mediaTitle,
@@ -565,7 +588,7 @@ export default function WatchPage() {
         console.warn('Instant server switch resolution failed:', err);
       }
     },
-    [isActuallyAnime, isActuallyTv, id, season, episode, mediaTitle, aniListId, malId, selectedAudioTrack, accentColor]
+    [isActuallyAnime, isActuallyTv, id, imdbId, season, episode, mediaTitle, aniListId, malId, selectedAudioTrack, accentColor]
   );
 
   const triedServersRef = useRef<Set<string>>(new Set());
@@ -1583,201 +1606,145 @@ export default function WatchPage() {
       </div>
 
       {/* ──────────────── APPLE-GRADE UNDER-PLAYER CONTROL DECK ──────────────── */}
-      <div className="max-w-7xl w-full mx-auto px-2.5 sm:px-6 pt-3 pb-2 overflow-hidden">
-        <div className="apple-glass rounded-2xl p-3 sm:p-4 border border-black/10 dark:border-white/10 shadow-2xl flex flex-col gap-3.5 w-full max-w-full overflow-hidden">
-          
-          {/* Top Section: Server Picker & Audio Track Picker */}
-          <div className="flex flex-col lg:flex-row items-stretch lg:items-start justify-between gap-3 w-full">
-            
-            {/* 1. Streaming Server Picker */}
-            <div className="flex flex-col gap-1.5 flex-1 min-w-0 max-w-full">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  {currentMediaType === 'anime' ? '🎌 Anime Streaming Servers' : currentMediaType === 'tv' ? '📺 Series Streaming Servers' : '🎬 Movie Streaming Servers'} ({availableProviders.length} Available)
-                </span>
-                <span className="text-[10px] text-blue-500 font-semibold truncate max-w-[160px]">
-                  {availableProviders.find((p) => p.id === provider)?.quality || '1080p'}
-                </span>
-              </div>
+      <div className="max-w-7xl w-full mx-auto px-2.5 sm:px-6 pt-3 pb-2 overflow-hidden flex flex-col gap-3">
+        {/* 1. Lumina Apple-Grade Server Selection Deck */}
+        <LuminaServerDeck
+          servers={availableProviders}
+          activeServerId={provider}
+          onSelectServer={handleSelectServer}
+          mediaType={currentMediaType}
+          selectedAudioTrack={selectedAudioTrack}
+          accentColor={accentColor.startsWith('#') ? accentColor : `#${accentColor}`}
+          isLoadingSource={isResolvingSource}
+        />
 
-              <div
-                className="flex flex-wrap items-center gap-1.5 w-full max-w-full py-0.5"
-                data-lenis-prevent
-              >
-                {availableProviders.map((p) => {
-                  const isActive = provider === p.id;
-                  return (
-                    <button
-                      key={p.id}
-                      onClick={() => handleSelectServer(p.id)}
-                      className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap cursor-pointer shrink-0 max-w-full ${
-                        isActive
-                          ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 scale-[1.02]'
-                          : 'text-slate-600 dark:text-slate-300 hover:text-black dark:hover:text-white bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] dark:hover:bg-white/[0.1]'
-                      }`}
-                    >
-                      <span>{p.badge}</span>
-                      <span className="truncate">{p.name}</span>
-                      <span className="text-[10px] text-emerald-400 font-extrabold" title="Verified Server">✓</span>
-                      <span
-                        className={`text-[9px] px-1.5 py-0.5 rounded-md ${
-                          isActive
-                            ? 'bg-white/20 text-white'
-                            : 'bg-black/10 dark:bg-white/10 text-slate-500 dark:text-slate-400'
+        {/* 2. Audio Track & Quick Action Bar */}
+        <div className="apple-glass rounded-2xl p-3 sm:p-4 border border-black/10 dark:border-white/10 shadow-xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 w-full">
+          {/* Left: Audio Track Selector */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 flex-1 min-w-0">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 shrink-0">
+              Audio Track:
+            </span>
+
+            {(() => {
+              // Synchronously evaluate default tracks from catalog so verified titles never flash N/A
+              const defaultTracks = (() => {
+                try {
+                  const initial = getEpisodeAudioTracks({
+                    mediaId: id,
+                    mediaType: isActuallyAnime ? 'anime' : isActuallyTv ? 'tv' : 'movie',
+                    season,
+                    episode,
+                    originalLanguage: mediaOriginalLang,
+                    title: mediaTitle,
+                    aniListId,
+                    malId,
+                  });
+                  if (initial?.tracks && initial.tracks.length > 0) return initial.tracks;
+                } catch {}
+                return isActuallyAnime
+                  ? [
+                      { id: 'sub', label: '🇯🇵 Japanese (SUB)', available: true, languageCode: 'ja' },
+                      { id: 'dub-en', label: '🇬🇧 English (DUB)', available: false, languageCode: 'en' },
+                      { id: 'dub-hi', label: '🇮🇳 Hindi (DUB)', available: false, languageCode: 'hi' },
+                    ]
+                  : [
+                      { id: 'sub', label: '🌐 Original', available: true, languageCode: mediaOriginalLang || 'en' },
+                      { id: 'dub-hi', label: '🇮🇳 Hindi DUB', available: false, languageCode: 'hi' },
+                    ];
+              })();
+
+              const rawTracks =
+                audioAvailability?.tracks && audioAvailability.tracks.length > 0
+                  ? audioAvailability.tracks
+                  : defaultTracks;
+
+              const tracksToRender = rawTracks.filter((t, _idx, arr) => {
+                if (t.id === 'dub-en' && arr.some((o) => o.id === 'sub' && (o as { languageCode?: string }).languageCode === 'en')) {
+                  return false;
+                }
+                return true;
+              });
+
+              return (
+                <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.06] dark:border-white/[0.08]">
+                  {tracksToRender.map((track) => {
+                    const isSelected = selectedAudioTrack === track.id;
+                    const isAvailable = track.available !== false;
+                    return (
+                      <button
+                        key={track.id}
+                        disabled={!isAvailable}
+                        onClick={() => isAvailable && handleSelectAudioTrack(track.id)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 whitespace-nowrap select-none flex items-center justify-center gap-1.5 ${
+                          !isAvailable
+                            ? 'opacity-35 cursor-not-allowed text-slate-400 dark:text-slate-600 line-through'
+                            : isSelected
+                            ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 scale-[1.02] ring-2 ring-blue-400/40 cursor-pointer'
+                            : 'text-slate-600 dark:text-slate-300 hover:text-black dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.08] cursor-pointer'
                         }`}
+                        title={isAvailable ? track.label : `${track.label} — Not available for this title`}
                       >
-                        {p.quality.split('/')[0].trim()}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Vertical Divider on large screens */}
-            <div className="hidden lg:block w-px self-stretch bg-black/[0.08] dark:bg-white/[0.08] shrink-0" />
-
-            {/* 2. Unified Audio Track Picker */}
-            <div className="flex flex-col gap-1.5 flex-initial min-w-0 max-w-full">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Audio Track
-                </span>
-                <span className="text-[10px] text-emerald-500 font-semibold uppercase">
-                  {selectedAudioTrack.replace('dub-', '')}
-                </span>
-              </div>
-
-              {(() => {
-                // Synchronously evaluate default tracks from catalog so verified titles never flash N/A
-                const defaultTracks = (() => {
-                  try {
-                    const initial = getEpisodeAudioTracks({
-                      mediaId: id,
-                      mediaType: isActuallyAnime ? 'anime' : isActuallyTv ? 'tv' : 'movie',
-                      season,
-                      episode,
-                      originalLanguage: mediaOriginalLang,
-                      title: mediaTitle,
-                      aniListId,
-                      malId,
-                    });
-                    if (initial?.tracks && initial.tracks.length > 0) return initial.tracks;
-                  } catch {}
-                  return isActuallyAnime
-                    ? [
-                        { id: 'sub', label: '🇯🇵 Japanese (SUB)', available: true, languageCode: 'ja' },
-                        { id: 'dub-en', label: '🇬🇧 English (DUB)', available: false, languageCode: 'en' },
-                        { id: 'dub-hi', label: '🇮🇳 Hindi (DUB)', available: false, languageCode: 'hi' },
-                      ]
-                    : [
-                        { id: 'sub', label: '🌐 Original', available: true, languageCode: mediaOriginalLang || 'en' },
-                        { id: 'dub-hi', label: '🇮🇳 Hindi DUB', available: false, languageCode: 'hi' },
-                      ];
-                })();
-
-                // Use audioAvailability tracks once loaded — do NOT override availability
-                const rawTracks =
-                  audioAvailability?.tracks && audioAvailability.tracks.length > 0
-                    ? audioAvailability.tracks
-                    : defaultTracks;
-
-                // Eliminate redundant English dub track if original language is already English
-                const tracksToRender = rawTracks.filter((t, _idx, arr) => {
-                  if (t.id === 'dub-en' && arr.some((o) => o.id === 'sub' && (o as { languageCode?: string }).languageCode === 'en')) {
-                    return false;
-                  }
-                  return true;
-                });
-
-                return (
-                  <div className={`grid ${tracksToRender.length === 2 ? 'grid-cols-2' : tracksToRender.length === 1 ? 'grid-cols-1' : 'grid-cols-3'} gap-1.5 sm:flex sm:flex-wrap items-center bg-black/[0.04] dark:bg-white/[0.06] p-1.5 rounded-xl border border-black/[0.06] dark:border-white/[0.08] w-full max-w-full`}>
-                    {tracksToRender.map((track) => {
-                      const isSelected = selectedAudioTrack === track.id;
-                      // Respect the verified availability field — no blanket overrides
-                      const isAvailable = track.available !== false;
-                      return (
-                        <button
-                          key={track.id}
-                          disabled={!isAvailable}
-                          onClick={() => isAvailable && handleSelectAudioTrack(track.id)}
-                          className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 whitespace-nowrap select-none flex items-center justify-center gap-1 min-w-0 max-w-full ${
-                            !isAvailable
-                              ? 'opacity-35 cursor-not-allowed text-slate-400 dark:text-slate-600 line-through'
-                              : isSelected
-                              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 scale-[1.02] ring-2 ring-blue-400/40 cursor-pointer'
-                              : 'text-slate-600 dark:text-slate-300 hover:text-black dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.08] cursor-pointer'
-                          }`}
-                          title={isAvailable ? track.label : `${track.label} — Not available for this title`}
-                        >
-                          <span className="block truncate min-w-0">
-                            <span className="sm:hidden">
-                              {track.id === 'sub' ? (isActuallyAnime ? '🇯🇵 SUB' : '🌐 Original') : track.id === 'dub-en' ? '🇬🇧 ENG' : track.id === 'dub-hi' ? '🇮🇳 HIN' : track.label}
-                            </span>
-                            <span className="hidden sm:inline">
-                              {track.label}
-                            </span>
+                        <span>{track.label}</span>
+                        {!isAvailable && (
+                          <span className="text-[9px] px-1 py-0.2 bg-black/10 dark:bg-white/10 rounded font-normal no-underline">
+                            N/A
                           </span>
-                          {!isAvailable && (
-                            <span className="text-[8px] sm:text-[9px] px-1 py-0.2 bg-black/10 dark:bg-white/10 rounded font-normal no-underline shrink-0">
-                              N/A
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
-            </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
 
-          {/* Bottom Action Deck: Auto-Switch Toggle + Quick Switch Server + Download + Watch Party */}
-          <div className="flex items-center justify-between gap-2 pt-2 border-t border-black/[0.06] dark:border-white/[0.06] flex-wrap w-full">
-            <div className="flex items-center gap-2 flex-wrap">
-              {/* Dedicated Auto-Switch ON/OFF toggle */}
-              <button
-                onClick={handleToggleAutoSwitch}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer hover:scale-105 active:scale-95 ${
-                  autoSwitchEnabled
-                    ? 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                    : 'bg-slate-500/10 hover:bg-slate-500/20 text-slate-500 dark:text-slate-400 border-slate-500/25'
-                }`}
-                title={autoSwitchEnabled ? 'Auto server-switching is ON — click to disable' : 'Auto server-switching is OFF — click to enable'}
-              >
-                <span className="text-[10px]">{autoSwitchEnabled ? '🟢' : '🔴'}</span>
-                <span>Auto-Switch: {autoSwitchEnabled ? 'ON' : 'OFF'}</span>
-              </button>
+          {/* Right: Actions (Auto-Switch, Quick Switch, Download, Party) */}
+          <div className="flex items-center gap-2 flex-wrap shrink-0">
+            {/* Auto-Switch Toggle */}
+            <button
+              onClick={handleToggleAutoSwitch}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer hover:scale-105 active:scale-95 ${
+                autoSwitchEnabled
+                  ? 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                  : 'bg-slate-500/10 hover:bg-slate-500/20 text-slate-500 dark:text-slate-400 border-slate-500/25'
+              }`}
+              title={autoSwitchEnabled ? 'Auto server-switching is ON — click to disable' : 'Auto server-switching is OFF — click to enable'}
+            >
+              <span className="text-[10px]">{autoSwitchEnabled ? '🟢' : '🔴'}</span>
+              <span>Auto-Switch: {autoSwitchEnabled ? 'ON' : 'OFF'}</span>
+            </button>
 
-              <button
-                onClick={() => handleNextServerFallback(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/25 transition-all cursor-pointer hover:scale-105 active:scale-95"
-                title="Stream slow or not playing? Switch to next streaming server"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>Switch Server</span>
-              </button>
-            </div>
+            {/* Quick Next Server */}
+            <button
+              onClick={() => handleNextServerFallback(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/25 transition-all cursor-pointer hover:scale-105 active:scale-95"
+              title="Stream slow or not playing? Switch to next streaming server"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Next Server</span>
+            </button>
 
-            <div className="flex items-center gap-2 ml-auto flex-wrap">
-              <button
-                onClick={() => setShowDownload(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-black/[0.05] dark:bg-white/[0.08] hover:bg-black/[0.1] dark:hover:bg-white/[0.15] text-slate-800 dark:text-slate-200 border border-black/10 dark:border-white/10 transition-all cursor-pointer hover:scale-105 active:scale-95"
-                title="Download Episode"
-              >
-                <Download className="w-3.5 h-3.5 text-blue-500" />
-                <span>Download</span>
-              </button>
+            {/* Download */}
+            <button
+              onClick={() => setShowDownload(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-black/[0.05] dark:bg-white/[0.08] hover:bg-black/[0.1] dark:hover:bg-white/[0.15] text-slate-800 dark:text-slate-200 border border-black/10 dark:border-white/10 transition-all cursor-pointer hover:scale-105 active:scale-95"
+              title="Download Media"
+            >
+              <Download className="w-3.5 h-3.5 text-blue-500" />
+              <span className="hidden sm:inline">Download</span>
+            </button>
 
-              <button
-                onClick={handleCreateParty}
-                disabled={isCreatingParty}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white transition-all shadow-md shadow-blue-600/20 cursor-pointer disabled:opacity-50 hover:scale-105 active:scale-95"
-              >
-                <Users className="w-3.5 h-3.5" />
-                <span>{isCreatingParty ? 'Creating...' : 'Watch Party'}</span>
-              </button>
-            </div>
+            {/* Watch Party */}
+            <button
+              onClick={handleCreateParty}
+              disabled={isCreatingParty}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-md shadow-blue-500/20 transition-all cursor-pointer hover:scale-105 active:scale-95 disabled:opacity-50"
+              title="Start Watch Party"
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span>{isCreatingParty ? 'Starting...' : 'Watch Party'}</span>
+            </button>
           </div>
         </div>
       </div>

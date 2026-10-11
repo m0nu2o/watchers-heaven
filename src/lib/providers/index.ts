@@ -99,23 +99,6 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
       return ApiGateway.getScreenScapeUrl(cfg.tmdbId, type, cfg.season || 1, cfg.episode || 1, lan);
     },
   },
-  {
-    id: 'vidsrc-su-anime',
-    name: 'VidSrc Direct Anime',
-    quality: '1080p / Direct / Clean',
-    badge: '🚀',
-    supportsMovie: false,
-    supportsTV: false,
-    supportsAnime: true,
-    supportsEnglishDub: false,
-    supportsHindiDub: false,
-    requiresApiKey: false,
-    isConfigured: () => true,
-    getPlaybackUrl: (cfg) => {
-      const type = (cfg.season !== undefined && cfg.episode !== undefined) ? 'tv' : 'movie';
-      return ApiGateway.getVidSrcSuUrl(cfg.tmdbId, type, cfg.season || 1, cfg.episode || 1);
-    },
-  },
 
   // ─── 2. Movies & TV Series Providers (1080p, Verified 200 OK, Multi-Language) ───
   {
@@ -226,34 +209,13 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     },
   },
   {
-    id: 'vidsrc-su',
-    name: 'VidSrc Direct HD',
-    quality: '1080p / Direct / Clean',
-    badge: '🚀',
-    supportsMovie: true,
-    supportsTV: true,
-    supportsAnime: false,
-    supportsEnglishDub: true,
-    supportsHindiDub: false,
-    requiresApiKey: false,
-    isConfigured: () => true,
-    getPlaybackUrl: (cfg) => {
-      return ApiGateway.getVidSrcSuUrl(
-        cfg.tmdbId,
-        cfg.mediaType === 'tv' ? 'tv' : 'movie',
-        cfg.season,
-        cfg.episode
-      );
-    },
-  },
-  {
     id: 'nova',
     name: 'Nova Ultra HD',
     quality: '1080p / Multi-Audio / Clean',
     badge: '🌟',
     supportsMovie: true,
     supportsTV: true,
-    supportsAnime: true,
+    supportsAnime: false, // Strict: Anime routes to dedicated anime engines
     supportsEnglishDub: true,
     supportsHindiDub: true,
     requiresApiKey: false,
@@ -275,11 +237,11 @@ const PROVIDER_ALIASES: Record<string, string> = {
   'nova': 'nova',
   'nova-anime': 'nova',
 
-  // VidFast alias redirects to fast 200 OK VidSrc Direct
-  'vidfast': 'vidsrc-su',
-  'vidfast-anime': 'vidsrc-su-anime',
-  'vidsrc-su': 'vidsrc-su',
-  'vidsrc-su-anime': 'vidsrc-su-anime',
+  // VidFast & VidSrc Direct aliases map to fast 200 OK VidSrc Ultra
+  'vidfast': 'vidsrc-pm',
+  'vidfast-anime': 'vidsrc-pm-anime',
+  'vidsrc-su': 'vidsrc-pm',
+  'vidsrc-su-anime': 'vidsrc-pm-anime',
 
   // Movie & TV legacy aliases
   'embedsu-cinema': 'vidsrc-pm',

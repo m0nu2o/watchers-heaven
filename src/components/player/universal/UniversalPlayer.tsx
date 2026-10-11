@@ -582,13 +582,13 @@ export function UniversalPlayer({
       {/* ── 1. Video / Iframe Stream Element ── */}
       {isEmbed ? (
         <iframe
-          key={source.url}
           ref={iframeRef}
           src={source.url}
           className="w-full h-full border-0 absolute inset-0 bg-black pointer-events-auto z-0"
           allowFullScreen
           allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
           referrerPolicy="no-referrer"
+          loading="eager"
           title="Streaming Player"
         />
       ) : (

@@ -69,14 +69,24 @@ export function PlayerServerMenu({
                   <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" title="Healthy Server" />
                 )}
 
-                <div className="truncate">
+                <div className="truncate flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 truncate">
                     <span>{server.badge}</span>
                     <span className="truncate">{server.name}</span>
+                    {server.supportsHindiDub && (
+                      <span className="text-[9px] px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold">
+                        HI
+                      </span>
+                    )}
+                    {server.supportsEnglishDub && (
+                      <span className="text-[9px] px-1 py-0.2 rounded bg-blue-500/20 text-blue-300 font-bold">
+                        EN
+                      </span>
+                    )}
                   </div>
-                  <div className="text-[10px] text-slate-400 font-medium">
+                  <div className="text-[10px] text-slate-400 font-medium mt-0.5">
                     {server.quality.split('/')[0].trim()}
-                    {health.avgLatencyMs ? ` • ${health.avgLatencyMs}ms` : ''}
+                    {health.avgLatencyMs ? ` • ${health.avgLatencyMs}ms` : ' • Ultra HD'}
                   </div>
                 </div>
               </div>

@@ -57,6 +57,21 @@ export default async function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Noto+Sans+Ethiopic:wght@400..700&display=swap" rel="stylesheet" />
+        {/* Preconnect to verified streaming CDNs & image servers to eliminate connection latency */}
+        <link rel="preconnect" href="https://vidlink.pro" />
+        <link rel="dns-prefetch" href="https://vidlink.pro" />
+        <link rel="preconnect" href="https://slast430did.com" />
+        <link rel="dns-prefetch" href="https://slast430did.com" />
+        <link rel="preconnect" href="https://screenscape.me" />
+        <link rel="dns-prefetch" href="https://screenscape.me" />
+        <link rel="preconnect" href="https://autoembed.co" />
+        <link rel="dns-prefetch" href="https://autoembed.co" />
+        <link rel="preconnect" href="https://vidsrc.pm" />
+        <link rel="dns-prefetch" href="https://vidsrc.pm" />
+        <link rel="preconnect" href="https://www.2embed.cc" />
+        <link rel="dns-prefetch" href="https://www.2embed.cc" />
+        <link rel="preconnect" href="https://image.tmdb.org" />
+        <link rel="dns-prefetch" href="https://image.tmdb.org" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

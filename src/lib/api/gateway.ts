@@ -82,6 +82,39 @@ function dedupeRequest<T>(key: string, fn: () => Promise<T>): Promise<T> {
   return promise;
 }
 
+// ─── Fast IMDb ID Cache for Nova & Multi-Audio Streaming ───
+const imdbIdCache = new Map<string, string>();
+
+export function setCachedImdbId(tmdbId: string | number, imdbId: string): void {
+  if (tmdbId && imdbId) {
+    const cleanImdb = String(imdbId).trim();
+    if (cleanImdb.startsWith('tt')) {
+      imdbIdCache.set(String(tmdbId), cleanImdb);
+      if (typeof window !== 'undefined') {
+        try {
+          sessionStorage.setItem(`wh-imdb:${tmdbId}`, cleanImdb);
+        } catch {}
+      }
+    }
+  }
+}
+
+export function getCachedImdbId(tmdbId: string | number): string | null {
+  const key = String(tmdbId).trim();
+  const cached = imdbIdCache.get(key);
+  if (cached) return cached;
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = sessionStorage.getItem(`wh-imdb:${key}`);
+      if (stored && stored.startsWith('tt')) {
+        imdbIdCache.set(key, stored);
+        return stored;
+      }
+    } catch {}
+  }
+  return null;
+}
+
 // ─── Types ───
 
 export interface TouStreamChannel {
@@ -103,6 +136,10 @@ export type { AniListMediaDetails };
 
 
 export const ApiGateway = {
+  // --- IMDb ID Synchronous Cache ---
+  setCachedImdbId,
+  getCachedImdbId,
+
   // --- RiveStream API ---
   getMovieEmbedUrl: (tmdbId: string | number, type: 'default' | 'torrent' | 'agg' = 'default') => {
     const path = type === 'default' ? '/embed' : `/embed/${type}`;
@@ -368,7 +405,8 @@ export const ApiGateway = {
     episode?: number,
     explicitImdbId?: string
   ) => {
-    const targetId = explicitImdbId || String(idOrImdb);
+    const idStr = String(idOrImdb).trim();
+    const targetId = explicitImdbId || (idStr.startsWith('tt') ? idStr : getCachedImdbId(idStr)) || idStr;
     if (type === 'tv' && season !== undefined && episode !== undefined) {
       return `https://slast430did.com/play/${encodeURIComponent(targetId)}?season=${season}&episode=${episode}`;
     }
@@ -670,9 +708,15 @@ export const ApiGateway = {
   getImdbId: async (id: string | number, type: 'movie' | 'tv' = 'movie'): Promise<string | null> => {
     const idStr = String(id).trim();
     if (idStr.startsWith('tt')) return idStr;
+    const cached = getCachedImdbId(idStr);
+    if (cached) return cached;
     try {
       const externalIds = await ApiGateway.fetchTmdb<{ imdb_id?: string | null }>(`/${type}/${idStr}/external_ids`);
-      return externalIds?.imdb_id || null;
+      if (externalIds?.imdb_id) {
+        setCachedImdbId(idStr, externalIds.imdb_id);
+        return externalIds.imdb_id;
+      }
+      return null;
     } catch {
       return null;
     }

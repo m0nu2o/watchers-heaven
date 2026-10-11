@@ -686,6 +686,7 @@ export async function getEpisodeAudioTracksAsync(
 export interface ResolveAudioSourceParams {
   mediaType: 'movie' | 'tv' | 'anime';
   id: string | number;
+  imdbId?: string;
   audioTrackId: string; // 'sub' | 'dub-en' | 'dub-hi' | 'dub-ta' | 'dub-te' | 'dub-bn'
   season?: number;
   episode?: number;
@@ -715,6 +716,7 @@ export function resolveAudioSource(params: ResolveAudioSourceParams): ResolveAud
   const {
     mediaType,
     id,
+    imdbId,
     audioTrackId,
     season,
     episode,
@@ -768,6 +770,7 @@ export function resolveAudioSource(params: ResolveAudioSourceParams): ResolveAud
   const playbackUrl = ProviderRegistry.resolvePlaybackUrl(chosenProvider, {
     mediaType: effectiveMediaType,
     tmdbId: id,
+    imdbId: imdbId || ApiGateway.getCachedImdbId(id) || undefined,
     season,
     episode,
     title,
@@ -796,6 +799,7 @@ export async function resolveAudioSourceAsync(
   const {
     mediaType,
     id,
+    imdbId: initialImdbId,
     audioTrackId,
     season,
     episode,
@@ -808,6 +812,19 @@ export async function resolveAudioSourceAsync(
 
   const isAnime = mediaType === 'anime';
   const effectiveMediaType = isAnime ? 'anime' : mediaType;
+
+  let resolvedImdbId = initialImdbId || ApiGateway.getCachedImdbId(id) || undefined;
+  if (!resolvedImdbId && (effectiveMediaType === 'movie' || effectiveMediaType === 'tv') && id) {
+    try {
+      const fetched = await ApiGateway.getImdbId(id, effectiveMediaType === 'tv' ? 'tv' : 'movie');
+      if (fetched) {
+        resolvedImdbId = fetched;
+        ApiGateway.setCachedImdbId(id, fetched);
+      }
+    } catch {
+      // ignore
+    }
+  }
 
   let resolvedAniListId = params.aniListId;
   let resolvedMalId = params.malId;
@@ -870,6 +887,7 @@ export async function resolveAudioSourceAsync(
   const playbackUrl = ProviderRegistry.resolvePlaybackUrl(chosenProvider, {
     mediaType: effectiveMediaType,
     tmdbId: id,
+    imdbId: resolvedImdbId,
     season,
     episode,
     title,

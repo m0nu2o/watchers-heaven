@@ -20,6 +20,8 @@ export async function GET(
     const originalLanguage = searchParams.get('origLang') || (type === 'anime' ? 'ja' : 'en');
     let title = searchParams.get('title') || undefined;
 
+    const imdbId = searchParams.get('imdbId') || searchParams.get('imdb') || undefined;
+
     if (!title && !aniListId) {
       try {
         const apiKey = process.env.TMDB_API_KEY;
@@ -41,6 +43,7 @@ export async function GET(
     const result = await resolveAudioSourceAsync({
       mediaType: type,
       id,
+      imdbId,
       audioTrackId: trackId,
       season,
       episode,
@@ -81,6 +84,7 @@ export async function POST(
       accentColor,
       title,
     } = body;
+    const imdbId = body.imdbId || body.imdb || undefined;
     let type = (body.type || 'movie') as 'movie' | 'tv' | 'anime';
     const originalLanguage = body.originalLanguage || (type === 'anime' ? 'ja' : 'en');
     let resolvedTitle = title;
@@ -106,6 +110,7 @@ export async function POST(
     const result = await resolveAudioSourceAsync({
       mediaType: type,
       id,
+      imdbId,
       audioTrackId: trackId,
       season,
       episode,
