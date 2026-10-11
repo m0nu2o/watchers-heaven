@@ -18,7 +18,7 @@
  */
 
 const PORT = process.env.PORT || 3002;
-const BASE_URL = `http://localhost:${PORT}`;
+const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 
 async function test(name, fn) {
   try {
