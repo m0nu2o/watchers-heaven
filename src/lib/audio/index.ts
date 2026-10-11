@@ -128,13 +128,13 @@ export function getContentAudioAvailability(
     providers: {
       en: hasEnglishDub
         ? isAnime
-          ? ['vidlink-anime', 'screenscape-anime']
-          : ['vidlink', 'vidsrc-pm', 'autoembed-co', 'screenscape', '2embed-skin', 'vidsrc-su']
+          ? ['vidsrc-su-anime']
+          : ['nova', 'vidlink', 'vidsrc-su', 'vidsrc-pm']
         : [],
       hi: hasHindiDub
         ? isAnime
-          ? ['screenscape-anime']
-          : ['screenscape', 'autoembed-co']
+          ? ['vidsrc-su-anime']
+          : ['nova']
         : [],
     },
   };
@@ -215,13 +215,13 @@ export async function getContentAudioAvailabilityAsync(
     providers: {
       en: hasEnglishDub
         ? isAnime
-          ? ['vidlink-anime', 'screenscape-anime']
-          : ['vidlink', 'vidsrc-pm', 'autoembed-co', 'screenscape', '2embed-skin', 'vidsrc-su']
+          ? ['vidsrc-su-anime']
+          : ['nova', 'vidlink', 'vidsrc-su', 'vidsrc-pm']
         : [],
       hi: hasHindiDub
         ? isAnime
-          ? ['screenscape-anime']
-          : ['screenscape', 'autoembed-co']
+          ? ['vidsrc-su-anime']
+          : ['nova']
         : [],
     },
   };
@@ -520,7 +520,7 @@ export function getEpisodeAudioTracks(params: GetEpisodeAudioTracksParams): Epis
       languageCode: isAnime ? 'ja' : origLang,
       type: 'sub',
       label: isAnime ? '🇯🇵 Japanese (SUB)' : `${origMeta.flag} ${origMeta.name} (Original)`,
-      provider: isAnime ? 'vidlink-anime' : 'vidlink',
+      provider: isAnime ? 'vidsrc-su-anime' : 'nova',
       available: true,
       isOriginal: true,
       evidenceLevel: 'PLAYBACK_VERIFIED',
@@ -534,7 +534,7 @@ export function getEpisodeAudioTracks(params: GetEpisodeAudioTracksParams): Epis
             languageCode: 'en',
             type: 'dub' as const,
             label: isAnime ? '🇬🇧 English (DUB)' : '🇬🇧 English (DUB)',
-            provider: isAnime ? 'vidlink-anime' : 'vidlink',
+            provider: isAnime ? 'vidsrc-su-anime' : 'vidlink',
             available: hasEnglishDub,
             isOriginal: isOriginalEnglish,
             evidenceLevel: hasEnglishDub ? ('PROVIDER_CONFIRMED' as const) : ('UNKNOWN' as const),
@@ -548,7 +548,7 @@ export function getEpisodeAudioTracks(params: GetEpisodeAudioTracksParams): Epis
       languageCode: 'hi',
       type: 'dub',
       label: isAnime ? '🇮🇳 Hindi (DUB)' : '🇮🇳 Hindi (DUB)',
-      provider: isAnime ? 'screenscape-anime' : 'autoembed-co',
+      provider: isAnime ? 'vidsrc-su-anime' : 'nova',
       available: hasHindiDub,
       isOriginal: isOriginalHindi,
       evidenceLevel: isOriginalHindi

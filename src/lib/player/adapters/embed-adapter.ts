@@ -43,21 +43,17 @@ export class EmbedAdapter implements PlayerAdapter {
     this.iframe.allow = 'autoplay; fullscreen; picture-in-picture; encrypted-media';
     this.iframe.referrerPolicy = 'no-referrer';
 
-    // Watchdog timer (15s): If server doesn't respond or load, trigger auto-fallback
+    // Watchdog timer (4.5s): If server doesn't respond or load, trigger auto-fallback
     this.watchdogTimer = setTimeout(() => {
       if (!this.isConfirmedPlaying) {
-        console.warn(`[EmbedAdapter] Server "${source.providerName}" did not respond within 15s. Requesting fallback.`);
+        console.warn(`[EmbedAdapter] Server "${source.providerName}" did not respond within 4.5s. Requesting fallback.`);
         callbacks.onFallbackNeeded('Server connection timed out');
       }
-    }, 15000);
+    }, 4500);
 
     const onLoad = () => {
-      this.isConfirmedPlaying = true;
-      if (this.watchdogTimer) {
-        clearTimeout(this.watchdogTimer);
-        this.watchdogTimer = null;
-      }
-      callbacks.onStateChange({ loading: false, buffering: false, statusMessage: null, playing: true });
+      // Clear status message once DOM is loaded; full playing confirmation arrives on playback event
+      callbacks.onStateChange({ loading: false, buffering: false, statusMessage: null });
     };
 
     const onError = () => {

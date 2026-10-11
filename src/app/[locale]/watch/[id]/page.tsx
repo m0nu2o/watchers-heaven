@@ -640,14 +640,14 @@ export default function WatchPage() {
 
     if (!embedUrl || isDirectHls || !autoSwitchEnabled) return;
 
-    // Give the server 15 seconds to start playback or emit player event
+    // Fast stream health watchdog: auto-switch server if stream doesn't start within 4.5s
     watchdogTimerRef.current = setTimeout(() => {
       if (!streamConfirmedPlayingRef.current) {
-        console.warn(`[Watchdog] Stream on server "${provider}" did not start within 15s. Auto-switching...`);
+        console.warn(`[Watchdog] Stream on server "${provider}" did not start within 4.5s. Auto-switching...`);
         ProviderTelemetry.recordFailure(provider, 'Stream watchdog timed out');
         handleNextServerFallback(false, true);
       }
-    }, 15000);
+    }, 4500);
 
     return () => {
       if (watchdogTimerRef.current) {

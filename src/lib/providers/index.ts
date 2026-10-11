@@ -12,27 +12,25 @@ export type { MediaType, MediaPlaybackConfig, ProviderAdapter };
 export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
   // ─── 1. Dedicated Anime Providers (1080p, Verified Sub/Dub, 0 Dead Servers) ───
   {
-    id: 'vidlink-anime',
-    name: 'VidLink Anime HD',
+    id: 'vidsrc-su-anime',
+    name: 'VidSrc Anime Ultra',
     quality: '1080p / Sub+Dub / 0 Ads',
     badge: '⚡',
     supportsMovie: false,
     supportsTV: false,
     supportsAnime: true,
     supportsEnglishDub: true,
-    supportsHindiDub: false, // VidLink anime does not provide Hindi dub audio
+    supportsHindiDub: false,
     requiresApiKey: false,
     isConfigured: () => true,
     getPlaybackUrl: (cfg) => {
-      // Only English DUB is triggered via isDub=true — Hindi dub not available on VidLink anime
-      const isDub = cfg.audioTrackId === 'dub-en' || cfg.audioTrackId === 'dub';
-      // Pass malId as 4th arg so the URL uses MAL ID (VidLink requirement)
-      return ApiGateway.getVidLinkAnimeUrl(cfg.tmdbId, cfg.season || 1, cfg.episode || 1, isDub, cfg.malId);
+      const type = (cfg.season !== undefined && cfg.episode !== undefined) ? 'tv' : 'movie';
+      return ApiGateway.getVidSrcSuUrl(cfg.tmdbId, type, cfg.season || 1, cfg.episode || 1);
     },
   },
   {
     id: 'vidsrc-pm-anime',
-    name: 'VidSrc Ultra Anime',
+    name: 'VidSrc Anime Mirror',
     quality: '1080p / Global CDN / Clean',
     badge: '🔥',
     supportsMovie: false,
@@ -47,60 +45,25 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
       return ApiGateway.getVidSrcPmUrl(cfg.tmdbId, type, cfg.season || 1, cfg.episode || 1);
     },
   },
+
+  // ─── 2. Movies & TV Series Providers (1080p, Verified 200 OK, Multi-Language) ───
   {
-    id: 'autoembed-co-anime',
-    name: 'AutoEmbed Anime',
-    quality: '1080p / Fast Multi-Audio',
-    badge: '🎬',
-    supportsMovie: false,
-    supportsTV: false,
-    supportsAnime: true,
-    supportsEnglishDub: false,
-    supportsHindiDub: false,
-    requiresApiKey: false,
-    isConfigured: () => true,
-    getPlaybackUrl: (cfg) => {
-      const type = (cfg.season !== undefined && cfg.episode !== undefined) ? 'tv' : 'movie';
-      return ApiGateway.getAutoEmbedCoUrl(cfg.tmdbId, type, cfg.season || 1, cfg.episode || 1);
-    },
-  },
-  {
-    id: '2embed-skin-anime',
-    name: '2Embed Anime',
-    quality: '1080p / Wide Catalog',
-    badge: '💎',
-    supportsMovie: false,
-    supportsTV: false,
-    supportsAnime: true,
-    supportsEnglishDub: false,
-    supportsHindiDub: false,
-    requiresApiKey: false,
-    isConfigured: () => true,
-    getPlaybackUrl: (cfg) => {
-      const type = (cfg.season !== undefined && cfg.episode !== undefined) ? 'tv' : 'movie';
-      return ApiGateway.get2EmbedSkinUrl(cfg.tmdbId, type, cfg.season || 1, cfg.episode || 1);
-    },
-  },
-  {
-    id: 'screenscape-anime',
-    name: 'ScreenScape Anime',
-    quality: '1080p / Multi-Audio / Clean',
-    badge: '🌐',
-    supportsMovie: false,
-    supportsTV: false,
-    supportsAnime: true,
+    id: 'nova',
+    name: 'Nova Ultra HD',
+    quality: '4K-1080p / Multi-Audio / Clean',
+    badge: '🌟',
+    supportsMovie: true,
+    supportsTV: true,
+    supportsAnime: false, // Strict: Anime routes to dedicated anime engines
     supportsEnglishDub: true,
     supportsHindiDub: true,
     requiresApiKey: false,
     isConfigured: () => true,
     getPlaybackUrl: (cfg) => {
-      const type = (cfg.season !== undefined && cfg.episode !== undefined) ? 'tv' : 'movie';
-      const lan = cfg.audioTrackId === 'dub-hi' ? 'hi' : (cfg.audioTrackId === 'dub-en' || cfg.audioTrackId === 'dub') ? 'eng' : 'jap';
-      return ApiGateway.getScreenScapeUrl(cfg.tmdbId, type, cfg.season || 1, cfg.episode || 1, lan);
+      const type = (cfg.season !== undefined && cfg.episode !== undefined) || cfg.mediaType === 'tv' ? 'tv' : 'movie';
+      return ApiGateway.getNovaUrl(cfg.tmdbId, type, cfg.season, cfg.episode, cfg.imdbId);
     },
   },
-
-  // ─── 2. Movies & TV Series Providers (1080p, Verified 200 OK, Multi-Language) ───
   {
     id: 'vidlink',
     name: 'VidLink HD',
@@ -123,9 +86,30 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     },
   },
   {
+    id: 'vidsrc-su',
+    name: 'VidSrc Stream HD',
+    quality: '1080p / Fast Global CDN',
+    badge: '🎬',
+    supportsMovie: true,
+    supportsTV: true,
+    supportsAnime: false,
+    supportsEnglishDub: true,
+    supportsHindiDub: false,
+    requiresApiKey: false,
+    isConfigured: () => true,
+    getPlaybackUrl: (cfg) => {
+      return ApiGateway.getVidSrcSuUrl(
+        cfg.tmdbId,
+        cfg.mediaType === 'tv' ? 'tv' : 'movie',
+        cfg.season,
+        cfg.episode
+      );
+    },
+  },
+  {
     id: 'vidsrc-pm',
-    name: 'VidSrc Ultra HD',
-    quality: '1080p / Global CDN / Clean',
+    name: 'VidSrc Global Mirror',
+    quality: '1080p / High Uptime / Clean',
     badge: '🔥',
     supportsMovie: true,
     supportsTV: true,
@@ -143,88 +127,6 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
       );
     },
   },
-  {
-    id: 'autoembed-co',
-    name: 'AutoEmbed HD',
-    quality: '1080p / Fast Multi-Audio',
-    badge: '🎬',
-    supportsMovie: true,
-    supportsTV: true,
-    supportsAnime: false,
-    supportsEnglishDub: true,
-    supportsHindiDub: true,
-    requiresApiKey: false,
-    isConfigured: () => true,
-    getPlaybackUrl: (cfg) => {
-      return ApiGateway.getAutoEmbedCoUrl(
-        cfg.tmdbId,
-        cfg.mediaType === 'tv' ? 'tv' : 'movie',
-        cfg.season,
-        cfg.episode
-      );
-    },
-  },
-  {
-    id: 'screenscape',
-    name: 'ScreenScape HD',
-    quality: '1080p / Multi-Audio / Clean',
-    badge: '🌐',
-    supportsMovie: true,
-    supportsTV: true,
-    supportsAnime: false,
-    supportsEnglishDub: true,
-    supportsHindiDub: true,
-    requiresApiKey: false,
-    isConfigured: () => true,
-    getPlaybackUrl: (cfg) => {
-      const lan = cfg.audioTrackId === 'dub-hi' ? 'hi' : (cfg.audioTrackId === 'dub-en' || cfg.audioTrackId === 'dub') ? 'eng' : 'eng';
-      return ApiGateway.getScreenScapeUrl(
-        cfg.tmdbId,
-        cfg.mediaType === 'tv' ? 'tv' : 'movie',
-        cfg.season,
-        cfg.episode,
-        lan
-      );
-    },
-  },
-  {
-    id: '2embed-skin',
-    name: '2Embed Direct',
-    quality: '1080p / Wide Catalog',
-    badge: '💎',
-    supportsMovie: true,
-    supportsTV: true,
-    supportsAnime: false,
-    supportsEnglishDub: true,
-    supportsHindiDub: false,
-    requiresApiKey: false,
-    isConfigured: () => true,
-    getPlaybackUrl: (cfg) => {
-      return ApiGateway.get2EmbedSkinUrl(
-        cfg.tmdbId,
-        cfg.mediaType === 'tv' ? 'tv' : 'movie',
-        cfg.season,
-        cfg.episode
-      );
-    },
-  },
-  {
-    id: 'nova',
-    name: 'Nova Ultra HD',
-    quality: '1080p / Multi-Audio / Clean',
-    badge: '🌟',
-    supportsMovie: true,
-    supportsTV: true,
-    supportsAnime: false, // Strict: Anime routes to dedicated anime engines
-    supportsEnglishDub: true,
-    supportsHindiDub: true,
-    requiresApiKey: false,
-    isConfigured: () => true,
-    getPlaybackUrl: (cfg) => {
-      const type = (cfg.season !== undefined && cfg.episode !== undefined) || cfg.mediaType === 'tv' ? 'tv' : 'movie';
-      return ApiGateway.getNovaUrl(cfg.tmdbId, type, cfg.season, cfg.episode, cfg.imdbId);
-    },
-  },
 ];
 
 /**
@@ -237,40 +139,52 @@ const PROVIDER_ALIASES: Record<string, string> = {
   'nova': 'nova',
   'nova-anime': 'nova',
 
-  // VidFast & VidSrc Direct aliases map to fast 200 OK VidSrc Ultra
+  // VidSrc SU & direct aliases
+  'vidsrc-su': 'vidsrc-su',
+  'vidsrc-su-anime': 'vidsrc-su-anime',
+
+  // VidFast & VidSrc PM aliases
   'vidfast': 'vidsrc-pm',
   'vidfast-anime': 'vidsrc-pm-anime',
-  'vidsrc-su': 'vidsrc-pm',
-  'vidsrc-su-anime': 'vidsrc-pm-anime',
+  'vidsrc-pm': 'vidsrc-pm',
+  'vidsrc-pm-anime': 'vidsrc-pm-anime',
 
-  // Movie & TV legacy aliases
-  'embedsu-cinema': 'vidsrc-pm',
-  'embedsu': 'vidsrc-pm',
-  'vidsrc': 'vidsrc-pm',
-  'vidsrc-me': 'vidsrc-pm',
-  'vidsrc-to': 'vidsrc-pm',
-  'vidsrc-cc': 'vidsrc-pm',
-  'multiembed': 'autoembed-co',
-  'autoembed': 'autoembed-co',
-  '2embed': '2embed-skin',
-  '2embed-cc': '2embed-skin',
-  'rivestream': 'autoembed-co',
+  // Movie & TV legacy aliases map to live healthy servers
+  'vidlink': 'vidlink',
+  'embedsu-cinema': 'vidsrc-su',
+  'embedsu': 'vidsrc-su',
+  'vidsrc': 'vidsrc-su',
+  'vidsrc-me': 'vidsrc-su',
+  'vidsrc-to': 'vidsrc-su',
+  'vidsrc-cc': 'vidsrc-su',
+  'multiembed': 'vidlink',
+  'autoembed': 'vidlink',
+  'autoembed-co': 'vidlink',
+  '2embed': 'vidsrc-su',
+  '2embed-skin': 'vidsrc-su',
+  '2embed-cc': 'vidsrc-su',
+  'screenscape': 'nova',
+  'rivestream': 'vidlink',
   '111movies': 'vidlink',
   'videasy': 'vidlink',
-  'nhd-cinema': 'autoembed-co',
-  'vidsrc-dev': 'autoembed-co',
+  'nhd-cinema': 'nova',
+  'vidsrc-dev': 'vidsrc-pm',
 
-  // Anime legacy aliases
-  'nhd-anime': 'vidlink-anime',
-  '2embed-anime': '2embed-skin-anime',
-  'rivestream-anime': 'vidlink-anime',
-  'vidsrc-dev-anime': 'vidlink-anime',
-  '111movies-anime': 'vidlink-anime',
-  'videasy-anime': 'vidlink-anime',
+  // Anime legacy aliases map to live healthy anime server
+  'vidlink-anime': 'vidsrc-su-anime',
+  'autoembed-co-anime': 'vidsrc-su-anime',
+  'screenscape-anime': 'vidsrc-su-anime',
+  '2embed-skin-anime': 'vidsrc-su-anime',
+  'nhd-anime': 'vidsrc-su-anime',
+  '2embed-anime': 'vidsrc-su-anime',
+  'rivestream-anime': 'vidsrc-su-anime',
+  'vidsrc-dev-anime': 'vidsrc-pm-anime',
+  '111movies-anime': 'vidsrc-su-anime',
+  'videasy-anime': 'vidsrc-su-anime',
   'vidsrc-cc-anime': 'vidsrc-pm-anime',
-  'miruro-anime': 'vidlink-anime',
-  'kuhi-hls': 'vidlink-anime',
-  'anivexa-hls': 'vidlink-anime',
+  'miruro-anime': 'vidsrc-su-anime',
+  'kuhi-hls': 'vidsrc-su-anime',
+  'anivexa-hls': 'vidsrc-su-anime',
 };
 
 export const ProviderRegistry = {
