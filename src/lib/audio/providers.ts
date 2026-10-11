@@ -128,6 +128,15 @@ export const PROVIDER_AUDIO_CAPABILITIES: Record<string, ProviderAudioCapability
     supportedDubLanguages: ['en'],
     notes: 'Direct 1080p stream.',
   },
+  nova: {
+    id: 'nova',
+    name: 'Nova Ultra HD',
+    mediaTypes: ['movie', 'tv', 'anime'],
+    supportsSub: true,
+    supportsOriginalAudio: true,
+    supportedDubLanguages: ['en', 'hi'],
+    notes: 'NovaAPI engine with multi-audio, subtitle, and HLS support.',
+  },
 };
 
 /**

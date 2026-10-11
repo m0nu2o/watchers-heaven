@@ -360,6 +360,21 @@ export const ApiGateway = {
       : `https://2embed.skin/embedtv/${tmdbId}&s=${season || 1}&e=${episode || 1}`;
   },
 
+  // --- NovaAPI / Nova Embed Player ---
+  getNovaUrl: (
+    idOrImdb: string | number,
+    type: 'movie' | 'tv' = 'movie',
+    season?: number,
+    episode?: number,
+    explicitImdbId?: string
+  ) => {
+    const targetId = explicitImdbId || String(idOrImdb);
+    if (type === 'tv' && season !== undefined && episode !== undefined) {
+      return `https://slast430did.com/play/${encodeURIComponent(targetId)}?season=${season}&episode=${episode}`;
+    }
+    return `https://slast430did.com/play/${encodeURIComponent(targetId)}`;
+  },
+
   // --- NHD Embed (nhdapi.com) API (Hindi Dub Priority, Multi-Audio, Auto Failover) ---
   getNhdEmbedUrl: (
     id: string | number,
@@ -650,6 +665,17 @@ export const ApiGateway = {
 
   getMovieDetails: (id: string | number) => {
     return ApiGateway.fetchTmdb<Record<string, unknown>>(`/movie/${id}`);
+  },
+
+  getImdbId: async (id: string | number, type: 'movie' | 'tv' = 'movie'): Promise<string | null> => {
+    const idStr = String(id).trim();
+    if (idStr.startsWith('tt')) return idStr;
+    try {
+      const externalIds = await ApiGateway.fetchTmdb<{ imdb_id?: string | null }>(`/${type}/${idStr}/external_ids`);
+      return externalIds?.imdb_id || null;
+    } catch {
+      return null;
+    }
   },
 
   getMovieCredits: async (id: string | number) => {

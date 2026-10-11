@@ -246,6 +246,23 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
       );
     },
   },
+  {
+    id: 'nova',
+    name: 'Nova Ultra HD',
+    quality: '1080p / Multi-Audio / Clean',
+    badge: '🌟',
+    supportsMovie: true,
+    supportsTV: true,
+    supportsAnime: true,
+    supportsEnglishDub: true,
+    supportsHindiDub: true,
+    requiresApiKey: false,
+    isConfigured: () => true,
+    getPlaybackUrl: (cfg) => {
+      const type = (cfg.season !== undefined && cfg.episode !== undefined) || cfg.mediaType === 'tv' ? 'tv' : 'movie';
+      return ApiGateway.getNovaUrl(cfg.tmdbId, type, cfg.season, cfg.episode, cfg.imdbId);
+    },
+  },
 ];
 
 /**
@@ -254,6 +271,10 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
  * automatically redirects to a live 200 OK verified server instead of failing.
  */
 const PROVIDER_ALIASES: Record<string, string> = {
+  // Nova aliases
+  'nova': 'nova',
+  'nova-anime': 'nova',
+
   // VidFast alias redirects to fast 200 OK VidSrc Direct
   'vidfast': 'vidsrc-su',
   'vidfast-anime': 'vidsrc-su-anime',
@@ -391,6 +412,7 @@ export const ProviderRegistry = {
 };
 
 export { ProviderTelemetry } from './telemetry';
+export { NovaProvider } from './nova';
 export type { ProviderStatus, ProviderHealthRecord } from './telemetry';
 export default ProviderRegistry;
 

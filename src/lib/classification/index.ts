@@ -26,9 +26,12 @@ export type ContentCategory =
   | 'bollywood'
   | 'international-movie'
   | 'tv'
+  | 'hindi-serial'
+  | 'hindi-web-series'
   | 'kdrama'
   | 'cdrama'
-  | 'asian-drama';
+  | 'asian-drama'
+  | 'live-tv';
 
 export interface ClassifiableMedia {
   id?: number | string;
@@ -153,6 +156,14 @@ export function classifyContent(item: ClassifiableMedia): ContentCategory {
 
   // ── 2. LIVE-ACTION TV TAXONOMY ──
   if (format === 'tv') {
+    // Indian Television
+    if (lang === 'hi' || countries.includes('IN')) {
+      const year = item.first_air_date ? parseInt(item.first_air_date.slice(0, 4), 10) : 2020;
+      const isDailySerial =
+        year < 2018 ||
+        (item.name && /(serial|natak|episodes|cid|crime patrol|savdhaan|kumkum|kundali|taarak)/i.test(item.name));
+      return isDailySerial ? 'hindi-serial' : 'hindi-web-series';
+    }
     // Korean Drama
     if (lang === 'ko' || countries.includes('KR')) {
       return 'kdrama';
@@ -201,6 +212,9 @@ export function getPlaybackMediaType(category: ContentCategory, format: 'movie' 
     case 'cdrama':
     case 'asian-drama':
     case 'tv':
+    case 'hindi-serial':
+    case 'hindi-web-series':
+    case 'live-tv':
       return 'tv';
     case 'bollywood':
     case 'hollywood':
@@ -296,6 +310,30 @@ export function getCategoryBadge(category: ContentCategory): CategoryBadgeInfo {
         icon: '🌍',
         badgeClass: 'bg-cyan-500/80 text-white shadow-cyan-500/20 border-cyan-400/30',
       };
+    case 'hindi-serial':
+      return {
+        category,
+        label: 'Indian TV Serial',
+        shortLabel: 'HINDI SERIAL',
+        icon: '📺',
+        badgeClass: 'bg-orange-600/80 text-white shadow-orange-600/20 border-orange-400/30',
+      };
+    case 'hindi-web-series':
+      return {
+        category,
+        label: 'Hindi Web Series',
+        shortLabel: 'WEB SERIES',
+        icon: '🔥',
+        badgeClass: 'bg-amber-600/80 text-white shadow-amber-600/20 border-amber-400/30',
+      };
+    case 'live-tv':
+      return {
+        category,
+        label: 'Live Television',
+        shortLabel: 'LIVE TV',
+        icon: '📡',
+        badgeClass: 'bg-red-600/80 text-white shadow-red-600/20 border-red-400/30 animate-pulse',
+      };
     case 'tv':
     default:
       return {
@@ -307,3 +345,4 @@ export function getCategoryBadge(category: ContentCategory): CategoryBadgeInfo {
       };
   }
 }
+

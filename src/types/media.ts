@@ -44,6 +44,7 @@ export interface AudioTrack {
 export interface MediaPlaybackConfig {
   mediaType: MediaType;
   tmdbId: string | number;
+  imdbId?: string;
   season?: number;
   episode?: number;
   title?: string;
