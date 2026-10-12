@@ -95,7 +95,7 @@ export function Navbar() {
     },
     {
       id: 'anime',
-      label: t('anime') || 'Anime',
+      label: t('anime') || 'Animation',
       path: '/anime',
       icon: Sparkles,
     },
@@ -322,7 +322,7 @@ export function Navbar() {
           { label: 'Home', path: '/', icon: Home },
           { label: 'Movies', path: '/movies', icon: Film },
           { label: 'Series', path: '/tv', icon: Tv },
-          { label: 'Anime', path: '/anime', icon: Sparkles },
+          { label: 'Animation', path: '/anime', icon: Sparkles },
           { label: 'Live TV', path: '/live', icon: Radio },
           { label: 'Watchlist', path: '/watchlist', icon: Bookmark },
         ].map((item) => {

@@ -244,15 +244,38 @@ export function UniversalPlayer({
     if (controlsTimeoutRef.current) {
       clearTimeout(controlsTimeoutRef.current);
     }
-    // Auto-hide when mouse is stationary
+    // Auto-hide when mouse is stationary (1.8s for smooth cinematic playback)
     controlsTimeoutRef.current = setTimeout(() => {
       setControlsVisible(false);
-    }, 3200);
+    }, 1800);
   }, []);
 
   const handleMouseMove = useCallback(() => {
     resetControlsTimeout();
   }, [resetControlsTimeout]);
+
+  const handleMouseLeave = useCallback(() => {
+    if (state.playing) {
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+      }
+      controlsTimeoutRef.current = setTimeout(() => {
+        setControlsVisible(false);
+      }, 600);
+    }
+  }, [state.playing]);
+
+  // Auto-hide controls when video transitions to playing state
+  useEffect(() => {
+    if (state.playing) {
+      resetControlsTimeout();
+    } else {
+      setControlsVisible(true);
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+      }
+    }
+  }, [state.playing, resetControlsTimeout]);
 
   // Play / Pause Toggle
   const togglePlay = useCallback(() => {
@@ -570,6 +593,7 @@ export function UniversalPlayer({
     <div
       ref={containerRef}
       onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
       onTouchStart={handleTouchStart}
       aria-label="Universal Video Player"
       className={`relative bg-black flex items-center justify-center overflow-hidden select-none isolation-isolate ${
@@ -602,8 +626,8 @@ export function UniversalPlayer({
         />
       )}
 
-      {/* ── 2. Top Header HUD Overlay (ONLY for direct streams or in Fullscreen — Never covers inline iframes!) ── */}
-      {(!isEmbed || state.isFullscreen) && (
+      {/* ── 2. Top Header HUD Overlay (ONLY in Fullscreen or Theater Mode — Never duplicates inline header!) ── */}
+      {(state.isFullscreen || state.isTheaterMode) && (
         <PlayerHeader
           title={mediaTitle}
           season={season}
@@ -636,18 +660,20 @@ export function UniversalPlayer({
       {/* ── 3. Direct Playback Custom Controls (ONLY for direct/HLS streams — Never over third-party iframes!) ── */}
       {!isEmbed && (
         <>
-          {/* Center Play, Seek, Prev/Next Controls */}
-          <PlayerCenterControls
-            playing={state.playing}
-            onTogglePlay={togglePlay}
-            onSeekRelative={seekRelative}
-            onPreviousEpisode={onPreviousEpisode}
-            onNextEpisode={onNextEpisode}
-            hasPreviousEpisode={hasPreviousEpisode}
-            hasNextEpisode={hasNextEpisode}
-            doubleTapFeedback={doubleTapFeedback}
-            visible={controlsVisible}
-          />
+          {/* Center Play, Seek, Prev/Next Controls (Never overlaps loading spinner) */}
+          {!state.loading && !state.buffering && (
+            <PlayerCenterControls
+              playing={state.playing}
+              onTogglePlay={togglePlay}
+              onSeekRelative={seekRelative}
+              onPreviousEpisode={onPreviousEpisode}
+              onNextEpisode={onNextEpisode}
+              hasPreviousEpisode={hasPreviousEpisode}
+              hasNextEpisode={hasNextEpisode}
+              doubleTapFeedback={doubleTapFeedback}
+              visible={controlsVisible || !state.playing}
+            />
+          )}
 
           {/* Bottom Control Deck (Timeline, Audio, Subtitles, Quality, Server, Speed) */}
           <PlayerControls

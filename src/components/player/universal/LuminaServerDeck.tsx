@@ -83,17 +83,17 @@ export function LuminaServerDeck({
     return () => el.removeEventListener('wheel', handleWheel);
   }, [updateScrollState]);
 
-  // Auto-scroll active server into center view without layout thrashing
+  // Auto-scroll active server into center view without viewport thrashing or screen shaking
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
 
     const activeEl = el.querySelector<HTMLElement>(`[data-server-id="${activeServerId}"]`);
     if (activeEl) {
-      activeEl.scrollIntoView({
+      const targetLeft = activeEl.offsetLeft - (el.clientWidth / 2) + (activeEl.clientWidth / 2);
+      el.scrollTo({
+        left: Math.max(0, targetLeft),
         behavior: 'smooth',
-        block: 'nearest',
-        inline: 'center',
       });
       setTimeout(updateScrollState, 300);
     }
@@ -127,7 +127,7 @@ export function LuminaServerDeck({
     if (!el) return;
     const x = e.pageX - el.offsetLeft;
     const walk = (x - startXRef.current) * 1.2;
-    if (Math.abs(walk) > 5) {
+    if (Math.abs(walk) > 14) {
       hasMovedRef.current = true;
     }
     el.scrollLeft = scrollLeftStartRef.current - walk;
@@ -136,6 +136,9 @@ export function LuminaServerDeck({
 
   const handleMouseUpOrLeave = () => {
     isDraggingRef.current = false;
+    setTimeout(() => {
+      hasMovedRef.current = false;
+    }, 80);
   };
 
   return (
@@ -151,30 +154,32 @@ export function LuminaServerDeck({
         }}
       />
 
-      <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-3 min-w-0">
-        {/* Left header tag + Sub/Dub Mode Selector */}
-        <div className="flex items-center gap-2.5 shrink-0 select-none flex-wrap sm:flex-nowrap">
-          <div className="w-6 h-6 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center shrink-0">
-            <Radio className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
-          </div>
+      <div className="relative z-10 flex flex-col gap-2.5 min-w-0">
+        {/* Row 1: Left category header tag + Right Sub/Dub Mode Selector */}
+        <div className="flex items-center justify-between gap-3 select-none flex-wrap sm:flex-nowrap px-0.5">
+          <div className="flex items-center gap-2 min-w-0 shrink-0">
+            <div className="w-6 h-6 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center shrink-0">
+              <Radio className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
+            </div>
 
-          <div className="flex items-center gap-1.5 min-w-0">
-            <span className="text-[11px] font-black uppercase tracking-wider text-slate-800 dark:text-white truncate">
-              {categoryLabel}
-            </span>
-            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center gap-1 shrink-0">
-              <span className="w-1 h-1 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-ping inline-block" />
-              {servers.length} Online
-            </span>
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-white whitespace-nowrap">
+                {categoryLabel}
+              </span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-ping inline-block" />
+                {servers.length} Online
+              </span>
+            </div>
           </div>
 
           {/* ── Sub & Dub Direct 1-Click Toggle (Ported from Taro HSL Server Engine) ── */}
           {onSelectAudioTrack && (
-            <div className="flex items-center gap-1 bg-black/5 dark:bg-white/[0.06] p-0.5 rounded-xl border border-black/5 dark:border-white/10 shrink-0 ml-auto sm:ml-2">
+            <div className="flex items-center gap-1 bg-black/5 dark:bg-white/[0.06] p-0.5 rounded-xl border border-black/5 dark:border-white/10 shrink-0">
               <button
                 type="button"
                 onClick={() => onSelectAudioTrack('sub')}
-                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
                   isSubSelected
                     ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/30 ring-1 ring-blue-500/50'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
@@ -188,7 +193,7 @@ export function LuminaServerDeck({
               <button
                 type="button"
                 onClick={() => onSelectAudioTrack('dub-en')}
-                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
                   isEnglishDubSelected
                     ? 'bg-purple-600 text-white shadow-sm shadow-purple-600/30 ring-1 ring-purple-500/50'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
@@ -203,7 +208,7 @@ export function LuminaServerDeck({
                 <button
                   type="button"
                   onClick={() => onSelectAudioTrack('dub-hi')}
-                  className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
                     isHindiDubSelected
                       ? 'bg-amber-600 text-white shadow-sm shadow-amber-600/30 ring-1 ring-amber-500/50'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
@@ -218,15 +223,15 @@ export function LuminaServerDeck({
           )}
         </div>
 
-        {/* Carousel Container with Elegant Adaptive Light/Dark Chevrons */}
-        <div className="relative flex items-center min-w-0 flex-1">
+        {/* Row 2: Full-Width Carousel Container with Adaptive Chevrons */}
+        <div className="relative flex items-center min-w-0 w-full">
           {/* Left Arrow Button */}
           {canScrollLeft && (
             <button
               type="button"
               onClick={() => scrollStep('left')}
               aria-label="Scroll servers left"
-              className="absolute left-0 z-20 w-7 h-7 rounded-full bg-white/95 dark:bg-slate-900/95 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 text-slate-700 dark:text-white flex items-center justify-center backdrop-blur-md border border-slate-200/80 dark:border-white/15 shadow-md transition-all duration-150 -translate-x-1 cursor-pointer"
+              className="absolute left-0 z-20 w-7 h-7 rounded-full bg-slate-900/10 hover:bg-slate-900/20 dark:bg-white/10 dark:hover:bg-white/20 text-slate-800 dark:text-white flex items-center justify-center backdrop-blur-xl border border-black/10 dark:border-white/15 shadow-sm transition-all duration-150 cursor-pointer"
             >
               <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
             </button>
@@ -234,7 +239,7 @@ export function LuminaServerDeck({
 
           {/* Left Gradient Fade Mask */}
           {canScrollLeft && (
-            <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white via-white/80 dark:from-slate-950 dark:via-slate-950/80 to-transparent pointer-events-none z-10" />
+            <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-slate-100/80 via-slate-100/40 dark:from-slate-950/80 dark:via-slate-950/40 to-transparent pointer-events-none z-10" />
           )}
 
           {/* Server Pills Horizontal Carousel / Deck */}
@@ -321,7 +326,7 @@ export function LuminaServerDeck({
 
           {/* Right Gradient Fade Mask */}
           {canScrollRight && (
-            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white via-white/80 dark:from-slate-950 dark:via-slate-950/80 to-transparent pointer-events-none z-10" />
+            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-slate-100/80 via-slate-100/40 dark:from-slate-950/80 dark:via-slate-950/40 to-transparent pointer-events-none z-10" />
           )}
 
           {/* Right Arrow Button */}
@@ -330,7 +335,7 @@ export function LuminaServerDeck({
               type="button"
               onClick={() => scrollStep('right')}
               aria-label="Scroll servers right"
-              className="absolute right-0 z-20 w-7 h-7 rounded-full bg-white/95 dark:bg-slate-900/95 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 text-slate-700 dark:text-white flex items-center justify-center backdrop-blur-md border border-slate-200/80 dark:border-white/15 shadow-md transition-all duration-150 translate-x-1 cursor-pointer"
+              className="absolute right-0 z-20 w-7 h-7 rounded-full bg-slate-900/10 hover:bg-slate-900/20 dark:bg-white/10 dark:hover:bg-white/20 text-slate-800 dark:text-white flex items-center justify-center backdrop-blur-xl border border-black/10 dark:border-white/15 shadow-sm transition-all duration-150 cursor-pointer"
             >
               <ChevronRight className="w-4 h-4 stroke-[2.5]" />
             </button>

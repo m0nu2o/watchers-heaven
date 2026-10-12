@@ -499,12 +499,51 @@ export async function resolveStreamingSources({
   let discoveredMalId = malId;
   let discoveredTmdbId = tmdbId;
   let isDonghua = isDonghuaInitial;
+  let resolvedAnimeId = animeId;
 
   try {
-    // 1. If not Donghua and animeId exists, attempt Reanime direct HLS
-    if (!isDonghua && animeId && Number(animeId) > 0) {
+    // 0. Auto-discover AniList ID if only TMDB ID or title is provided
+    if ((!resolvedAnimeId || Number(resolvedAnimeId) <= 0) && (title || tmdbId)) {
       try {
-        const reanimeResult = await resolveReanime(animeId, epNum, isDub, {
+        let searchTitle = title;
+        if (!searchTitle && tmdbId && process.env.TMDB_API_KEY) {
+          const tmdbRes = await fetchJson(
+            fetch,
+            `https://api.tmdb.org/3/tv/${tmdbId}?api_key=${process.env.TMDB_API_KEY}`,
+            {},
+            2000,
+            resolutionDeadline.signal
+          ).catch(() => null);
+          if (tmdbRes) searchTitle = tmdbRes.name || tmdbRes.original_name;
+        }
+        if (searchTitle) {
+          const alData = await fetchJson(
+            fetch,
+            'https://graphql.anilist.co',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'User-Agent': USER_AGENT },
+              body: JSON.stringify({
+                query: 'query ($search: String) { Media(search: $search, type: ANIME) { id idMal countryOfOrigin } }',
+                variables: { search: searchTitle },
+              }),
+            },
+            2500,
+            resolutionDeadline.signal
+          ).catch(() => null);
+          if (alData?.data?.Media?.id) {
+            resolvedAnimeId = alData.data.Media.id;
+            if (!discoveredMalId && alData.data.Media.idMal) discoveredMalId = alData.data.Media.idMal;
+            if (alData.data.Media.countryOfOrigin === 'CN') isDonghua = true;
+          }
+        }
+      } catch {}
+    }
+
+    // 1. If not Donghua and animeId exists, attempt Reanime direct HLS
+    if (!isDonghua && resolvedAnimeId && Number(resolvedAnimeId) > 0) {
+      try {
+        const reanimeResult = await resolveReanime(resolvedAnimeId, epNum, isDub, {
           signal: resolutionDeadline.signal,
           timeoutMs: DEFAULT_REQUEST_TIMEOUT_MS,
         });
@@ -539,6 +578,7 @@ export async function resolveStreamingSources({
           return payload;
         }
       } catch (err) {
+        console.warn('[DEBUG resolveReanime ERROR]', err);
         // Reanime failed, continue to Senshi or Donghua fallback
       }
     }

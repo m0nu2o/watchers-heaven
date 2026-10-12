@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { resolveStreamingSources } from '@/lib/anime/streamResolver';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'edge';
@@ -119,6 +120,24 @@ function assToVtt(assText: string): string {
 export async function GET(req: NextRequest) {
   const urlParam = req.nextUrl.searchParams.get('url');
   if (!urlParam) {
+    const id = req.nextUrl.searchParams.get('id');
+    const type = req.nextUrl.searchParams.get('type') || 'anime';
+    const ep = parseInt(req.nextUrl.searchParams.get('e') || '1', 10);
+    const isDub = req.nextUrl.searchParams.get('dub') === '1';
+    if (id && type === 'anime') {
+      try {
+        const streamResult = await resolveStreamingSources({
+          tmdbId: id,
+          episode: ep,
+          isDub,
+        });
+        if (streamResult?.primaryUrl) {
+          return NextResponse.redirect(new URL(streamResult.primaryUrl, req.url));
+        }
+      } catch (err) {
+        console.warn('Failed to auto-resolve anime stream in proxy:', err);
+      }
+    }
     return NextResponse.json({ error: 'url parameter is required' }, { status: 400 });
   }
 

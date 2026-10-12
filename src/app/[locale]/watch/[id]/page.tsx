@@ -561,9 +561,20 @@ export default function WatchPage() {
       setPlaybackError(null);
       setAudioError(null);
 
-      try {
-        const mediaType = isActuallyAnime ? 'anime' : isActuallyTv ? 'tv' : 'movie';
-        const effectiveImdb = imdbId || ApiGateway.getCachedImdbId(id) || undefined;
+      const effectiveImdb = imdbId || ApiGateway.getCachedImdbId(id) || undefined;
+      const mediaType = isActuallyAnime ? 'anime' : isActuallyTv ? 'tv' : 'movie';
+
+      if (newProviderId === 'direct-hls') {
+        setIsDirectHls(true);
+        void resolveCurrentSource(selectedAudioTrack, 'direct-hls').then((result) => {
+          if (result?.url) {
+            setEmbedUrl(result.url);
+            if (result.subtitles) setSubtitles(result.subtitles);
+            if (result.skipTimestamps) setSkipTimestamps(result.skipTimestamps);
+          }
+        });
+      } else {
+        setIsDirectHls(false);
         const instantUrl = ProviderRegistry.resolvePlaybackUrl(newProviderId, {
           mediaType,
           tmdbId: id,
@@ -571,25 +582,15 @@ export default function WatchPage() {
           season,
           episode,
           title: mediaTitle,
-          aniListId: aniListId && aniListId > 0 ? aniListId : undefined,
-          malId: malId && malId > 0 ? malId : undefined,
           audioTrackId: selectedAudioTrack,
           accentColor,
         });
-
         if (instantUrl) {
-          if (newProviderId !== 'direct-hls') {
-            setEmbedUrl(instantUrl);
-            setIsDirectHls(false);
-          } else {
-            setIsDirectHls(true);
-          }
+          setEmbedUrl(instantUrl);
         }
-      } catch (err) {
-        console.warn('Instant server switch resolution failed:', err);
       }
     },
-    [isActuallyAnime, isActuallyTv, id, imdbId, season, episode, mediaTitle, aniListId, malId, selectedAudioTrack, accentColor]
+    [isActuallyAnime, isActuallyTv, id, imdbId, season, episode, mediaTitle, selectedAudioTrack, accentColor, resolveCurrentSource]
   );
 
   const triedServersRef = useRef<Set<string>>(new Set());
@@ -644,27 +645,31 @@ export default function WatchPage() {
 
     const loadSource = async () => {
       setPlaybackError(null);
-      const result = await resolveCurrentSource(selectedAudioTrack);
 
-      if (!cancelled) {
-        if (result?.url) {
-          if (result.provider && result.provider !== provider) {
-            setProvider(result.provider);
-          }
+      if (provider === 'direct-hls') {
+        const result = await resolveCurrentSource(selectedAudioTrack, 'direct-hls');
+        if (!cancelled && result?.url) {
           setEmbedUrl(result.url);
-          setIsDirectHls(Boolean(result.isHls || result.url.includes('.m3u8')));
+          setIsDirectHls(true);
           if (result.subtitles) setSubtitles(result.subtitles);
           if (result.skipTimestamps) setSkipTimestamps(result.skipTimestamps);
           setPlaybackError(null);
-        } else {
-          // Automatic Provider Fallback: Try next compatible server for this audio track
-          const next = ProviderRegistry.getFallbackProvider(provider, currentMediaType, selectedAudioTrack);
-          if (next && next.id !== provider && !triedServersRef.current.has(next.id)) {
-            handleSelectServer(next.id);
-          } else {
-            const trackName = selectedAudioTrack === 'dub-hi' ? 'Hindi DUB' : selectedAudioTrack === 'dub-en' ? 'English DUB' : 'Original / SUB';
-            setPlaybackError(`${trackName} stream is unavailable on all tested servers. Please try another audio track or server.`);
-          }
+        }
+      } else {
+        const effectiveImdb = imdbId || ApiGateway.getCachedImdbId(id) || undefined;
+        const instantUrl = ProviderRegistry.resolvePlaybackUrl(provider, {
+          mediaType: currentMediaType,
+          tmdbId: id,
+          imdbId: effectiveImdb,
+          season,
+          episode,
+          title: mediaTitle,
+          audioTrackId: selectedAudioTrack,
+        });
+        if (!cancelled && instantUrl) {
+          setEmbedUrl(instantUrl);
+          setIsDirectHls(false);
+          setPlaybackError(null);
         }
       }
     };
@@ -679,9 +684,9 @@ export default function WatchPage() {
   // ── Real Audio Switching with Verified Dub Availability ──
   const handleSelectAudioTrack = useCallback(
     async (trackId: string) => {
-      // Guard: Do NOT proceed if the track is marked unavailable
+      // Guard: Do NOT block anime dub tracks (handled gracefully by providers)
       const trackObj = audioAvailability?.tracks?.find((t) => t.id === trackId);
-      if (trackObj && trackObj.available === false) {
+      if (trackObj && trackObj.available === false && !isActuallyAnime) {
         triggerSeekFeedback(`⚠️ ${trackObj.label} is not available for this title`);
         return;
       }
@@ -697,17 +702,27 @@ export default function WatchPage() {
         : '🇬🇧 Switching to English DUB...';
       triggerSeekFeedback(feedbackMsg);
 
-      // Auto-route to the correct DUB-capable provider
+      // Auto-route to the correct DUB-capable provider while preserving Hikari Direct 4K
       let overrideProv: string | undefined = undefined;
+      const currentAdapter = ProviderRegistry.getById(provider);
+
       if (trackId === 'dub-en' || trackId === 'dub') {
-        // English DUB: vidsrc-su-anime for anime, keep current or use vidlink for movies/TV
-        overrideProv = isActuallyAnime ? 'vidsrc-su-anime' : (provider === 'vidlink' ? 'vidlink' : 'vidsrc-pm');
+        if (isActuallyAnime) {
+          // Hikari Direct 4K supports both SUB & DUB natively — keep current provider if it supports dub!
+          overrideProv = (provider === 'direct-hls' || currentAdapter?.supportsEnglishDub)
+            ? provider
+            : 'direct-hls';
+        } else {
+          overrideProv = currentAdapter?.supportsEnglishDub
+            ? provider
+            : (provider === 'vidlink' ? 'vidlink' : 'vidsrc-pm');
+        }
       } else if (trackId === 'dub-hi') {
-        // Hindi DUB: nova supports Hindi for both anime and movies/TV
-        overrideProv = 'nova';
+        // Hindi DUB: nova or current provider if it supports Hindi
+        overrideProv = currentAdapter?.supportsHindiDub ? provider : 'nova';
       } else {
-        // SUB: default provider for media type
-        overrideProv = isActuallyAnime ? 'vidsrc-su-anime' : 'vidlink';
+        // SUB: keep current provider
+        overrideProv = provider;
       }
 
       if (overrideProv && overrideProv !== provider) {
@@ -795,14 +810,19 @@ export default function WatchPage() {
     const streamType = UniversalPlayerEngine.detectStreamType(embedUrl || '', isDirectHls);
     const activeAdapter = availableProviders.find((p) => p.id === provider);
 
-    const audioTracks: PlayerAudioTrack[] = (audioAvailability?.tracks || []).map((t) => ({
-      id: t.id,
-      label: t.label,
-      language: t.language,
-      languageCode: t.languageCode,
-      isOriginal: t.isOriginal,
-      available: t.available !== false,
-    }));
+    const audioTracks: PlayerAudioTrack[] = isActuallyAnime && provider === 'direct-hls'
+      ? [
+          { id: 'sub', label: '🇯🇵 Japanese (SUB)', language: 'Japanese', languageCode: 'ja', isOriginal: true, available: true },
+          { id: 'dub-en', label: '🇬🇧 English (DUB)', language: 'English', languageCode: 'en', isOriginal: false, available: true },
+        ]
+      : (audioAvailability?.tracks || []).map((t) => ({
+          id: t.id,
+          label: t.label,
+          language: t.language,
+          languageCode: t.languageCode,
+          isOriginal: t.isOriginal,
+          available: isActuallyAnime ? true : t.available !== false,
+        }));
 
     return {
       sourceId: `${provider}-${id}-${season || 1}-${episode || 1}-${selectedAudioTrack}`,
@@ -1384,38 +1404,7 @@ export default function WatchPage() {
           </div>
         </div>
 
-        {/* Center: Apple Cinema Quick Skip Controls (Visible on screens >= 480px) */}
-        <div className="hidden min-[480px]:flex items-center gap-1 sm:gap-1.5 shrink-0 bg-black/50 dark:bg-black/60 backdrop-blur-md p-1 rounded-2xl border border-white/15 shadow-sm">
-          <button
-            onClick={handleSkipBackward10}
-            className="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-200 hover:text-white hover:bg-white/15 transition-all cursor-pointer"
-            title="Skip 10 seconds backward"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>-10s</span>
-          </button>
-          <button
-            onClick={handleSkipForward10}
-            className="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-200 hover:text-white hover:bg-white/15 transition-all cursor-pointer"
-            title="Skip 10 seconds forward"
-          >
-            <RotateCw className="w-3.5 h-3.5" />
-            <span>+10s</span>
-          </button>
-          {isActuallyTv && (
-            <button
-              onClick={handleSkipIntro85}
-              className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold text-amber-300 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 transition-all cursor-pointer shadow-sm"
-              title="Skip Intro / Recap (+85s)"
-            >
-              <FastForward className="w-3.5 h-3.5" />
-              <span className="hidden xs:inline">Skip Intro</span>
-              <span className="xs:hidden">Intro</span>
-            </button>
-          )}
-        </div>
-
-        {/* Right Side: Popup Guard, Reload & Fullscreen */}
+        {/* Right Side: Popup Guard & Fullscreen */}
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           <div
             className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-500 dark:text-emerald-400 text-[11px] font-bold tracking-wide"
@@ -1424,21 +1413,6 @@ export default function WatchPage() {
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
             <span>Popup Guard</span>
           </div>
-          <button
-            onClick={() => {
-              void resolveCurrentSource(selectedAudioTrack).then((result) => {
-                if (result?.url) {
-                  setEmbedUrl(result.url);
-                  setPlaybackError(null);
-                }
-              });
-            }}
-            className="text-slate-700 dark:text-slate-300 hover:text-black dark:hover:text-white p-2.5 bg-black/[0.04] dark:bg-slate-900 hover:bg-black/[0.08] dark:hover:bg-slate-850 border border-black/[0.08] dark:border-slate-800 rounded-xl transition-all cursor-pointer hover:scale-105 active:scale-95"
-            title="Reload Stream"
-            aria-label="Reload Stream"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </button>
           <button
             onClick={toggleFullscreen}
             className="text-slate-700 dark:text-slate-300 hover:text-black dark:hover:text-white p-2.5 bg-black/[0.04] dark:bg-slate-900 hover:bg-black/[0.08] dark:hover:bg-slate-850 border border-black/[0.08] dark:border-slate-800 rounded-xl transition-all cursor-pointer hover:scale-105 active:scale-95"
@@ -1526,85 +1500,17 @@ export default function WatchPage() {
           isLoadingSource={isResolvingSource}
         />
 
-        {/* 2. Audio Track & Quick Action Bar */}
-        <div className="apple-glass rounded-2xl p-3 sm:p-4 border border-black/10 dark:border-white/10 shadow-xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 w-full">
-          {/* Left: Audio Track Selector */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 flex-1 min-w-0">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 shrink-0">
-              Audio Track:
+        {/* 2. Apple Quick Action Bar */}
+        <div className="apple-glass rounded-2xl p-2.5 sm:p-3 border border-black/10 dark:border-white/10 shadow-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
+          {/* Left: Active Server Indicator */}
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Active Server:
             </span>
-
-            {(() => {
-              // Synchronously evaluate default tracks from catalog so verified titles never flash N/A
-              const defaultTracks = (() => {
-                try {
-                  const initial = getEpisodeAudioTracks({
-                    mediaId: id,
-                    mediaType: isActuallyAnime ? 'anime' : isActuallyTv ? 'tv' : 'movie',
-                    season,
-                    episode,
-                    originalLanguage: mediaOriginalLang,
-                    title: mediaTitle,
-                    aniListId,
-                    malId,
-                  });
-                  if (initial?.tracks && initial.tracks.length > 0) return initial.tracks;
-                } catch {}
-                return isActuallyAnime
-                  ? [
-                      { id: 'sub', label: '🇯🇵 Japanese (SUB)', available: true, languageCode: 'ja' },
-                      { id: 'dub-en', label: '🇬🇧 English (DUB)', available: false, languageCode: 'en' },
-                      { id: 'dub-hi', label: '🇮🇳 Hindi (DUB)', available: false, languageCode: 'hi' },
-                    ]
-                  : [
-                      { id: 'sub', label: '🌐 Original', available: true, languageCode: mediaOriginalLang || 'en' },
-                      { id: 'dub-hi', label: '🇮🇳 Hindi DUB', available: false, languageCode: 'hi' },
-                    ];
-              })();
-
-              const rawTracks =
-                audioAvailability?.tracks && audioAvailability.tracks.length > 0
-                  ? audioAvailability.tracks
-                  : defaultTracks;
-
-              const tracksToRender = rawTracks.filter((t, _idx, arr) => {
-                if (t.id === 'dub-en' && arr.some((o) => o.id === 'sub' && (o as { languageCode?: string }).languageCode === 'en')) {
-                  return false;
-                }
-                return true;
-              });
-
-              return (
-                <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.06] dark:border-white/[0.08]">
-                  {tracksToRender.map((track) => {
-                    const isSelected = selectedAudioTrack === track.id;
-                    const isAvailable = track.available !== false;
-                    return (
-                      <button
-                        key={track.id}
-                        disabled={!isAvailable}
-                        onClick={() => isAvailable && handleSelectAudioTrack(track.id)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 whitespace-nowrap select-none flex items-center justify-center gap-1.5 ${
-                          !isAvailable
-                            ? 'opacity-35 cursor-not-allowed text-slate-400 dark:text-slate-600 line-through'
-                            : isSelected
-                            ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 scale-[1.02] ring-2 ring-blue-400/40 cursor-pointer'
-                            : 'text-slate-600 dark:text-slate-300 hover:text-black dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.08] cursor-pointer'
-                        }`}
-                        title={isAvailable ? track.label : `${track.label} — Not available for this title`}
-                      >
-                        <span>{track.label}</span>
-                        {!isAvailable && (
-                          <span className="text-[9px] px-1 py-0.2 bg-black/10 dark:bg-white/10 rounded font-normal no-underline">
-                            N/A
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              );
-            })()}
+            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              {availableProviders.find((p) => p.id === provider)?.name || provider}
+            </span>
           </div>
 
           {/* Right: Actions (Auto-Switch, Quick Switch, Download, Party) */}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveAudioSourceAsync } from '@/lib/audio';
+import { ApiGateway } from '@/lib/api/gateway';
 
 export async function GET(
   request: NextRequest,
@@ -13,8 +14,8 @@ export async function GET(
     const episode = searchParams.get('e') || searchParams.get('episode') ? parseInt(searchParams.get('e') || searchParams.get('episode')!, 10) : undefined;
     const trackId = searchParams.get('track') || searchParams.get('trackId') || 'sub';
     const provider = searchParams.get('provider') || undefined;
-    const aniListId = searchParams.get('aniListId') ? parseInt(searchParams.get('aniListId')!, 10) : undefined;
-    const malId = searchParams.get('malId') ? parseInt(searchParams.get('malId')!, 10) : undefined;
+    let aniListId = searchParams.get('aniListId') ? parseInt(searchParams.get('aniListId')!, 10) : undefined;
+    let malId = searchParams.get('malId') ? parseInt(searchParams.get('malId')!, 10) : undefined;
     const startTime = searchParams.get('startTime') ? parseFloat(searchParams.get('startTime')!) : 0;
     const accentColor = searchParams.get('accentColor') || undefined;
     const originalLanguage = searchParams.get('origLang') || (type === 'anime' ? 'ja' : 'en');
@@ -33,6 +34,20 @@ export async function GET(
           if (res.ok) {
             const data = await res.json();
             title = data.name || data.title || data.original_name || data.original_title;
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    if (type === 'anime' && !aniListId && title) {
+      try {
+        const anilistDetails = await ApiGateway.getAniListMediaDetails(title);
+        if (anilistDetails?.id) {
+          aniListId = anilistDetails.id;
+          if (!malId && anilistDetails.malId) {
+            malId = anilistDetails.malId;
           }
         }
       } catch {
@@ -107,6 +122,23 @@ export async function POST(
       }
     }
 
+    let resolvedAniListId = aniListId;
+    let resolvedMalId = malId;
+
+    if (type === 'anime' && !resolvedAniListId && resolvedTitle) {
+      try {
+        const anilistDetails = await ApiGateway.getAniListMediaDetails(resolvedTitle);
+        if (anilistDetails?.id) {
+          resolvedAniListId = anilistDetails.id;
+          if (!resolvedMalId && anilistDetails.malId) {
+            resolvedMalId = anilistDetails.malId;
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+
     const result = await resolveAudioSourceAsync({
       mediaType: type,
       id,
@@ -115,8 +147,8 @@ export async function POST(
       season,
       episode,
       preferredProvider: provider,
-      aniListId,
-      malId,
+      aniListId: resolvedAniListId,
+      malId: resolvedMalId,
       startTime,
       accentColor,
       originalLanguage,

@@ -214,8 +214,8 @@ export function PlayerControls({
 
         {/* Right Side: Audio, Subtitles, Quality, Server, Speed, PiP, Theater, Fullscreen */}
         <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-          {/* Audio Language Button */}
-          {audioTracks.length > 0 && (
+          {/* Audio Language Button (Scoped strictly to Fullscreen mode so it never duplicates the under-player LuminaServerDeck) */}
+          {isFullscreen && audioTracks.length > 0 && (
             <button
               onClick={() => setActiveMenu(activeMenu === 'audio' ? 'none' : 'audio')}
               className={`px-2 sm:px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer border ${

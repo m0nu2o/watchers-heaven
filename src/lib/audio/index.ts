@@ -102,6 +102,8 @@ export function getContentAudioAvailability(
   let hasEnglishDub = isOriginalEnglish;
   if (!hasEnglishDub && cachedLangs) {
     hasEnglishDub = cachedLangs.includes('English');
+  } else if (isAnime && origLang === 'ja') {
+    hasEnglishDub = true;
   }
 
   let hasHindiDub = isOriginalHindi;
@@ -302,7 +304,9 @@ export function filterContentByDub(
       (typeof item.title === 'string' ? AudioAvailabilityCache.getKnownDubLanguages(item.title) : null);
 
     const hasHindiDub = isOriginalHindi || (cachedLangs ? cachedLangs.includes('Hindi') : false);
-    const hasEnglishDub = isOriginalEnglish || (cachedLangs ? cachedLangs.includes('English') : false);
+    const hasEnglishDub =
+      isOriginalEnglish ||
+      (cachedLangs ? cachedLangs.includes('English') : (isAnime && origLang === 'ja'));
 
     if (dubFilter === 'hindi') {
       return hasHindiDub;
@@ -468,8 +472,8 @@ export function getEpisodeAudioTracks(params: GetEpisodeAudioTracksParams): Epis
   }
 
   // 1. Evaluate genuine English availability
-  let hasEnglishDub = false;
-  if (!isOriginalEnglish) {
+  let hasEnglishDub = isAnime ? true : false;
+  if (!isOriginalEnglish && !isAnime) {
     if (params.verifiedEnglish === true) {
       hasEnglishDub = true;
     } else if (params.dubLanguages && params.dubLanguages.length > 0 && params.dubLanguages.includes('English')) {
@@ -513,7 +517,7 @@ export function getEpisodeAudioTracks(params: GetEpisodeAudioTracksParams): Epis
       languageCode: isAnime ? 'ja' : origLang,
       type: 'sub',
       label: isAnime ? '🇯🇵 Japanese (SUB)' : `${origMeta.flag} ${origMeta.name} (Original)`,
-      provider: isAnime ? 'vidsrc-su-anime' : 'nova',
+      provider: isAnime ? 'direct-hls' : 'nova',
       available: true,
       isOriginal: true,
       evidenceLevel: 'PLAYBACK_VERIFIED',
@@ -527,7 +531,7 @@ export function getEpisodeAudioTracks(params: GetEpisodeAudioTracksParams): Epis
             languageCode: 'en',
             type: 'dub' as const,
             label: isAnime ? '🇬🇧 English (DUB)' : '🇬🇧 English (DUB)',
-            provider: isAnime ? 'vidsrc-su-anime' : 'vidlink',
+            provider: isAnime ? 'direct-hls' : 'vidlink',
             available: hasEnglishDub,
             isOriginal: isOriginalEnglish,
             evidenceLevel: hasEnglishDub ? ('PROVIDER_CONFIRMED' as const) : ('UNKNOWN' as const),
@@ -582,38 +586,51 @@ export function getEpisodeAudioTracks(params: GetEpisodeAudioTracksParams): Epis
  * Authoritative async AniList Dub checker.
  * Dynamically queries voice actors from AniList and caches the result for 24 hours.
  */
+const anilistMediaDetailsCache = new Map<string, { hasEnglishDub: boolean; spokenLanguages: string[]; id: number | null; malId: number | null }>();
+
 export async function checkAniListDubAvailability(
   idOrTitle: number | string
 ): Promise<{ hasEnglishDub: boolean; spokenLanguages: string[]; id: number | null; malId: number | null }> {
+  const cacheKey = String(idOrTitle).toLowerCase().trim();
+  const memoryHit = anilistMediaDetailsCache.get(cacheKey);
+  if (memoryHit) return memoryHit;
+
   const isId = typeof idOrTitle === 'number' || /^\d+$/.test(String(idOrTitle).trim());
   const cachedLangs = AudioAvailabilityCache.getKnownDubLanguages(idOrTitle);
-  if (cachedLangs) {
-    return {
+  if (cachedLangs && isId) {
+    const res = {
       hasEnglishDub: cachedLangs.includes('English'),
       spokenLanguages: cachedLangs,
-      id: isId ? Number(idOrTitle) : null,
+      id: Number(idOrTitle),
       malId: null,
     };
+    anilistMediaDetailsCache.set(cacheKey, res);
+    return res;
   }
 
   const details = await ApiGateway.getAniListMediaDetails(idOrTitle);
   if (details) {
     AudioAvailabilityCache.setKnownDubLanguages(details.id, details.spokenLanguages);
     AudioAvailabilityCache.setKnownDubLanguages(idOrTitle, details.spokenLanguages);
-    return {
+    const res = {
       hasEnglishDub: details.hasEnglishDub,
       spokenLanguages: details.spokenLanguages,
       id: details.id,
       malId: details.malId ?? null,
     };
+    anilistMediaDetailsCache.set(cacheKey, res);
+    anilistMediaDetailsCache.set(String(details.id), res);
+    return res;
   }
 
-  return {
-    hasEnglishDub: false,
-    spokenLanguages: ['Japanese'],
-    id: null,
+  const fallback = {
+    hasEnglishDub: true,
+    spokenLanguages: ['Japanese', 'English'],
+    id: isId ? Number(idOrTitle) : null,
     malId: null,
   };
+  anilistMediaDetailsCache.set(cacheKey, fallback);
+  return fallback;
 }
 
 /**

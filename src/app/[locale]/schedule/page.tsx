@@ -180,24 +180,24 @@ export default function SchedulePage() {
   };
 
   return (
-    <div className="min-h-screen py-10 px-4 md:px-8 bg-[var(--color-main)] text-white">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <div className="min-h-screen py-6 sm:py-8 px-3 sm:px-6 bg-[var(--color-main)] text-white">
+      <div className="max-w-7xl mx-auto space-y-5 sm:space-y-6">
         
         {/* ── 1. Header Banner & Title ── */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-white/[0.08] pb-6">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 border-b border-white/[0.08] pb-4">
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-400 shadow-md shadow-blue-500/20">
-                <CalendarIcon className="w-4 h-4" />
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className="w-7 h-7 rounded-lg bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-400 shadow-md shadow-blue-500/20">
+                <CalendarIcon className="w-3.5 h-3.5" />
               </div>
-              <span className="text-xs font-black uppercase tracking-wider text-blue-400">
+              <span className="text-[11px] font-black uppercase tracking-wider text-blue-400">
                 Lumina Broadcast Radar
               </span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
               Upcoming Release Calendar
             </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-xl">
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 max-w-xl">
               Track live airing countdowns, weekly broadcast schedules, and episode premieres across Anime, K-Drama, and Series.
             </p>
           </div>
@@ -317,7 +317,7 @@ export default function SchedulePage() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2.5 sm:gap-3">
             {filteredItems.map((item) => {
               const countdownStr = activeTab === 'anime' ? formatCountdown(item.airingAt) : null;
               const isToday = item.localWeekday === todayName;
@@ -326,7 +326,7 @@ export default function SchedulePage() {
                 <Link
                   key={`${item.id}-${item.airingAt || item.title}`}
                   href={`/${locale}${item.href}`}
-                  className="group relative flex flex-col rounded-2xl apple-glass border border-white/[0.08] hover:border-blue-500/50 overflow-hidden shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-blue-600/10"
+                  className="group relative flex flex-col rounded-xl apple-glass border border-white/[0.08] hover:border-blue-500/50 overflow-hidden shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-600/15"
                 >
                   {/* Poster Image Frame */}
                   <div className="relative aspect-[2/3] w-full bg-slate-900 overflow-hidden">
@@ -338,17 +338,17 @@ export default function SchedulePage() {
                     />
 
                     {/* Gradient Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent pointer-events-none" />
 
                     {/* Top Badges */}
-                    <div className="absolute top-2 left-2 right-2 flex items-center justify-between pointer-events-none">
+                    <div className="absolute top-1.5 left-1.5 right-1.5 flex items-center justify-between pointer-events-none">
                       {item.episode !== undefined && (
-                        <span className="px-2 py-0.5 rounded-lg bg-blue-600/90 text-white font-black text-[10px] shadow-md backdrop-blur-md">
+                        <span className="px-1.5 py-0.5 rounded-md bg-blue-600/90 text-white font-black text-[9px] shadow-sm backdrop-blur-md">
                           EP {item.episode}
                         </span>
                       )}
                       {item.score && (
-                        <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-black/60 text-amber-300 text-[10px] font-bold backdrop-blur-md">
+                        <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-black/60 text-amber-300 text-[9px] font-bold backdrop-blur-md">
                           <Star className="w-2.5 h-2.5 fill-amber-300" />
                           {item.score}
                         </span>
@@ -356,15 +356,15 @@ export default function SchedulePage() {
                     </div>
 
                     {/* Bottom Countdown or Time Tag */}
-                    <div className="absolute bottom-2 left-2 right-2 flex flex-col gap-1">
+                    <div className="absolute bottom-1.5 left-1.5 right-1.5 flex flex-col gap-0.5 pointer-events-none">
                       {countdownStr && (
-                        <span className="px-2 py-0.5 rounded-md bg-emerald-500/80 text-white font-bold text-[9px] w-fit backdrop-blur-md flex items-center gap-1">
+                        <span className="px-1.5 py-0.5 rounded bg-emerald-500/85 text-white font-bold text-[8.5px] w-fit backdrop-blur-md flex items-center gap-1">
                           <Clock className="w-2.5 h-2.5" />
                           {countdownStr}
                         </span>
                       )}
                       {item.localTime && item.localTime !== 'TBA' && (
-                        <span className="text-[10px] font-mono text-slate-300">
+                        <span className="text-[9px] font-mono text-slate-300 font-medium">
                           {item.localWeekday.slice(0, 3)} • {item.localTime}
                         </span>
                       )}
@@ -372,9 +372,9 @@ export default function SchedulePage() {
                   </div>
 
                   {/* Card Info Details */}
-                  <div className="p-3 flex flex-col flex-1 justify-between gap-2">
+                  <div className="p-2 sm:p-2.5 flex flex-col flex-1 justify-between gap-1.5">
                     <div>
-                      <h3 className="font-bold text-xs text-white line-clamp-2 group-hover:text-blue-400 transition-colors">
+                      <h3 className="font-bold text-xs text-white line-clamp-1 group-hover:text-blue-400 transition-colors" title={item.title}>
                         {item.title}
                       </h3>
                       {item.studio && (
@@ -382,11 +382,11 @@ export default function SchedulePage() {
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between pt-1 border-t border-white/[0.06] text-[10px] text-slate-400">
-                      <span className="capitalize">{item.format || 'Series'}</span>
-                      <span className="flex items-center gap-0.5 text-blue-400 font-bold group-hover:translate-x-0.5 transition-transform">
+                    <div className="flex items-center justify-between pt-1 border-t border-white/[0.06] text-[9.5px] text-slate-400">
+                      <span className="capitalize truncate max-w-[70px]">{item.format || 'Series'}</span>
+                      <span className="flex items-center gap-0.5 text-blue-400 font-bold group-hover:translate-x-0.5 transition-transform shrink-0">
                         <span>Watch</span>
-                        <ChevronRight className="w-3 h-3" />
+                        <ChevronRight className="w-2.5 h-2.5" />
                       </span>
                     </div>
                   </div>
