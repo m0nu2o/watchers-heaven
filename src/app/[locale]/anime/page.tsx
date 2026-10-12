@@ -73,6 +73,7 @@ export default function AnimePage() {
   const [totalPages, setTotalPages] = useState(1);
 
   // Filter state
+  const [animationTab, setAnimationTab] = useState<'anime' | 'donghua' | 'all'>('anime');
   const [selectedGenre, setSelectedGenre] = useState<string>('all');
   const [selectedYear, setSelectedYear] = useState('');
   const [sortBy, setSortBy] = useState('popularity.desc');
@@ -140,19 +141,23 @@ export default function AnimePage() {
           }
         );
         if (data.results) {
-          const filtered = data.results.filter(
-            (item) => isJapaneseAnime(item as ClassifiableMedia)
-          );
+          const filtered = data.results.filter((item) => {
+            const rec = item as unknown as ClassifiableMedia;
+            if (animationTab === 'anime') return isJapaneseAnime(rec);
+            if (animationTab === 'donghua') return rec.original_language === 'zh' || rec.origin_country?.includes('CN');
+            return isJapaneseAnime(rec) || rec.original_language === 'zh' || rec.origin_country?.includes('CN');
+          });
           setShows(filtered.slice(0, ITEMS_PER_PAGE));
           setTotalPages(Math.min(data.total_pages || 1, 500));
         }
       } else {
         const genres = selectedGenre === 'all' ? ['16'] : ['16', selectedGenre];
+        const langParam = animationTab === 'anime' ? 'ja' : animationTab === 'donghua' ? 'zh' : 'ja|zh';
         const fetchParams: Record<string, string> = {
           page: String(currentPage),
           sort_by: sortBy,
           with_genres: genres.join(','),
-          with_original_language: 'ja',
+          with_original_language: langParam,
           include_adult: 'false',
         };
 
@@ -177,7 +182,7 @@ export default function AnimePage() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, selectedGenre, selectedYear, sortBy, searchQuery]);
+  }, [currentPage, selectedGenre, selectedYear, sortBy, searchQuery, animationTab]);
 
   useEffect(() => {
     loadCatalog();
@@ -430,6 +435,54 @@ export default function AnimePage() {
 
           {/* Segmented Glass Genre & Sort Bar */}
           <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 apple-glass p-2 rounded-2xl border border-black/[0.08] dark:border-white/[0.08]">
+            {/* Category Selector: Anime vs Donghua vs All */}
+            <div className="flex items-center gap-1 bg-black/[0.04] dark:bg-white/[0.06] p-1 rounded-xl border border-black/[0.06] dark:border-white/[0.08] shrink-0 self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  setAnimationTab('anime');
+                  setCurrentPage(1);
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  animationTab === 'anime'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <span>🇯🇵</span>
+                <span>Anime</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAnimationTab('donghua');
+                  setCurrentPage(1);
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  animationTab === 'donghua'
+                    ? 'bg-gradient-to-r from-red-600 to-amber-600 text-white shadow-md'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <span>🇨🇳</span>
+                <span>Donghua</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAnimationTab('all');
+                  setCurrentPage(1);
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  animationTab === 'all'
+                    ? 'bg-indigo-600 text-white shadow-md'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                All
+              </button>
+            </div>
+
             {/* Audio Format Pills (All / Subbed / Dubbed) */}
             <div className="flex items-center gap-1 bg-black/[0.04] dark:bg-white/[0.06] p-1 rounded-xl border border-black/[0.06] dark:border-white/[0.08] shrink-0 self-start sm:self-auto">
               <button

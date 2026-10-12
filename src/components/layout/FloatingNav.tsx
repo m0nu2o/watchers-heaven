@@ -1,6 +1,6 @@
 'use client';
 import { 
-  Home, Search, MonitorPlay, Tv, Settings, Radio, Film, Compass, Folder, Bookmark
+  Home, Search, MonitorPlay, Tv, Settings, Radio, Film, Compass, Folder, Bookmark, Calendar
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -25,6 +25,7 @@ export function FloatingNav() {
     { icon: Compass, path: '/anime', label: t('anime') },
     { icon: Radio, path: '/live', label: t('live') },
     { icon: Film, path: '/k-drama', label: t('kDrama') },
+    { icon: Calendar, path: '/schedule', label: 'Schedule' },
     { icon: Bookmark, path: '/watchlist', label: t('watchlist') },
     { icon: Folder, path: '/collections', label: t('collections') },
   ];

@@ -16,7 +16,8 @@ import {
   Sun, 
   Moon,
   Layers,
-  Bot
+  Bot,
+  Calendar
 } from 'lucide-react';
 import { LuminaLogo } from '@/components/brand/LuminaLogo';
 import { AiChatModal } from '@/components/chat/AiChatModal';
@@ -109,6 +110,12 @@ export function Navbar() {
       label: t('kDrama') || 'K-Drama',
       path: '/k-drama',
       icon: Layers,
+    },
+    {
+      id: 'schedule',
+      label: 'Schedule',
+      path: '/schedule',
+      icon: Calendar,
     },
     {
       id: 'watchlist',

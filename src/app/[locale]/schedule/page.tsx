@@ -1,402 +1,396 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { useParams } from 'next/navigation';
 import {
-  Calendar,
+  Calendar as CalendarIcon,
   Clock,
-  Tv,
+  Search,
   Sparkles,
+  Tv,
+  Film,
+  RefreshCw,
   Star,
   Play,
-  Layers,
+  Globe,
   ChevronRight,
 } from 'lucide-react';
-import { ApiGateway } from '@/lib/api/gateway';
+
+const DAYS_OF_WEEK = [
+  'All Days',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+];
 
 interface ScheduleItem {
   id: number;
+  idMal?: number | null;
   title: string;
-  posterPath?: string;
-  coverImage?: string;
-  rating?: number;
-  type: 'tv' | 'anime';
-  statusBadge: string;
-  airDateLabel: string;
-  airTimestamp?: number;
-  nextEpisodeNum?: number;
+  image: string;
+  banner?: string | null;
+  episode?: number;
+  season?: number;
+  airingAt?: number;
+  airDate?: string;
+  timeUntilAiring?: number;
+  format?: string;
+  score?: string | null;
+  studio?: string | null;
   overview?: string;
+  category: 'anime' | 'kdrama' | 'tv';
+  country?: string;
+  href: string;
 }
 
 export default function SchedulePage() {
   const params = useParams();
-  const router = useRouter();
-  const locale = (params.locale as string) || 'en';
+  const locale = (params?.locale as string) || 'en';
 
-  const [activeTab, setActiveTab] = useState<'today' | 'week' | 'anime'>('today');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'tv' | 'anime'>('all');
-  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'anime' | 'kdrama' | 'tv'>('anime');
+  const [scheduleData, setScheduleData] = useState<ScheduleItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedDay, setSelectedDay] = useState<string>('All Days');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [userTimezone, setUserTimezone] = useState<string>('Local');
+  const [todayName, setTodayName] = useState<string>('');
+  const [nowTimestamp, setNowTimestamp] = useState<number>(Math.floor(Date.now() / 1000));
 
-  // Raw data from TMDB and AniList
-  const [todayTv, setTodayTv] = useState<ScheduleItem[]>([]);
-  const [weekTv, setWeekTv] = useState<ScheduleItem[]>([]);
-  const [airingAnime, setAiringAnime] = useState<ScheduleItem[]>([]);
-
+  // Detect user's timezone & current day of week on mount
   useEffect(() => {
-    let isMounted = true;
-
-    async function loadSchedule() {
-      setLoading(true);
-      try {
-        const [todayRes, weekRes, animeRes] = await Promise.allSettled([
-          ApiGateway.getTvAiringToday(1),
-          ApiGateway.getTvOnTheAir(1),
-          ApiGateway.getAiringAnime(1, 30),
-        ]);
-
-        if (!isMounted) return;
-
-        // Process TMDB Airing Today
-        if (todayRes.status === 'fulfilled' && todayRes.value?.results) {
-          const items: ScheduleItem[] = todayRes.value.results.map((show) => {
-            const isAnimeShow =
-              show.origin_country?.includes('JP') ||
-              show.original_language === 'ja';
-            return {
-              id: show.id,
-              title: show.name || show.original_name || `Show #${show.id}`,
-              posterPath: show.poster_path,
-              rating: show.vote_average,
-              type: isAnimeShow ? 'anime' : 'tv',
-              statusBadge: 'Airing Today',
-              airDateLabel: 'Today',
-              overview: show.overview,
-            };
-          });
-          setTodayTv(items);
-        }
-
-        // Process TMDB On The Air (This Week)
-        if (weekRes.status === 'fulfilled' && weekRes.value?.results) {
-          const items: ScheduleItem[] = weekRes.value.results.map((show) => {
-            const isAnimeShow =
-              show.origin_country?.includes('JP') ||
-              show.original_language === 'ja';
-            return {
-              id: show.id,
-              title: show.name || show.original_name || `Show #${show.id}`,
-              posterPath: show.poster_path,
-              rating: show.vote_average,
-              type: isAnimeShow ? 'anime' : 'tv',
-              statusBadge: 'New Episode',
-              airDateLabel: 'This Week',
-              overview: show.overview,
-            };
-          });
-          setWeekTv(items);
-        }
-
-        // Process AniList Releasing Anime
-        if (animeRes.status === 'fulfilled' && animeRes.value) {
-          const items: ScheduleItem[] = animeRes.value.map((anime) => {
-            const title =
-              anime.title.english ||
-              anime.title.romaji ||
-              `Anime #${anime.id}`;
-            const ep = anime.nextAiringEpisode?.episode;
-            const airTime = anime.nextAiringEpisode?.airingAt;
-
-            let dateLabel = 'Upcoming';
-            if (airTime) {
-              const diffMs = airTime * 1000 - Date.now();
-              const diffHours = Math.round(diffMs / (1000 * 60 * 60));
-              const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
-
-              if (diffHours <= 24 && diffHours > 0) {
-                dateLabel = `In ${diffHours} hours`;
-              } else if (diffDays === 1) {
-                dateLabel = 'Tomorrow';
-              } else if (diffDays > 1) {
-                dateLabel = `In ${diffDays} days`;
-              } else {
-                dateLabel = 'Airing Soon';
-              }
-            }
-
-            return {
-              id: anime.id,
-              title,
-              coverImage: anime.coverImage?.large,
-              rating: anime.averageScore ? anime.averageScore / 10 : undefined,
-              type: 'anime',
-              statusBadge: ep ? `Episode ${ep}` : 'Releasing',
-              airDateLabel: dateLabel,
-              airTimestamp: airTime,
-              nextEpisodeNum: ep,
-            };
-          });
-          setAiringAnime(items);
-        }
-      } catch (err) {
-        console.error('Failed to load schedule:', err);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Local';
+      setUserTimezone(tz);
+      const curDay = new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(new Date());
+      setTodayName(curDay);
+      setSelectedDay('All Days');
+    } catch {
+      setUserTimezone('Local');
+      setTodayName('Monday');
+      setSelectedDay('All Days');
     }
-
-    loadSchedule();
-
-    return () => {
-      isMounted = false;
-    };
   }, []);
 
-  // Filter items based on active tab and type filter
-  const displayedItems = useMemo(() => {
-    let list: ScheduleItem[] = [];
-    if (activeTab === 'today') list = todayTv;
-    else if (activeTab === 'week') list = weekTv;
-    else if (activeTab === 'anime') list = airingAnime;
+  // Update clock every 30s for live countdowns
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNowTimestamp(Math.floor(Date.now() / 1000));
+    }, 30000);
+    return () => clearInterval(timer);
+  }, []);
 
-    if (typeFilter !== 'all') {
-      list = list.filter((item) => item.type === typeFilter);
-    }
-    return list;
-  }, [activeTab, typeFilter, todayTv, weekTv, airingAnime]);
+  // Fetch schedule whenever active tab changes
+  const fetchSchedule = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
 
-  const handleCardClick = (item: ScheduleItem) => {
-    if (item.type === 'anime') {
-      router.push(`/${locale}/tv/${item.id}?from=anime`);
-    } else {
-      router.push(`/${locale}/tv/${item.id}`);
+    try {
+      const res = await fetch(`/api/schedule?type=${activeTab}&limit=120`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      if (data.success && Array.isArray(data.schedule)) {
+        setScheduleData(data.schedule);
+      } else {
+        throw new Error(data.error || 'No schedule returned');
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Failed to load schedule');
+    } finally {
+      setIsLoading(false);
     }
+  }, [activeTab]);
+
+  useEffect(() => {
+    fetchSchedule();
+  }, [fetchSchedule]);
+
+  // Convert air dates into user's local timezone & attach local weekday
+  const processedItems = useMemo(() => {
+    return scheduleData.map((item) => {
+      let localWeekday = 'Unknown';
+      let localTime = 'TBA';
+      let localDateLabel = '';
+
+      if (item.airingAt && item.airingAt > 0) {
+        const dateObj = new Date(item.airingAt * 1000);
+        try {
+          const tzOption = userTimezone === 'Local' ? undefined : userTimezone;
+          localWeekday = new Intl.DateTimeFormat('en-US', {
+            timeZone: tzOption,
+            weekday: 'long',
+          }).format(dateObj);
+
+          localTime = dateObj.toLocaleTimeString([], {
+            timeZone: tzOption,
+            hour: '2-digit',
+            minute: '2-digit',
+          });
+
+          localDateLabel = dateObj.toLocaleDateString([], {
+            timeZone: tzOption,
+            month: 'short',
+            day: 'numeric',
+          });
+        } catch {
+          // fallback
+        }
+      }
+
+      return {
+        ...item,
+        localWeekday,
+        localTime,
+        localDateLabel,
+      };
+    });
+  }, [scheduleData, userTimezone]);
+
+  // Filter by selected day and search query
+  const filteredItems = useMemo(() => {
+    return processedItems.filter((item) => {
+      const matchDay = selectedDay === 'All Days' || item.localWeekday === selectedDay;
+      const matchSearch =
+        !searchQuery.trim() ||
+        item.title.toLowerCase().includes(searchQuery.toLowerCase().trim());
+      return matchDay && matchSearch;
+    });
+  }, [processedItems, selectedDay, searchQuery]);
+
+  // Format countdown string for live airing ticker
+  const formatCountdown = (airingAt?: number) => {
+    if (!airingAt) return null;
+    const diff = airingAt - nowTimestamp;
+    if (diff <= 0) return 'Aired today';
+    const hours = Math.floor(diff / 3600);
+    const minutes = Math.floor((diff % 3600) / 60);
+    if (hours > 24) {
+      const days = Math.floor(hours / 24);
+      return `In ${days}d ${hours % 24}h`;
+    }
+    if (hours > 0) return `In ${hours}h ${minutes}m`;
+    return `In ${minutes}m`;
   };
 
   return (
-    <div className="min-h-screen bg-[#07090e] text-slate-100 flex flex-col font-sans">
-      {/* Header Banner */}
-      <div className="relative border-b border-slate-800/80 bg-gradient-to-b from-[#0b0f17] via-[#07090e] to-[#07090e] px-4 sm:px-8 pt-10 pb-8 overflow-hidden">
-        <div className="absolute top-0 right-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="max-w-7xl mx-auto relative z-10 space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold uppercase tracking-wider">
-            <Calendar className="w-3.5 h-3.5" />
-            <span>Release Schedule</span>
-          </div>
-          <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
-            Broadcast & Airing Calendar
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-400 max-w-xl leading-relaxed">
-            Live release schedules for ongoing television series and currently airing anime. 
-            All air dates and episode numbers are verified upstream.
-          </p>
-
-          {/* Navigation Tabs & Filter Bar */}
-          <div className="pt-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            {/* Primary Time Tabs */}
-            <div className="flex items-center gap-1.5 p-1 bg-[#0b0f17] border border-slate-800/80 rounded-2xl w-max">
-              <button
-                onClick={() => setActiveTab('today')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  activeTab === 'today'
-                    ? 'bg-blue-600 text-white shadow-lg'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-850'
-                }`}
-              >
-                <Clock className="w-3.5 h-3.5" />
-                <span>Airing Today</span>
-                {todayTv.length > 0 && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/20">
-                    {todayTv.length}
-                  </span>
-                )}
-              </button>
-              <button
-                onClick={() => setActiveTab('week')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  activeTab === 'week'
-                    ? 'bg-blue-600 text-white shadow-lg'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-850'
-                }`}
-              >
-                <Calendar className="w-3.5 h-3.5" />
-                <span>This Week</span>
-                {weekTv.length > 0 && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/20">
-                    {weekTv.length}
-                  </span>
-                )}
-              </button>
-              <button
-                onClick={() => setActiveTab('anime')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  activeTab === 'anime'
-                    ? 'bg-blue-600 text-white shadow-lg'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-850'
-                }`}
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Airing Anime</span>
-                {airingAnime.length > 0 && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/20">
-                    {airingAnime.length}
-                  </span>
-                )}
-              </button>
-            </div>
-
-            {/* Media Type Filter Chips */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500 font-semibold hidden sm:inline">Filter:</span>
-              <div className="flex items-center gap-1.5 p-1 bg-[#0b0f17] border border-slate-800/80 rounded-xl">
-                <button
-                  onClick={() => setTypeFilter('all')}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                    typeFilter === 'all'
-                      ? 'bg-slate-800 text-white'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  All
-                </button>
-                <button
-                  onClick={() => setTypeFilter('tv')}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                    typeFilter === 'tv'
-                      ? 'bg-indigo-600 text-white'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Series
-                </button>
-                <button
-                  onClick={() => setTypeFilter('anime')}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                    typeFilter === 'anime'
-                      ? 'bg-blue-600 text-white'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Anime
-                </button>
+    <div className="min-h-screen py-10 px-4 md:px-8 bg-[var(--color-main)] text-white">
+      <div className="max-w-7xl mx-auto space-y-8">
+        
+        {/* ── 1. Header Banner & Title ── */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-white/[0.08] pb-6">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-400 shadow-md shadow-blue-500/20">
+                <CalendarIcon className="w-4 h-4" />
               </div>
+              <span className="text-xs font-black uppercase tracking-wider text-blue-400">
+                Lumina Broadcast Radar
+              </span>
             </div>
+            <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+              Upcoming Release Calendar
+            </h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-xl">
+              Track live airing countdowns, weekly broadcast schedules, and episode premieres across Anime, K-Drama, and Series.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="apple-glass px-3 py-1.5 rounded-xl border border-white/10 flex items-center gap-2 text-xs text-slate-300">
+              <Globe className="w-3.5 h-3.5 text-blue-400" />
+              <span className="font-mono">{userTimezone}</span>
+            </div>
+            <button
+              onClick={() => fetchSchedule()}
+              disabled={isLoading}
+              className="apple-glass p-2.5 rounded-xl border border-white/10 hover:border-white/20 text-slate-300 hover:text-white transition active:scale-95"
+              title="Refresh Schedule"
+            >
+              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-blue-400' : ''}`} />
+            </button>
           </div>
         </div>
-      </div>
 
-      {/* Main Content Grid */}
-      <div className="max-w-7xl w-full mx-auto px-4 sm:px-8 py-8 flex-1">
-        {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-            {Array.from({ length: 12 }).map((_, idx) => (
-              <div
-                key={idx}
-                className="aspect-[2/3] rounded-2xl bg-slate-900/60 border border-slate-800 animate-pulse"
-              />
-            ))}
+        {/* ── 2. Top Multi-Category Tab Selector ── */}
+        <div className="flex flex-wrap items-center gap-2">
+          {[
+            { id: 'anime', label: '🎌 Anime Airing Schedule', badge: 'Live Countdowns' },
+            { id: 'kdrama', label: '🇰🇷 K-Drama Releases', badge: 'Korean TV' },
+            { id: 'tv', label: '📺 Global TV Series', badge: 'Western & Web Series' },
+          ].map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setActiveTab(tab.id as any);
+                  setSelectedDay('All Days');
+                }}
+                className={`flex items-center gap-2.5 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all duration-200 cursor-pointer border ${
+                  isActive
+                    ? 'bg-blue-600 text-white border-blue-500/80 shadow-lg shadow-blue-600/25 ring-1 ring-blue-400/40'
+                    : 'apple-glass text-slate-400 hover:text-white border-white/[0.08] hover:border-white/20'
+                }`}
+              >
+                <span>{tab.label}</span>
+                <span
+                  className={`text-[10px] px-1.5 py-0.5 rounded-md ${
+                    isActive ? 'bg-black/20 text-blue-100' : 'bg-white/[0.06] text-slate-400'
+                  }`}
+                >
+                  {tab.badge}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ── 3. Controls & Filter Deck (Days + Search Bar) ── */}
+        <div className="apple-glass p-3 rounded-2xl border border-white/[0.08] shadow-xl flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+          {/* Day of Week Selector */}
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1 flex-1 min-w-0" data-lenis-prevent>
+            {DAYS_OF_WEEK.map((day) => {
+              const isSelected = selectedDay === day;
+              const isToday = todayName === day && day !== 'All Days';
+
+              return (
+                <button
+                  key={day}
+                  onClick={() => setSelectedDay(day)}
+                  className={`relative px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
+                    isSelected
+                      ? 'bg-white text-slate-900 shadow-md font-black'
+                      : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
+                  }`}
+                >
+                  <span>{day}</span>
+                  {isToday && !isSelected && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400 absolute top-1.5 right-1.5" />
+                  )}
+                </button>
+              );
+            })}
           </div>
-        ) : displayedItems.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
-            <div className="w-16 h-16 rounded-3xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500">
-              <Layers className="w-8 h-8" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-white mb-1">No Broadcasts Found</h3>
-              <p className="text-xs text-slate-400 max-w-sm">
-                No items match the current tab and filter criteria. Try selecting another filter or tab.
-              </p>
-            </div>
+
+          {/* Title Search Input */}
+          <div className="relative w-full lg:w-72 shrink-0">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Filter by title..."
+              className="w-full pl-9 pr-4 py-2 rounded-xl apple-glass text-xs text-white placeholder:text-slate-500 border border-white/10 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+            />
+          </div>
+        </div>
+
+        {/* ── 4. Main Schedule Grid ── */}
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-24 space-y-4">
+            <RefreshCw className="w-8 h-8 text-blue-400 animate-spin" />
+            <p className="text-sm font-semibold text-slate-400">Loading airing broadcast schedules...</p>
+          </div>
+        ) : error ? (
+          <div className="apple-glass p-8 rounded-3xl border border-red-500/20 text-center max-w-md mx-auto space-y-3">
+            <p className="text-sm text-red-400 font-semibold">{error}</p>
+            <button
+              onClick={() => fetchSchedule()}
+              className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white transition"
+            >
+              Retry
+            </button>
+          </div>
+        ) : filteredItems.length === 0 ? (
+          <div className="apple-glass p-12 rounded-3xl border border-white/10 text-center max-w-lg mx-auto space-y-3">
+            <CalendarIcon className="w-10 h-10 text-slate-500 mx-auto" />
+            <h3 className="text-lg font-bold text-white">No releases found</h3>
+            <p className="text-xs text-slate-400">
+              No shows are scheduled to broadcast on {selectedDay} matching your search.
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-            {displayedItems.map((item) => {
-              const poster = item.coverImage
-                ? item.coverImage
-                : item.posterPath
-                ? `https://image.tmdb.org/t/p/w342${item.posterPath}`
-                : null;
+            {filteredItems.map((item) => {
+              const countdownStr = activeTab === 'anime' ? formatCountdown(item.airingAt) : null;
+              const isToday = item.localWeekday === todayName;
 
               return (
-                <div
-                  key={`${item.type}-${item.id}`}
-                  onClick={() => handleCardClick(item)}
-                  className="group relative flex flex-col bg-[#0b0f17] border border-slate-800/80 hover:border-slate-700 rounded-2xl overflow-hidden shadow-lg transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl cursor-pointer"
+                <Link
+                  key={`${item.id}-${item.airingAt || item.title}`}
+                  href={`/${locale}${item.href}`}
+                  className="group relative flex flex-col rounded-2xl apple-glass border border-white/[0.08] hover:border-blue-500/50 overflow-hidden shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-blue-600/10"
                 >
-                  {/* Poster image container */}
+                  {/* Poster Image Frame */}
                   <div className="relative aspect-[2/3] w-full bg-slate-900 overflow-hidden">
-                    {poster ? (
-                      <img
-                        src={poster}
-                        alt={item.title}
-                        loading="lazy"
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-900 to-[#07090e] p-4 text-center">
-                        <Tv className="w-8 h-8 text-slate-700 mb-2" />
-                      </div>
-                    )}
+                    <img
+                      src={item.image}
+                      alt={item.title}
+                      loading="lazy"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+
+                    {/* Gradient Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
 
                     {/* Top Badges */}
-                    <div className="absolute top-2 inset-x-2 flex items-center justify-between pointer-events-none z-10">
-                      {/* Rating */}
-                      {item.rating !== undefined && item.rating > 0 ? (
-                        <div className="flex items-center gap-1 bg-black/75 backdrop-blur-md text-white text-[10px] font-black px-2 py-0.5 rounded-lg border border-white/10 shadow-md">
-                          <Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
-                          <span className="text-amber-300">{item.rating.toFixed(1)}</span>
-                        </div>
-                      ) : <div />}
-
-                      {/* Type Badge */}
-                      <span
-                        className={`text-[9px] font-black px-1.5 py-0.5 rounded shadow-md uppercase tracking-wider backdrop-blur-md border border-white/10 ${
-                          item.type === 'anime'
-                            ? 'bg-blue-600/80 text-white'
-                            : 'bg-indigo-600/80 text-white'
-                        }`}
-                      >
-                        {item.type === 'anime' ? 'ANIME' : 'SERIES'}
-                      </span>
-                    </div>
-
-                    {/* Bottom air schedule badge overlay */}
-                    <div className="absolute bottom-2 inset-x-2 flex items-center justify-between pointer-events-none z-10">
-                      <span className="bg-emerald-500/90 text-black text-[9px] font-black px-2 py-0.5 rounded-md shadow-md backdrop-blur-sm">
-                        {item.airDateLabel}
-                      </span>
-                      <span className="bg-black/80 text-slate-200 text-[9px] font-bold px-1.5 py-0.5 rounded-md border border-white/10">
-                        {item.statusBadge}
-                      </span>
-                    </div>
-
-                    {/* Hover cinema overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center p-4">
-                      <div className="w-11 h-11 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
-                        <Play className="w-5 h-5 fill-white ml-0.5" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Card metadata footer */}
-                  <div className="p-3 flex flex-col justify-between flex-1 bg-[#0b0f17]">
-                    <div>
-                      <h4 className="text-xs font-bold text-white line-clamp-1 group-hover:text-blue-400 transition-colors">
-                        {item.title}
-                      </h4>
-                      {item.overview && (
-                        <p className="text-[10px] text-slate-400 line-clamp-2 mt-1 leading-relaxed">
-                          {item.overview}
-                        </p>
+                    <div className="absolute top-2 left-2 right-2 flex items-center justify-between pointer-events-none">
+                      {item.episode !== undefined && (
+                        <span className="px-2 py-0.5 rounded-lg bg-blue-600/90 text-white font-black text-[10px] shadow-md backdrop-blur-md">
+                          EP {item.episode}
+                        </span>
+                      )}
+                      {item.score && (
+                        <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-black/60 text-amber-300 text-[10px] font-bold backdrop-blur-md">
+                          <Star className="w-2.5 h-2.5 fill-amber-300" />
+                          {item.score}
+                        </span>
                       )}
                     </div>
-                    <div className="flex items-center justify-between text-[10px] font-semibold text-slate-500 mt-2.5 pt-2 border-t border-slate-800/60">
-                      <span className="text-slate-400">{item.statusBadge}</span>
-                      <span className="text-blue-400 group-hover:translate-x-0.5 transition-transform flex items-center">
-                        Details <ChevronRight className="w-3 h-3" />
+
+                    {/* Bottom Countdown or Time Tag */}
+                    <div className="absolute bottom-2 left-2 right-2 flex flex-col gap-1">
+                      {countdownStr && (
+                        <span className="px-2 py-0.5 rounded-md bg-emerald-500/80 text-white font-bold text-[9px] w-fit backdrop-blur-md flex items-center gap-1">
+                          <Clock className="w-2.5 h-2.5" />
+                          {countdownStr}
+                        </span>
+                      )}
+                      {item.localTime && item.localTime !== 'TBA' && (
+                        <span className="text-[10px] font-mono text-slate-300">
+                          {item.localWeekday.slice(0, 3)} • {item.localTime}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Card Info Details */}
+                  <div className="p-3 flex flex-col flex-1 justify-between gap-2">
+                    <div>
+                      <h3 className="font-bold text-xs text-white line-clamp-2 group-hover:text-blue-400 transition-colors">
+                        {item.title}
+                      </h3>
+                      {item.studio && (
+                        <p className="text-[10px] text-slate-400 mt-0.5 truncate">{item.studio}</p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1 border-t border-white/[0.06] text-[10px] text-slate-400">
+                      <span className="capitalize">{item.format || 'Series'}</span>
+                      <span className="flex items-center gap-0.5 text-blue-400 font-bold group-hover:translate-x-0.5 transition-transform">
+                        <span>Watch</span>
+                        <ChevronRight className="w-3 h-3" />
                       </span>
                     </div>
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>
@@ -405,4 +399,3 @@ export default function SchedulePage() {
     </div>
   );
 }
-

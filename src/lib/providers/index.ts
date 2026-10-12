@@ -12,10 +12,27 @@ export type { MediaType, MediaPlaybackConfig, ProviderAdapter };
 export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
   // ─── 1. Dedicated Anime Providers (1080p, Verified Sub/Dub, 0 Dead Servers) ───
   {
+    id: 'direct-hls',
+    name: 'Hikari Direct 4K',
+    quality: '4K/1080p / Direct HLS / 0 Ads',
+    badge: '⚡',
+    supportsMovie: false,
+    supportsTV: false,
+    supportsAnime: true,
+    supportsEnglishDub: true,
+    supportsHindiDub: false,
+    requiresApiKey: false,
+    isConfigured: () => true,
+    getPlaybackUrl: (cfg) => {
+      const type = (cfg.season !== undefined && cfg.episode !== undefined) ? 'tv' : 'movie';
+      return ApiGateway.getVidSrcSuUrl(cfg.tmdbId, type, cfg.season || 1, cfg.episode || 1);
+    },
+  },
+  {
     id: 'vidsrc-su-anime',
     name: 'VidSrc Anime Ultra',
     quality: '1080p / Sub+Dub / 0 Ads',
-    badge: '⚡',
+    badge: '🎬',
     supportsMovie: false,
     supportsTV: false,
     supportsAnime: true,
@@ -135,6 +152,11 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
  * automatically redirects to a live 200 OK verified server instead of failing.
  */
 const PROVIDER_ALIASES: Record<string, string> = {
+  // Direct HLS alias
+  'direct-hls': 'direct-hls',
+  'hikari': 'direct-hls',
+  'reanime': 'direct-hls',
+
   // Nova aliases
   'nova': 'nova',
   'nova-anime': 'nova',

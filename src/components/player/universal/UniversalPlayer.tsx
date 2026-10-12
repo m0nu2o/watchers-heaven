@@ -7,6 +7,7 @@ import React, {
   useCallback,
   useMemo,
 } from 'react';
+import { Zap, RotateCw } from 'lucide-react';
 import { UniversalPlayerEngine } from '@/lib/player/engine';
 import {
   NormalizedPlaybackSource,
@@ -687,6 +688,30 @@ export function UniversalPlayer({
             accentColor={accentColor}
           />
         </>
+      )}
+
+      {/* ── 3b. Embed Fast Recovery Bar (Quick Switch & Reload when third-party servers lag or black-screen) ── */}
+      {isEmbed && controlsVisible && !state.error && !externalError && !state.loading && !isLoadingSource && (
+        <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 z-20 flex items-center gap-2 pointer-events-auto transition-all animate-fade-in">
+          <button
+            onClick={() => {
+              if (iframeRef.current) iframeRef.current.src = source.url;
+            }}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-black/60 hover:bg-black/80 text-white/90 text-[11px] font-semibold backdrop-blur-md border border-white/15 shadow-lg active:scale-95 transition"
+            title="Reload Server Player"
+          >
+            <RotateCw className="w-3 h-3 text-slate-300" />
+            <span className="hidden sm:inline">Reload</span>
+          </button>
+          <button
+            onClick={() => onNextServerFallback(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600/80 hover:bg-blue-600 text-white text-[11px] font-bold backdrop-blur-md border border-blue-400/40 shadow-lg shadow-blue-600/20 active:scale-95 transition"
+            title="Switch to next server if current server is black or buffering"
+          >
+            <Zap className="w-3 h-3 text-amber-300 fill-amber-300" />
+            <span>Switch Server</span>
+          </button>
+        </div>
       )}
 
       {/* ── 4. Status & Loading Overlay (Apple Blur with Spinner) ── */}

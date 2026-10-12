@@ -234,13 +234,19 @@ html:not(.dark) .apple-card:hover {
   );
 }
 
-/* Scroll Snap & Hidden Scrollbars for Horizontal Rails & Chips */
-.carousel,
+/* Scroll Snap Carousel */
+.carousel {
+  scroll-snap-type: x mandatory;
+  overflow-x: auto;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Hidden Scrollbars for Horizontal Rails & Chips */
 .scrollbar-none,
 .no-scrollbar,
 .scrollbar-hide {
-  scroll-snap-type: x mandatory;
-  overflow-x: auto;
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
   -webkit-overflow-scrolling: touch;

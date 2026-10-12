@@ -99,8 +99,13 @@ export default function KDramaPage() {
           page: String(currentPage),
           sort_by: sortBy,
           with_original_language: langParam,
-          include_adult: 'false'
+          include_adult: 'false',
         };
+        if (dramaTab === 'kdrama') {
+          params.with_origin_country = 'KR';
+        } else if (dramaTab === 'cdrama') {
+          params.with_origin_country = 'CN|TW';
+        }
 
         if (selectedGenres.length > 0) {
           params.with_genres = selectedGenres.join(',');

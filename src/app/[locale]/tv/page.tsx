@@ -84,6 +84,8 @@ export default function TvShowsPage() {
             results = results.filter((r) => r.original_language === 'en');
           } else if (selectedIndustry === 'bollywood') {
             results = results.filter((r) => r.original_language === 'hi');
+          } else if (selectedIndustry === 'kdrama') {
+            results = results.filter((r) => r.original_language === 'ko' || (r.origin_country as string[])?.includes('KR'));
           }
           setShows(results.slice(0, ITEMS_PER_PAGE));
           setTotalPages(Math.min(data.total_pages || 1, 500));
@@ -105,6 +107,9 @@ export default function TvShowsPage() {
           params.with_original_language = 'en';
         } else if (selectedIndustry === 'bollywood') {
           params.with_original_language = 'hi';
+        } else if (selectedIndustry === 'kdrama') {
+          params.with_original_language = 'ko';
+          params.with_origin_country = 'KR';
         }
         if (sortBy === 'vote_average.desc') {
           params['vote_count.gte'] = '200';
@@ -227,7 +232,8 @@ export default function TvShowsPage() {
                 {[
                   { id: '', name: tFil('allIndustries') },
                   { id: 'hollywood', name: tFil('hollywood') },
-                  { id: 'bollywood', name: tFil('bollywood') }
+                  { id: 'bollywood', name: 'Hindi TV / Serials' },
+                  { id: 'kdrama', name: 'K-Drama' },
                 ].map(ind => (
                   <button
                     key={ind.id}

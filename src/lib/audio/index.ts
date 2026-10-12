@@ -10,6 +10,7 @@ import {
 } from './types';
 import { AudioAvailabilityCache, isKnownTheatricalHindiDub, KNOWN_HINDI_DUBBED_TMDB_IDS } from './cache';
 import { PROVIDER_AUDIO_CAPABILITIES } from './providers';
+import { resolveStreamingSources } from '@/lib/anime/streamResolver';
 
 export * from './types';
 export * from './cache';
@@ -874,6 +875,41 @@ export async function resolveAudioSourceAsync(
     chosenProvider = preferredProvider;
   } else if (compatibleProviders.length > 0) {
     chosenProvider = compatibleProviders[0].id;
+  }
+
+  // ── High-Performance Direct HLS Anime Engine (Ported from Taro) ──
+  // Resolves direct ad-free HLS m3u8 streams with subtitles and intro chapters for anime and donghua
+  if (
+    effectiveMediaType === 'anime' &&
+    (preferredProvider === 'direct-hls' || (!preferredProvider && track.id !== 'dub-hi'))
+  ) {
+    try {
+      const streamResult = await resolveStreamingSources({
+        animeId: resolvedAniListId ?? undefined,
+        episode: episode || 1,
+        isDub: track.id === 'dub-en' || track.id === 'dub',
+        malId: resolvedMalId ?? undefined,
+        tmdbId: id,
+        title,
+        country: originalLanguage === 'zh' ? 'CN' : undefined,
+      });
+
+      if (streamResult?.success && streamResult.primaryUrl) {
+        AudioAvailabilityCache.setPreferredLanguage(audioTrackId);
+        return {
+          success: true,
+          available: true,
+          provider: streamResult.provider || 'direct-hls',
+          url: streamResult.primaryUrl,
+          isHls: Boolean(streamResult.isHls),
+          subtitles: streamResult.subtitles || [],
+          skipTimestamps: streamResult.skipTimestamps,
+          track,
+        };
+      }
+    } catch (streamErr) {
+      console.warn('Anime direct HLS resolution fallback:', streamErr);
+    }
   }
 
   const playbackUrl = ProviderRegistry.resolvePlaybackUrl(chosenProvider, {
