@@ -565,12 +565,24 @@ export default function WatchPage() {
       const mediaType = isActuallyAnime ? 'anime' : isActuallyTv ? 'tv' : 'movie';
 
       if (newProviderId === 'direct-hls') {
-        setIsDirectHls(true);
         void resolveCurrentSource(selectedAudioTrack, 'direct-hls').then((result) => {
           if (result?.url) {
             setEmbedUrl(result.url);
+            setIsDirectHls(Boolean(result.isHls));
             if (result.subtitles) setSubtitles(result.subtitles);
             if (result.skipTimestamps) setSkipTimestamps(result.skipTimestamps);
+          } else {
+            setIsDirectHls(false);
+            const fallbackUrl = ProviderRegistry.resolvePlaybackUrl('vidsrc-su-anime', {
+              mediaType,
+              tmdbId: id,
+              imdbId: effectiveImdb,
+              season,
+              episode,
+              title: mediaTitle,
+              audioTrackId: selectedAudioTrack,
+            });
+            if (fallbackUrl) setEmbedUrl(fallbackUrl);
           }
         });
       } else {
@@ -650,10 +662,23 @@ export default function WatchPage() {
         const result = await resolveCurrentSource(selectedAudioTrack, 'direct-hls');
         if (!cancelled && result?.url) {
           setEmbedUrl(result.url);
-          setIsDirectHls(true);
+          setIsDirectHls(Boolean(result.isHls));
           if (result.subtitles) setSubtitles(result.subtitles);
           if (result.skipTimestamps) setSkipTimestamps(result.skipTimestamps);
           setPlaybackError(null);
+        } else if (!cancelled) {
+          setIsDirectHls(false);
+          const effectiveImdb = imdbId || ApiGateway.getCachedImdbId(id) || undefined;
+          const fallbackUrl = ProviderRegistry.resolvePlaybackUrl('vidsrc-su-anime', {
+            mediaType: currentMediaType,
+            tmdbId: id,
+            imdbId: effectiveImdb,
+            season,
+            episode,
+            title: mediaTitle,
+            audioTrackId: selectedAudioTrack,
+          });
+          if (fallbackUrl) setEmbedUrl(fallbackUrl);
         }
       } else {
         const effectiveImdb = imdbId || ApiGateway.getCachedImdbId(id) || undefined;

@@ -12,22 +12,6 @@ export type { MediaType, MediaPlaybackConfig, ProviderAdapter };
 export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
   // ─── 1. Dedicated Anime Providers (1080p, Verified Sub/Dub, 0 Dead Servers) ───
   {
-    id: 'direct-hls',
-    name: 'Hikari Direct 4K',
-    quality: '4K/1080p / Direct HLS / 0 Ads',
-    badge: '⚡',
-    supportsMovie: false,
-    supportsTV: false,
-    supportsAnime: true,
-    supportsEnglishDub: true,
-    supportsHindiDub: false,
-    requiresApiKey: false,
-    isConfigured: () => true,
-    getPlaybackUrl: (cfg) => {
-      return `/api/proxy/stream?type=anime&id=${cfg.tmdbId}&e=${cfg.episode || 1}`;
-    },
-  },
-  {
     id: 'vidsrc-su-anime',
     name: 'VidSrc Anime Ultra',
     quality: '1080p / Sub+Dub / 0 Ads',
@@ -42,6 +26,23 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     getPlaybackUrl: (cfg) => {
       const type = (cfg.season !== undefined && cfg.episode !== undefined) ? 'tv' : 'movie';
       return ApiGateway.getVidSrcSuUrl(cfg.tmdbId, type, cfg.season || 1, cfg.episode || 1);
+    },
+  },
+  {
+    id: 'direct-hls',
+    name: 'Hikari Direct 4K',
+    quality: '4K/1080p / Direct HLS / 0 Ads',
+    badge: '⚡',
+    supportsMovie: false,
+    supportsTV: false,
+    supportsAnime: true,
+    supportsEnglishDub: true,
+    supportsHindiDub: false,
+    requiresApiKey: false,
+    isConfigured: () => true,
+    getPlaybackUrl: (cfg) => {
+      const isDub = cfg.audioTrackId === 'dub-en' || cfg.audioTrackId === 'dub';
+      return `/api/proxy/stream?type=anime&id=${cfg.tmdbId}&e=${cfg.episode || 1}${isDub ? '&dub=1' : ''}`;
     },
   },
   {

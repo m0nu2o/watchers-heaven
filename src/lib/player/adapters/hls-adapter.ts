@@ -8,6 +8,8 @@ export class HlsAdapter implements PlayerAdapter {
   private video: HTMLVideoElement | null = null;
   private callbacks: PlayerAdapterCallbacks | null = null;
   private cleanups: (() => void)[] = [];
+  private watchdogTimer: NodeJS.Timeout | null = null;
+  private networkRetryCount = 0;
 
   async initialize(
     container: HTMLElement,
@@ -17,6 +19,7 @@ export class HlsAdapter implements PlayerAdapter {
     initialTime = 0
   ): Promise<void> {
     this.callbacks = callbacks;
+    this.networkRetryCount = 0;
 
     if (!(mediaElement instanceof HTMLVideoElement)) {
       callbacks.onError('HlsAdapter requires an HTMLVideoElement');
@@ -25,6 +28,12 @@ export class HlsAdapter implements PlayerAdapter {
     this.video = mediaElement;
 
     callbacks.onStateChange({ loading: true, buffering: true, statusMessage: 'Connecting HLS stream...' });
+
+    // 6.5s Watchdog: If HLS stream fails to parse manifest within 6.5s, trigger automatic fallback
+    this.watchdogTimer = setTimeout(() => {
+      console.warn(`[HlsAdapter] Stream for "${source.providerName}" timed out after 6.5s. Requesting fallback.`);
+      callbacks.onFallbackNeeded('HLS stream connection timed out');
+    }, 6500);
 
     // 1. Check Hls.js support
     if (Hls.isSupported()) {
@@ -80,8 +89,15 @@ export class HlsAdapter implements PlayerAdapter {
           })),
         ];
 
+        // Clear watchdog timer once manifest is successfully parsed
+        if (this.watchdogTimer) {
+          clearTimeout(this.watchdogTimer);
+          this.watchdogTimer = null;
+        }
+
         callbacks.onStateChange({
           loading: false,
+          buffering: false,
           availableQualities: qualities,
           availableAudioTracks: audioTracks.length > 0 ? audioTracks : source.audioTracks || [],
           availableSubtitleTracks: subtitleTracks,
@@ -113,8 +129,19 @@ export class HlsAdapter implements PlayerAdapter {
         if (data.fatal) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
-              console.warn('[HLS] Fatal network error, attempting recovery...');
-              hls.startLoad();
+              this.networkRetryCount += 1;
+              if (this.networkRetryCount > 2) {
+                console.warn('[HLS] Exceeded network retry limit. Requesting fallback.');
+                if (this.watchdogTimer) {
+                  clearTimeout(this.watchdogTimer);
+                  this.watchdogTimer = null;
+                }
+                hls.destroy();
+                callbacks.onFallbackNeeded('HLS stream network error');
+              } else {
+                console.warn(`[HLS] Network error retry ${this.networkRetryCount}/2...`);
+                hls.startLoad();
+              }
               break;
             case Hls.ErrorTypes.MEDIA_ERROR:
               console.warn('[HLS] Fatal media error, recovering...');
@@ -122,6 +149,10 @@ export class HlsAdapter implements PlayerAdapter {
               break;
             default:
               console.error('[HLS] Unrecoverable error:', data);
+              if (this.watchdogTimer) {
+                clearTimeout(this.watchdogTimer);
+                this.watchdogTimer = null;
+              }
               hls.destroy();
               callbacks.onFallbackNeeded('HLS stream failed to play');
               break;
@@ -266,6 +297,11 @@ export class HlsAdapter implements PlayerAdapter {
   }
 
   destroy(): void {
+    if (this.watchdogTimer) {
+      clearTimeout(this.watchdogTimer);
+      this.watchdogTimer = null;
+    }
+
     this.cleanups.forEach((c) => c());
     this.cleanups = [];
 

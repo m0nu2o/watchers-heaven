@@ -131,9 +131,13 @@ export async function GET(req: NextRequest) {
           episode: ep,
           isDub,
         });
-        if (streamResult?.primaryUrl) {
+        if (streamResult?.primaryUrl && streamResult.isHls) {
           return NextResponse.redirect(new URL(streamResult.primaryUrl, req.url));
         }
+        return NextResponse.json(
+          { error: 'No direct HLS stream available for this title', fallback: 'embed' },
+          { status: 404 }
+        );
       } catch (err) {
         console.warn('Failed to auto-resolve anime stream in proxy:', err);
       }

@@ -83,6 +83,7 @@ export function UniversalPlayer({
   const videoRef = useRef<HTMLVideoElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const engineRef = useRef<UniversalPlayerEngine>(new UniversalPlayerEngine());
+  const currentLoadedSourceRef = useRef<string>('');
 
   const isEmbed = source.type === 'embed';
 
@@ -158,7 +159,19 @@ export function UniversalPlayer({
     let isCancelled = false;
     const mediaEl = isEmbed ? iframeRef.current : videoRef.current;
 
-    if (!mediaEl) return;
+    if (!mediaEl || !source.url) return;
+
+    const sourceKey = `${source.type}:${source.url}:${source.providerId}`;
+    if (currentLoadedSourceRef.current === sourceKey) {
+      // Just update track and quality metadata without tearing down player engine
+      handleStateChange({
+        availableQualities: source.qualities || state.availableQualities,
+        availableAudioTracks: source.audioTracks || state.availableAudioTracks,
+        availableSubtitleTracks: source.subtitleTracks || state.availableSubtitleTracks,
+      });
+      return;
+    }
+    currentLoadedSourceRef.current = sourceKey;
 
     const init = async () => {
       handleStateChange({
@@ -622,7 +635,8 @@ export function UniversalPlayer({
           ref={videoRef}
           playsInline
           autoPlay={preferences.autoPlay}
-          className="w-full h-full object-contain absolute inset-0 bg-black z-0 pointer-events-auto"
+          onClick={togglePlay}
+          className="w-full h-full object-contain absolute inset-0 bg-black z-0 pointer-events-auto cursor-pointer"
         />
       )}
 
@@ -660,8 +674,8 @@ export function UniversalPlayer({
       {/* ── 3. Direct Playback Custom Controls (ONLY for direct/HLS streams — Never over third-party iframes!) ── */}
       {!isEmbed && (
         <>
-          {/* Center Play, Seek, Prev/Next Controls (Never overlaps loading spinner) */}
-          {!state.loading && !state.buffering && (
+          {/* Center Play, Seek, Prev/Next Controls (Always available when paused so user can start playback) */}
+          {(!state.loading || !state.playing) && (
             <PlayerCenterControls
               playing={state.playing}
               onTogglePlay={togglePlay}
