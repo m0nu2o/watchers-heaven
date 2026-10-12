@@ -1606,7 +1606,7 @@ export default function WatchPage() {
       </div>
 
       {/* ──────────────── APPLE-GRADE UNDER-PLAYER CONTROL DECK ──────────────── */}
-      <div className="max-w-7xl w-full mx-auto px-2.5 sm:px-6 pt-3 pb-2 overflow-hidden flex flex-col gap-3">
+      <div className="max-w-7xl w-full mx-auto px-2.5 sm:px-6 pt-3 pb-2 flex flex-col gap-3">
         {/* 1. Lumina Apple-Grade Server Selection Deck */}
         <LuminaServerDeck
           servers={availableProviders}

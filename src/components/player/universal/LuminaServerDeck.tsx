@@ -45,7 +45,7 @@ export function LuminaServerDeck({
   return (
     <section
       aria-label="Streaming Server Selection"
-      className="w-full rounded-2xl apple-glass p-2.5 sm:p-3 border border-white/[0.08] shadow-xl relative overflow-hidden backdrop-blur-xl"
+      className="w-full rounded-2xl apple-glass p-2.5 sm:p-3 border border-white/[0.08] shadow-xl relative overflow-clip backdrop-blur-xl"
     >
       {/* Subtle ambient light glow */}
       <div
@@ -76,7 +76,7 @@ export function LuminaServerDeck({
         </div>
 
         {/* Server Pills Horizontal Carousel / Deck */}
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 flex-1 sm:justify-end">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 flex-1 min-w-0">
           {servers.map((server) => {
             const isActive = server.id === activeServerId;
             const health = ProviderTelemetry.getHealth(server.id);
