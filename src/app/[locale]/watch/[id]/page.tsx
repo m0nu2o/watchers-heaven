@@ -578,8 +578,12 @@ export default function WatchPage() {
         });
 
         if (instantUrl) {
-          setEmbedUrl(instantUrl);
-          setIsDirectHls(Boolean(instantUrl.includes('.m3u8')));
+          if (newProviderId !== 'direct-hls') {
+            setEmbedUrl(instantUrl);
+            setIsDirectHls(false);
+          } else {
+            setIsDirectHls(true);
+          }
         }
       } catch (err) {
         console.warn('Instant server switch resolution failed:', err);
@@ -1517,6 +1521,7 @@ export default function WatchPage() {
           onSelectServer={handleSelectServer}
           mediaType={currentMediaType}
           selectedAudioTrack={selectedAudioTrack}
+          onSelectAudioTrack={handleSelectAudioTrack}
           accentColor={accentColor.startsWith('#') ? accentColor : `#${accentColor}`}
           isLoadingSource={isResolvingSource}
         />

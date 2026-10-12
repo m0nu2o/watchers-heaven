@@ -12,7 +12,12 @@ export class UniversalPlayerEngine {
     if (!url) return 'embed';
     const clean = url.toLowerCase().split('?')[0];
 
-    if (explicitDirectHls || clean.endsWith('.m3u8') || url.includes('.m3u8')) {
+    if (
+      explicitDirectHls ||
+      clean.endsWith('.m3u8') ||
+      url.includes('.m3u8') ||
+      url.includes('/api/proxy/stream')
+    ) {
       return 'hls';
     }
     if (clean.endsWith('.mpd') || url.includes('.mpd')) {

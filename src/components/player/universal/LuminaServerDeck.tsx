@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { Check, Radio, ChevronLeft, ChevronRight, Zap } from 'lucide-react';
+import { Check, Radio, ChevronLeft, ChevronRight, Volume2, Mic, Subtitles } from 'lucide-react';
 import { ProviderAdapter, MediaType } from '@/types/media';
 import { ProviderTelemetry } from '@/lib/providers';
 
@@ -11,6 +11,7 @@ export interface LuminaServerDeckProps {
   onSelectServer: (serverId: string) => void;
   mediaType: MediaType;
   selectedAudioTrack?: string;
+  onSelectAudioTrack?: (trackId: string) => void;
   accentColor?: string;
   isLoadingSource?: boolean;
 }
@@ -21,6 +22,7 @@ export function LuminaServerDeck({
   onSelectServer,
   mediaType,
   selectedAudioTrack = 'sub',
+  onSelectAudioTrack,
   accentColor = '#3b82f6',
   isLoadingSource = false,
 }: LuminaServerDeckProps) {
@@ -35,6 +37,7 @@ export function LuminaServerDeck({
   const isAnime = mediaType === 'anime';
   const isHindiDubSelected = selectedAudioTrack === 'dub-hi' || selectedAudioTrack === 'hindi';
   const isEnglishDubSelected = selectedAudioTrack === 'dub-en' || selectedAudioTrack === 'dub';
+  const isSubSelected = !isHindiDubSelected && !isEnglishDubSelected;
 
   const categoryLabel = isAnime
     ? 'Anime Engines'
@@ -42,21 +45,13 @@ export function LuminaServerDeck({
     ? 'Series Relays'
     : 'Cinema Network';
 
-  const filterNotice = isHindiDubSelected
-    ? 'Hindi DUB'
-    : isEnglishDubSelected
-    ? 'English DUB'
-    : isAnime
-    ? 'Sub & Dub'
-    : 'Multi-Audio';
-
   // Check scroll boundary state
   const updateScrollState = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
     const { scrollLeft, scrollWidth, clientWidth } = el;
-    setCanScrollLeft(scrollLeft > 4);
-    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 4);
+    setCanScrollLeft(scrollLeft > 6);
+    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 6);
   }, []);
 
   // Sync scroll boundaries on mount and resize
@@ -88,7 +83,7 @@ export function LuminaServerDeck({
     return () => el.removeEventListener('wheel', handleWheel);
   }, [updateScrollState]);
 
-  // Auto-scroll active server into center view
+  // Auto-scroll active server into center view without layout thrashing
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -100,7 +95,7 @@ export function LuminaServerDeck({
         block: 'nearest',
         inline: 'center',
       });
-      setTimeout(updateScrollState, 350);
+      setTimeout(updateScrollState, 300);
     }
   }, [activeServerId, updateScrollState]);
 
@@ -113,7 +108,7 @@ export function LuminaServerDeck({
       left: direction === 'left' ? -distance : distance,
       behavior: 'smooth',
     });
-    setTimeout(updateScrollState, 300);
+    setTimeout(updateScrollState, 280);
   };
 
   // Mouse Drag-to-Scroll handlers
@@ -146,7 +141,7 @@ export function LuminaServerDeck({
   return (
     <section
       aria-label="Streaming Server Selection"
-      className="w-full rounded-2xl apple-glass p-2.5 sm:p-3 border border-white/[0.08] shadow-xl relative overflow-hidden backdrop-blur-xl group/deck"
+      className="w-full rounded-2xl apple-glass p-2.5 sm:p-3 border border-black/10 dark:border-white/[0.08] shadow-xl relative overflow-hidden backdrop-blur-xl group/deck"
     >
       {/* Subtle ambient light glow */}
       <div
@@ -156,27 +151,74 @@ export function LuminaServerDeck({
         }}
       />
 
-      <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-2.5 min-w-0">
-        {/* Left header tag */}
-        <div className="flex items-center gap-2 shrink-0 select-none">
+      <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-3 min-w-0">
+        {/* Left header tag + Sub/Dub Mode Selector */}
+        <div className="flex items-center gap-2.5 shrink-0 select-none flex-wrap sm:flex-nowrap">
           <div className="w-6 h-6 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center shrink-0">
             <Radio className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
           </div>
+
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="text-[11px] font-black uppercase tracking-wider text-white truncate">
+            <span className="text-[11px] font-black uppercase tracking-wider text-slate-800 dark:text-white truncate">
               {categoryLabel}
             </span>
-            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center gap-1 shrink-0">
-              <span className="w-1 h-1 rounded-full bg-emerald-400 animate-ping inline-block" />
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center gap-1 shrink-0">
+              <span className="w-1 h-1 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-ping inline-block" />
               {servers.length} Online
             </span>
-            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-white/[0.06] text-slate-400 hidden sm:inline-block">
-              {filterNotice}
-            </span>
           </div>
+
+          {/* ── Sub & Dub Direct 1-Click Toggle (Ported from Taro HSL Server Engine) ── */}
+          {onSelectAudioTrack && (
+            <div className="flex items-center gap-1 bg-black/5 dark:bg-white/[0.06] p-0.5 rounded-xl border border-black/5 dark:border-white/10 shrink-0 ml-auto sm:ml-2">
+              <button
+                type="button"
+                onClick={() => onSelectAudioTrack('sub')}
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                  isSubSelected
+                    ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/30 ring-1 ring-blue-500/50'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
+                }`}
+                title="Original Japanese / Subtitles"
+              >
+                <Subtitles className="w-3 h-3" />
+                <span>SUB</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onSelectAudioTrack('dub-en')}
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                  isEnglishDubSelected
+                    ? 'bg-purple-600 text-white shadow-sm shadow-purple-600/30 ring-1 ring-purple-500/50'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
+                }`}
+                title="English Dubbed Audio"
+              >
+                <Mic className="w-3 h-3" />
+                <span>DUB</span>
+              </button>
+
+              {servers.some((s) => s.supportsHindiDub) && (
+                <button
+                  type="button"
+                  onClick={() => onSelectAudioTrack('dub-hi')}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                    isHindiDubSelected
+                      ? 'bg-amber-600 text-white shadow-sm shadow-amber-600/30 ring-1 ring-amber-500/50'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
+                  }`}
+                  title="Hindi Dubbed Audio"
+                >
+                  <Volume2 className="w-3 h-3" />
+                  <span>HINDI</span>
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Carousel Container with Scroll Arrows */}
+        {/* Carousel Container with Elegant Adaptive Light/Dark Chevrons */}
         <div className="relative flex items-center min-w-0 flex-1">
           {/* Left Arrow Button */}
           {canScrollLeft && (
@@ -184,7 +226,7 @@ export function LuminaServerDeck({
               type="button"
               onClick={() => scrollStep('left')}
               aria-label="Scroll servers left"
-              className="absolute left-0 z-20 w-7 h-7 rounded-full bg-black/80 hover:bg-blue-600/90 text-white flex items-center justify-center backdrop-blur-md border border-white/20 shadow-lg transition-all duration-200 -translate-x-1"
+              className="absolute left-0 z-20 w-7 h-7 rounded-full bg-white/95 dark:bg-slate-900/95 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 text-slate-700 dark:text-white flex items-center justify-center backdrop-blur-md border border-slate-200/80 dark:border-white/15 shadow-md transition-all duration-150 -translate-x-1 cursor-pointer"
             >
               <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
             </button>
@@ -192,7 +234,7 @@ export function LuminaServerDeck({
 
           {/* Left Gradient Fade Mask */}
           {canScrollLeft && (
-            <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-black/80 to-transparent pointer-events-none z-10" />
+            <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white via-white/80 dark:from-slate-950 dark:via-slate-950/80 to-transparent pointer-events-none z-10" />
           )}
 
           {/* Server Pills Horizontal Carousel / Deck */}
@@ -223,10 +265,10 @@ export function LuminaServerDeck({
                   }}
                   disabled={isLoadingSource && isActive}
                   aria-pressed={isActive}
-                  className={`group relative flex items-center gap-2 px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer shrink-0 select-none border whitespace-nowrap ${
+                  className={`group relative flex items-center gap-2 px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-colors duration-150 cursor-pointer shrink-0 select-none border whitespace-nowrap ${
                     isActive
-                      ? 'bg-blue-600/30 border-blue-400 text-white shadow-md shadow-blue-600/25 ring-1 ring-blue-500/50 scale-[1.02]'
-                      : 'bg-white/[0.04] hover:bg-white/[0.08] border-white/[0.08] hover:border-white/20 text-slate-300 hover:text-white'
+                      ? 'bg-blue-600/25 border-blue-500 text-blue-700 dark:text-white shadow-sm ring-1 ring-blue-500/40'
+                      : 'bg-black/[0.03] dark:bg-white/[0.04] hover:bg-black/[0.06] dark:hover:bg-white/[0.08] border-black/10 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   {/* Server Badge & Status Dot */}
@@ -240,24 +282,24 @@ export function LuminaServerDeck({
                   {/* Badges / Active Pill */}
                   <div className="flex items-center gap-1.5 text-[10px]">
                     {isActive ? (
-                      <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-blue-500 text-white font-black uppercase text-[9px] tracking-wide shadow-sm">
+                      <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-blue-600 text-white font-black uppercase text-[9px] tracking-wide shadow-sm">
                         <Check className="w-2.5 h-2.5 stroke-[3]" />
                         Live
                       </span>
                     ) : (
-                      <span className="px-1.5 py-0.5 rounded bg-white/[0.08] text-slate-400 font-medium text-[9px]">
+                      <span className="px-1.5 py-0.5 rounded bg-black/[0.05] dark:bg-white/[0.08] text-slate-500 dark:text-slate-400 font-medium text-[9px]">
                         {qualityClean}
                       </span>
                     )}
 
                     {/* Language Badges if available */}
                     {server.supportsHindiDub && (
-                      <span className="px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 font-black text-[9px]">
+                      <span className="px-1 py-0.2 rounded bg-amber-500/20 text-amber-600 dark:text-amber-300 font-black text-[9px]">
                         HI
                       </span>
                     )}
                     {server.supportsEnglishDub && (
-                      <span className="px-1 py-0.2 rounded bg-blue-500/20 text-blue-300 font-bold text-[9px]">
+                      <span className="px-1 py-0.2 rounded bg-blue-500/20 text-blue-600 dark:text-blue-300 font-bold text-[9px]">
                         EN
                       </span>
                     )}
@@ -267,7 +309,7 @@ export function LuminaServerDeck({
                       {inCooldown ? (
                         <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
                       ) : (
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
                       )}
                       {health.avgLatencyMs ? `${health.avgLatencyMs}ms` : 'Fast'}
                     </span>
@@ -279,7 +321,7 @@ export function LuminaServerDeck({
 
           {/* Right Gradient Fade Mask */}
           {canScrollRight && (
-            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-black/80 to-transparent pointer-events-none z-10" />
+            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white via-white/80 dark:from-slate-950 dark:via-slate-950/80 to-transparent pointer-events-none z-10" />
           )}
 
           {/* Right Arrow Button */}
@@ -288,7 +330,7 @@ export function LuminaServerDeck({
               type="button"
               onClick={() => scrollStep('right')}
               aria-label="Scroll servers right"
-              className="absolute right-0 z-20 w-7 h-7 rounded-full bg-black/80 hover:bg-blue-600/90 text-white flex items-center justify-center backdrop-blur-md border border-white/20 shadow-lg transition-all duration-200 translate-x-1"
+              className="absolute right-0 z-20 w-7 h-7 rounded-full bg-white/95 dark:bg-slate-900/95 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 text-slate-700 dark:text-white flex items-center justify-center backdrop-blur-md border border-slate-200/80 dark:border-white/15 shadow-md transition-all duration-150 translate-x-1 cursor-pointer"
             >
               <ChevronRight className="w-4 h-4 stroke-[2.5]" />
             </button>

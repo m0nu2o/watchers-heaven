@@ -24,8 +24,7 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     requiresApiKey: false,
     isConfigured: () => true,
     getPlaybackUrl: (cfg) => {
-      const type = (cfg.season !== undefined && cfg.episode !== undefined) ? 'tv' : 'movie';
-      return ApiGateway.getVidSrcSuUrl(cfg.tmdbId, type, cfg.season || 1, cfg.episode || 1);
+      return `/api/proxy/stream?type=anime&id=${cfg.tmdbId}&e=${cfg.episode || 1}`;
     },
   },
   {

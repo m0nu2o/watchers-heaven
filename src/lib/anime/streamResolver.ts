@@ -4,8 +4,8 @@ import { extractFlixcloud } from './extractors/flixcloud';
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
-const DEFAULT_REQUEST_TIMEOUT_MS = 8000;
-const DEFAULT_RESOLUTION_TIMEOUT_MS = 20000;
+const DEFAULT_REQUEST_TIMEOUT_MS = 3200;
+const DEFAULT_RESOLUTION_TIMEOUT_MS = 7500;
 const STREAM_CACHE_TTL = 15 * 60 * 1000;
 
 interface StreamCacheEntry {
@@ -548,7 +548,7 @@ export async function resolveStreamingSources({
       try {
         const mappings = await getAniZipMappings(animeId, {
           signal: resolutionDeadline.signal,
-          timeoutMs: 5000,
+          timeoutMs: 2000,
         });
         if (mappings?.mal_id && !discoveredMalId) discoveredMalId = mappings.mal_id;
         if (mappings?.themoviedb_id && !discoveredTmdbId) discoveredTmdbId = mappings.themoviedb_id;

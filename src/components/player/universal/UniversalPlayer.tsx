@@ -572,7 +572,7 @@ export function UniversalPlayer({
       onMouseMove={handleMouseMove}
       onTouchStart={handleTouchStart}
       aria-label="Universal Video Player"
-      className={`relative bg-black flex items-center justify-center overflow-hidden select-none transition-all duration-300 isolation-isolate ${
+      className={`relative bg-black flex items-center justify-center overflow-hidden select-none isolation-isolate ${
         state.isFullscreen
           ? 'fixed inset-0 z-[9999] w-screen h-[100dvh] m-0 p-0'
           : state.isTheaterMode
@@ -602,34 +602,36 @@ export function UniversalPlayer({
         />
       )}
 
-      {/* ── 2. Top Header HUD Overlay (Apple-Grade Minimalist Frame) ── */}
-      <PlayerHeader
-        title={mediaTitle}
-        season={season}
-        episode={episode}
-        episodeName={episodeName}
-        arcName={arcName}
-        mediaType={mediaType}
-        visible={controlsVisible}
-        serverName={source.providerName}
-        serverQuality={source.quality}
-        autoSwitchEnabled={autoSwitchEnabled}
-        onToggleAutoSwitch={onToggleAutoSwitch}
-        onReload={() => {
-          if (isEmbed && iframeRef.current) {
-            iframeRef.current.src = source.url;
-          } else {
-            seekTo(state.currentTime);
-          }
-        }}
-        onSkipIntro={handleSkipIntro}
-        hasIntro={Boolean(source.skipTimestamps?.intro || episode)}
-        isEmbed={isEmbed}
-        isFullscreen={state.isFullscreen}
-        onToggleFullscreen={toggleFullscreen}
-        isTheaterMode={state.isTheaterMode}
-        onToggleTheaterMode={toggleTheaterMode}
-      />
+      {/* ── 2. Top Header HUD Overlay (ONLY for direct streams or in Fullscreen — Never covers inline iframes!) ── */}
+      {(!isEmbed || state.isFullscreen) && (
+        <PlayerHeader
+          title={mediaTitle}
+          season={season}
+          episode={episode}
+          episodeName={episodeName}
+          arcName={arcName}
+          mediaType={mediaType}
+          visible={controlsVisible}
+          serverName={source.providerName}
+          serverQuality={source.quality}
+          autoSwitchEnabled={autoSwitchEnabled}
+          onToggleAutoSwitch={onToggleAutoSwitch}
+          onReload={() => {
+            if (isEmbed && iframeRef.current) {
+              iframeRef.current.src = source.url;
+            } else {
+              seekTo(state.currentTime);
+            }
+          }}
+          onSkipIntro={handleSkipIntro}
+          hasIntro={Boolean(source.skipTimestamps?.intro || episode)}
+          isEmbed={isEmbed}
+          isFullscreen={state.isFullscreen}
+          onToggleFullscreen={toggleFullscreen}
+          isTheaterMode={state.isTheaterMode}
+          onToggleTheaterMode={toggleTheaterMode}
+        />
+      )}
 
       {/* ── 3. Direct Playback Custom Controls (ONLY for direct/HLS streams — Never over third-party iframes!) ── */}
       {!isEmbed && (
@@ -690,32 +692,8 @@ export function UniversalPlayer({
         </>
       )}
 
-      {/* ── 3b. Embed Fast Recovery Bar (Quick Switch & Reload when third-party servers lag or black-screen) ── */}
-      {isEmbed && controlsVisible && !state.error && !externalError && !state.loading && !isLoadingSource && (
-        <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 z-20 flex items-center gap-2 pointer-events-auto transition-all animate-fade-in">
-          <button
-            onClick={() => {
-              if (iframeRef.current) iframeRef.current.src = source.url;
-            }}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-black/60 hover:bg-black/80 text-white/90 text-[11px] font-semibold backdrop-blur-md border border-white/15 shadow-lg active:scale-95 transition"
-            title="Reload Server Player"
-          >
-            <RotateCw className="w-3 h-3 text-slate-300" />
-            <span className="hidden sm:inline">Reload</span>
-          </button>
-          <button
-            onClick={() => onNextServerFallback(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600/80 hover:bg-blue-600 text-white text-[11px] font-bold backdrop-blur-md border border-blue-400/40 shadow-lg shadow-blue-600/20 active:scale-95 transition"
-            title="Switch to next server if current server is black or buffering"
-          >
-            <Zap className="w-3 h-3 text-amber-300 fill-amber-300" />
-            <span>Switch Server</span>
-          </button>
-        </div>
-      )}
-
-      {/* ── 4. Status & Loading Overlay (Apple Blur with Spinner) ── */}
-      {(state.loading || isLoadingSource) && !state.error && !externalError && (
+      {/* ── 4. Status & Loading Overlay (Apple Blur with Spinner, only for direct streams to avoid blocking iframes) ── */}
+      {!isEmbed && (state.loading || isLoadingSource) && !state.error && !externalError && (
         <PlayerLoadingOverlay statusMessage={state.statusMessage} />
       )}
 
