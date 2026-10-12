@@ -76,6 +76,8 @@ export default function WatchPage() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showDownload, setShowDownload] = useState(false);
   const [savedProgress, setSavedProgress] = useState<number>(0);
+  const savedProgressRef = useRef(savedProgress);
+  savedProgressRef.current = savedProgress;
   const [showResumePrompt, setShowResumePrompt] = useState(false);
   const [initialProgressApplied, setInitialProgressApplied] = useState(false);
   const [accentColor, setAccentColor] = useState<string>('007bff');
@@ -170,8 +172,6 @@ export default function WatchPage() {
   const [loadingEpisodes, setLoadingEpisodes] = useState(false);
 
   const playerContainerRef = useRef<HTMLDivElement>(null);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
   const [isDirectHls, setIsDirectHls] = useState<boolean>(false);
   const [isIframeLoaded, setIsIframeLoaded] = useState(false);
   const [subtitles, setSubtitles] = useState<SubtitleTrack[]>([]);
@@ -222,7 +222,7 @@ export default function WatchPage() {
         };
 
         const category = classifyContent(classifiable);
-        const isDetectedAnimeSeries = category === 'anime';
+        const isDetectedAnimeSeries = category === 'anime' || category === 'donghua';
         const isDetectedAnimeMovie = category === 'anime-movie';
         const isDetectedAnime = isDetectedAnimeSeries || isDetectedAnimeMovie;
         const isDetectedTv = isTvResult && !isDetectedAnimeMovie;
@@ -313,7 +313,8 @@ export default function WatchPage() {
     }
 
     loadMediaDetails();
-  }, [id, isTv, isAnime, provider]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, isTv, isAnime]);
 
   // Sync Episode Audio Availability whenever episode, season, or language metadata updates
   useEffect(() => {
@@ -477,7 +478,7 @@ export default function WatchPage() {
   const resolveCurrentSource = useCallback(
     async (trackId: string = selectedAudioTrack, overrideProvider?: string) => {
       const mediaType = isActuallyAnime ? 'anime' : isActuallyTv ? 'tv' : 'movie';
-      const startProgress = initialProgressApplied ? savedProgress : 0;
+      const startProgress = initialProgressApplied ? (savedProgressRef.current ?? 0) : 0;
       const activeProvider = overrideProvider || provider;
 
       try {
@@ -540,7 +541,6 @@ export default function WatchPage() {
       isActuallyAnime,
       isActuallyTv,
       initialProgressApplied,
-      savedProgress,
       season,
       episode,
       aniListId,
@@ -580,9 +580,6 @@ export default function WatchPage() {
         if (instantUrl) {
           setEmbedUrl(instantUrl);
           setIsDirectHls(Boolean(instantUrl.includes('.m3u8')));
-          if (iframeRef.current) {
-            iframeRef.current.src = instantUrl;
-          }
         }
       } catch (err) {
         console.warn('Instant server switch resolution failed:', err);
@@ -595,10 +592,10 @@ export default function WatchPage() {
   const streamConfirmedPlayingRef = useRef(false);
   const watchdogTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Reset tried servers when episode/media changes
+  // Reset tried servers when episode/media or audio track changes
   useEffect(() => {
     triedServersRef.current.clear();
-  }, [id, season, episode]);
+  }, [id, season, episode, selectedAudioTrack]);
 
   // Fallback to next available server within the selected audio track
   const handleNextServerFallback = useCallback(
@@ -630,32 +627,11 @@ export default function WatchPage() {
     [provider, currentMediaType, selectedAudioTrack, handleSelectServer, triggerSeekFeedback]
   );
 
-  // Stream health watchdog: auto-switch server if iframe stream doesn't start
+  // Stream confirmed playing ref is set by postMessage bridge in UniversalPlayer.
+  // The EmbedAdapter has its own 4.5s watchdog — no duplicate timer here.
   useEffect(() => {
     streamConfirmedPlayingRef.current = false;
-    if (watchdogTimerRef.current) {
-      clearTimeout(watchdogTimerRef.current);
-      watchdogTimerRef.current = null;
-    }
-
-    if (!embedUrl || isDirectHls || !autoSwitchEnabled) return;
-
-    // Fast stream health watchdog: auto-switch server if stream doesn't start within 4.5s
-    watchdogTimerRef.current = setTimeout(() => {
-      if (!streamConfirmedPlayingRef.current) {
-        console.warn(`[Watchdog] Stream on server "${provider}" did not start within 4.5s. Auto-switching...`);
-        ProviderTelemetry.recordFailure(provider, 'Stream watchdog timed out');
-        handleNextServerFallback(false, true);
-      }
-    }, 4500);
-
-    return () => {
-      if (watchdogTimerRef.current) {
-        clearTimeout(watchdogTimerRef.current);
-        watchdogTimerRef.current = null;
-      }
-    };
-  }, [embedUrl, provider, isDirectHls, autoSwitchEnabled, handleNextServerFallback]);
+  }, [embedUrl, provider]);
 
   // Resolve the initial/current source whenever the episode, provider,
   // or selected audio track changes.
@@ -676,9 +652,6 @@ export default function WatchPage() {
           if (result.subtitles) setSubtitles(result.subtitles);
           if (result.skipTimestamps) setSkipTimestamps(result.skipTimestamps);
           setPlaybackError(null);
-          if (iframeRef.current && iframeRef.current.src !== result.url) {
-            iframeRef.current.src = result.url;
-          }
         } else {
           // Automatic Provider Fallback: Try next compatible server for this audio track
           const next = ProviderRegistry.getFallbackProvider(provider, currentMediaType, selectedAudioTrack);
@@ -698,44 +671,6 @@ export default function WatchPage() {
       cancelled = true;
     };
   }, [resolveCurrentSource, selectedAudioTrack, provider, season, episode, currentMediaType, handleSelectServer]);
-
-  // Initialize HLS.js for direct .m3u8 playback without iframes or ads
-  useEffect(() => {
-    if (!isDirectHls || !embedUrl || !videoRef.current) return;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let hlsInstance: any = null;
-    const video = videoRef.current;
-
-    const onLoadedMetadata = () => {
-      if (savedProgress && savedProgress > 0 && video.currentTime === 0) {
-        video.currentTime = savedProgress;
-      }
-    };
-    video.addEventListener('loadedmetadata', onLoadedMetadata);
-
-    if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = embedUrl;
-    } else {
-      import('hls.js')
-        .then(({ default: Hls }) => {
-          if (Hls.isSupported() && videoRef.current) {
-            hlsInstance = new Hls({ enableWorker: true, lowLatencyMode: true });
-            hlsInstance.loadSource(embedUrl);
-            hlsInstance.attachMedia(videoRef.current);
-          }
-        })
-        .catch((err) => {
-          console.warn('Failed to load Hls.js:', err);
-        });
-    }
-
-    return () => {
-      video.removeEventListener('loadedmetadata', onLoadedMetadata);
-      if (hlsInstance) {
-        hlsInstance.destroy();
-      }
-    };
-  }, [isDirectHls, embedUrl, savedProgress]);
 
   // ── Real Audio Switching with Verified Dub Availability ──
   const handleSelectAudioTrack = useCallback(
@@ -761,14 +696,14 @@ export default function WatchPage() {
       // Auto-route to the correct DUB-capable provider
       let overrideProv: string | undefined = undefined;
       if (trackId === 'dub-en' || trackId === 'dub') {
-        // For anime, vidlink-anime is the verified English DUB provider
-        overrideProv = isActuallyAnime ? 'vidlink-anime' : (provider === 'vidlink' ? 'vidlink' : 'vidsrc-pm');
+        // English DUB: vidsrc-su-anime for anime, keep current or use vidlink for movies/TV
+        overrideProv = isActuallyAnime ? 'vidsrc-su-anime' : (provider === 'vidlink' ? 'vidlink' : 'vidsrc-pm');
       } else if (trackId === 'dub-hi') {
-        // Hindi DUB: screenscape-anime for anime, autoembed-co for movies/TV
-        overrideProv = isActuallyAnime ? 'screenscape-anime' : 'autoembed-co';
+        // Hindi DUB: nova supports Hindi for both anime and movies/TV
+        overrideProv = 'nova';
       } else {
         // SUB: default provider for media type
-        overrideProv = isActuallyAnime ? 'vidlink-anime' : 'vidlink';
+        overrideProv = isActuallyAnime ? 'vidsrc-su-anime' : 'vidlink';
       }
 
       if (overrideProv && overrideProv !== provider) {
@@ -791,10 +726,6 @@ export default function WatchPage() {
       setIsDirectHls(Boolean(result.isHls || result.url.includes('.m3u8')));
       if (result.subtitles) setSubtitles(result.subtitles);
       if (result.skipTimestamps) setSkipTimestamps(result.skipTimestamps);
-
-      if (iframeRef.current) {
-        iframeRef.current.src = result.url;
-      }
     },
     [audioAvailability, isActuallyAnime, provider, resolveCurrentSource, triggerSeekFeedback]
   );
@@ -1003,62 +934,43 @@ export default function WatchPage() {
     };
   }, [triggerSeekFeedback]);
 
-  const handleSkipBackward10 = useCallback(() => {
-    triggerSeekFeedback('⏪ -10s');
-    if (isDirectHls && videoRef.current) {
-      const newTime = Math.max(0, videoRef.current.currentTime - 10);
-      videoRef.current.currentTime = newTime;
-      setSavedProgress(newTime);
+  const sendSeekCommand = useCallback((newTime: number) => {
+    if (typeof document === 'undefined') return;
+    const video = document.querySelector('video');
+    if (video) {
+      video.currentTime = newTime;
       return;
     }
-    const newTime = Math.max(0, (savedProgress || 0) - 10);
-    setSavedProgress(newTime);
-    if (iframeRef.current?.contentWindow) {
-      const win = iframeRef.current.contentWindow;
+    const iframe = document.querySelector('iframe');
+    if (iframe?.contentWindow) {
+      const win = iframe.contentWindow;
       win.postMessage({ type: 'PLAYER_COMMAND', action: 'seek', time: newTime }, '*');
       win.postMessage({ type: 'VIDSYNC_PLAYER_COMMAND', action: 'seek', time: newTime }, '*');
       win.postMessage({ event: 'command', func: 'seekTo', args: [newTime, true] }, '*');
       win.postMessage({ type: 'seek', value: newTime }, '*');
     }
-  }, [isDirectHls, savedProgress, triggerSeekFeedback]);
+  }, []);
+
+  const handleSkipBackward10 = useCallback(() => {
+    triggerSeekFeedback('⏪ -10s');
+    const newTime = Math.max(0, (savedProgressRef.current || 0) - 10);
+    setSavedProgress(newTime);
+    sendSeekCommand(newTime);
+  }, [triggerSeekFeedback, sendSeekCommand]);
 
   const handleSkipForward10 = useCallback(() => {
     triggerSeekFeedback('⏩ +10s');
-    if (isDirectHls && videoRef.current) {
-      const newTime = videoRef.current.currentTime + 10;
-      videoRef.current.currentTime = newTime;
-      setSavedProgress(newTime);
-      return;
-    }
-    const newTime = (savedProgress || 0) + 10;
+    const newTime = (savedProgressRef.current || 0) + 10;
     setSavedProgress(newTime);
-    if (iframeRef.current?.contentWindow) {
-      const win = iframeRef.current.contentWindow;
-      win.postMessage({ type: 'PLAYER_COMMAND', action: 'seek', time: newTime }, '*');
-      win.postMessage({ type: 'VIDSYNC_PLAYER_COMMAND', action: 'seek', time: newTime }, '*');
-      win.postMessage({ event: 'command', func: 'seekTo', args: [newTime, true] }, '*');
-      win.postMessage({ type: 'seek', value: newTime }, '*');
-    }
-  }, [isDirectHls, savedProgress, triggerSeekFeedback]);
+    sendSeekCommand(newTime);
+  }, [triggerSeekFeedback, sendSeekCommand]);
 
   const handleSkipIntro85 = useCallback(() => {
     triggerSeekFeedback('⚡ Intro Skipped (+85s)');
-    if (isDirectHls && videoRef.current) {
-      const targetTime = skipTimestamps?.intro?.end ?? (videoRef.current.currentTime + 85);
-      videoRef.current.currentTime = targetTime;
-      setSavedProgress(targetTime);
-      return;
-    }
-    const newTime = (savedProgress || 0) + 85;
-    setSavedProgress(newTime);
-    if (iframeRef.current?.contentWindow) {
-      const win = iframeRef.current.contentWindow;
-      win.postMessage({ type: 'PLAYER_COMMAND', action: 'seek', time: newTime }, '*');
-      win.postMessage({ type: 'VIDSYNC_PLAYER_COMMAND', action: 'seek', time: newTime }, '*');
-      win.postMessage({ event: 'command', func: 'seekTo', args: [newTime, true] }, '*');
-      win.postMessage({ type: 'seek', value: newTime }, '*');
-    }
-  }, [isDirectHls, skipTimestamps, savedProgress, triggerSeekFeedback]);
+    const targetTime = skipTimestamps?.intro?.end ?? ((savedProgressRef.current || 0) + 85);
+    setSavedProgress(targetTime);
+    sendSeekCommand(targetTime);
+  }, [skipTimestamps, triggerSeekFeedback, sendSeekCommand]);
 
   // Load saved progress from localStorage (provider-specific)
   useEffect(() => {
@@ -1083,14 +995,6 @@ export default function WatchPage() {
     }, 0);
     return () => clearTimeout(timer);
   }, [storageKey]);
-
-  // Reload iframe when provider changes or resume is confirmed.
-  // Source resolution is asynchronous and always goes through the API.
-  useEffect(() => {
-    if (iframeRef.current && !showResumePrompt && embedUrl) {
-      iframeRef.current.src = embedUrl;
-    }
-  }, [provider, initialProgressApplied, showResumePrompt, embedUrl]);
 
   // Reset next episode trigger when episode changes
   useEffect(() => {
@@ -1168,9 +1072,8 @@ export default function WatchPage() {
     localStorage.removeItem(storageKey);
     setSavedProgress(0);
     void resolveCurrentSource(selectedAudioTrack).then((result) => {
-      if (result?.url && iframeRef.current) {
+      if (result?.url) {
         setEmbedUrl(result.url);
-        iframeRef.current.src = result.url;
       }
     });
   }, [storageKey, resolveCurrentSource, selectedAudioTrack]);
@@ -1520,9 +1423,9 @@ export default function WatchPage() {
           <button
             onClick={() => {
               void resolveCurrentSource(selectedAudioTrack).then((result) => {
-                if (result?.url && iframeRef.current) {
+                if (result?.url) {
                   setEmbedUrl(result.url);
-                  iframeRef.current.src = result.url;
+                  setPlaybackError(null);
                 }
               });
             }}

@@ -131,11 +131,7 @@ export function getContentAudioAvailability(
           ? ['vidsrc-su-anime']
           : ['nova', 'vidlink', 'vidsrc-su', 'vidsrc-pm']
         : [],
-      hi: hasHindiDub
-        ? isAnime
-          ? ['vidsrc-su-anime']
-          : ['nova']
-        : [],
+      hi: hasHindiDub ? ['nova'] : [],
     },
   };
 
@@ -218,11 +214,7 @@ export async function getContentAudioAvailabilityAsync(
           ? ['vidsrc-su-anime']
           : ['nova', 'vidlink', 'vidsrc-su', 'vidsrc-pm']
         : [],
-      hi: hasHindiDub
-        ? isAnime
-          ? ['vidsrc-su-anime']
-          : ['nova']
-        : [],
+      hi: hasHindiDub ? ['nova'] : [],
     },
   };
 
@@ -548,7 +540,7 @@ export function getEpisodeAudioTracks(params: GetEpisodeAudioTracksParams): Epis
       languageCode: 'hi',
       type: 'dub',
       label: isAnime ? '🇮🇳 Hindi (DUB)' : '🇮🇳 Hindi (DUB)',
-      provider: isAnime ? 'vidsrc-su-anime' : 'nova',
+      provider: 'nova',
       available: hasHindiDub,
       isOriginal: isOriginalHindi,
       evidenceLevel: isOriginalHindi

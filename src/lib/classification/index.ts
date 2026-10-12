@@ -21,6 +21,7 @@
 export type ContentCategory =
   | 'anime'
   | 'anime-movie'
+  | 'donghua'
   | 'cartoon'
   | 'hollywood'
   | 'bollywood'
@@ -149,7 +150,11 @@ export function classifyContent(item: ClassifiableMedia): ContentCategory {
     if (isJapAnime) {
       return format === 'movie' ? 'anime-movie' : 'anime';
     }
-    // Any non-Japanese animation is Western Cartoons and Animation
+    // Chinese Animation (Donghua)
+    if (lang === 'zh' || countries.includes('CN') || countries.includes('TW') || countries.includes('HK')) {
+      return 'donghua';
+    }
+    // Any non-Japanese, non-Chinese animation is Western Cartoons and Animation
     // (e.g. Toy Story, Shrek, The Simpsons, Arcane, Avatar)
     return 'cartoon';
   }
@@ -202,6 +207,7 @@ export function classifyContent(item: ClassifiableMedia): ContentCategory {
 export function getPlaybackMediaType(category: ContentCategory, format: 'movie' | 'tv' = 'movie'): 'movie' | 'tv' | 'anime' {
   switch (category) {
     case 'anime':
+    case 'donghua':
       return 'anime';
     case 'anime-movie':
       // Anime movies are feature films; they can route to anime or movie providers based on ID
@@ -245,6 +251,14 @@ export function getCategoryBadge(category: ContentCategory): CategoryBadgeInfo {
         shortLabel: 'ANIME',
         icon: '🎌',
         badgeClass: 'bg-rose-500/80 text-white shadow-rose-500/20 border-rose-400/30',
+      };
+    case 'donghua':
+      return {
+        category,
+        label: 'Chinese Donghua',
+        shortLabel: 'DONGHUA',
+        icon: '🐉',
+        badgeClass: 'bg-red-600/80 text-white shadow-red-600/20 border-red-400/30',
       };
     case 'anime-movie':
       return {

@@ -54,7 +54,7 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     badge: '🌟',
     supportsMovie: true,
     supportsTV: true,
-    supportsAnime: false, // Strict: Anime routes to dedicated anime engines
+    supportsAnime: true, // Nova handles anime via TMDB/IMDb IDs — needed for Hindi DUB support
     supportsEnglishDub: true,
     supportsHindiDub: true,
     requiresApiKey: false,

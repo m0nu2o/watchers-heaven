@@ -78,11 +78,24 @@ export class EmbedAdapter implements PlayerAdapter {
 
       if (!data) return;
 
-      // Detect playback confirmed from any provider event
-      this.isConfirmedPlaying = true;
-      if (this.watchdogTimer) {
-        clearTimeout(this.watchdogTimer);
-        this.watchdogTimer = null;
+      // Only confirm playback from messages with recognizable video player data.
+      // Ad scripts and unrelated messages must NOT dismiss the watchdog.
+      const isVideoMessage =
+        typeof data.currentTime === 'number' ||
+        typeof data.playing === 'boolean' ||
+        data.event === 'play' ||
+        data.event === 'playing' ||
+        data.event === 'timeupdate' ||
+        data.event === 'ended' ||
+        data.type === 'ended' ||
+        (typeof data.timestamp === 'number' && data.timestamp > 0);
+
+      if (isVideoMessage && !this.isConfirmedPlaying) {
+        this.isConfirmedPlaying = true;
+        if (this.watchdogTimer) {
+          clearTimeout(this.watchdogTimer);
+          this.watchdogTimer = null;
+        }
       }
 
       // Handle VidSync / Playerjs / VidLink timeupdate & play events

@@ -37,6 +37,7 @@ export const KNOWN_HINDI_DUBBED_TMDB_IDS = new Set<string>([
   '693134', // Dune: Part Two
   '157336', // Interstellar
   '27205',  // Inception
+  'tt1375666', // Inception (IMDb)
   '155',    // The Dark Knight
   '49026',  // The Dark Knight Rises
   '272',    // Batman Begins
@@ -78,6 +79,7 @@ export function isKnownTheatricalHindiDub(id?: string | number, title?: string):
   if (title) {
     const clean = title.toLowerCase().trim();
     if (
+      clean.includes('inception') ||
       clean.includes('avengers: endgame') ||
       clean.includes('avengers endgame') ||
       clean.includes('avengers: infinity war') ||

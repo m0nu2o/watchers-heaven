@@ -732,6 +732,8 @@ export const ApiGateway = {
 
   getMovieRecommendations: async (id: string | number) => {
     try {
+      // TMDB recommendations endpoint requires a numeric TMDB ID, not IMDb IDs
+      if (typeof id === 'string' && id.startsWith('tt')) return { results: [] };
       return await ApiGateway.fetchTmdb<{ results?: Record<string, unknown>[] }>(`/movie/${id}/recommendations`);
     } catch {
       return { results: [] };
@@ -752,6 +754,7 @@ export const ApiGateway = {
 
   getTvRecommendations: async (id: string | number) => {
     try {
+      if (typeof id === 'string' && id.startsWith('tt')) return { results: [] };
       return await ApiGateway.fetchTmdb<{ results?: Record<string, unknown>[] }>(`/tv/${id}/recommendations`);
     } catch {
       return { results: [] };

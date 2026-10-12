@@ -24,7 +24,7 @@ export function PosterCard({ id, title, posterPath, rating, year, className, typ
   const locale = ['en', 'am', 'om', 'ti', 'so'].includes(currentLocale) ? currentLocale : 'en';
 
   const defaultHref = (() => {
-    if (category === 'anime') return `/${locale}/tv/${id}?from=anime`;
+    if (category === 'anime' || category === 'donghua') return `/${locale}/tv/${id}?from=anime`;
     if (category === 'anime-movie') return `/${locale}/movie/${id}?from=anime`;
     if (category === 'cartoon') return type === 'tv' ? `/${locale}/tv/${id}` : `/${locale}/movie/${id}`;
     if (category === 'kdrama' || category === 'cdrama' || category === 'asian-drama' || category === 'tv') {
