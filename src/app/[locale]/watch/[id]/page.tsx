@@ -733,10 +733,8 @@ export default function WatchPage() {
 
       if (trackId === 'dub-en' || trackId === 'dub') {
         if (isActuallyAnime) {
-          // Hikari Direct 4K supports both SUB & DUB natively — keep current provider if it supports dub!
-          overrideProv = (provider === 'direct-hls' || currentAdapter?.supportsEnglishDub)
-            ? provider
-            : 'direct-hls';
+          // Hikari Direct 4K supports both SUB & DUB natively — keep on or route to direct-hls!
+          overrideProv = 'direct-hls';
         } else {
           overrideProv = currentAdapter?.supportsEnglishDub
             ? provider
@@ -746,8 +744,8 @@ export default function WatchPage() {
         // Hindi DUB: nova or current provider if it supports Hindi
         overrideProv = currentAdapter?.supportsHindiDub ? provider : 'nova';
       } else {
-        // SUB: keep current provider
-        overrideProv = provider;
+        // SUB: keep current provider or direct-hls for anime
+        overrideProv = isActuallyAnime && provider === 'direct-hls' ? 'direct-hls' : provider;
       }
 
       if (overrideProv && overrideProv !== provider) {
@@ -761,7 +759,7 @@ export default function WatchPage() {
         return;
       }
 
-      const newProv = result.provider || overrideProv;
+      const newProv = isActuallyAnime && overrideProv === 'direct-hls' ? 'direct-hls' : (result.provider || overrideProv);
       if (newProv && newProv !== provider) {
         setProvider(newProv);
       }

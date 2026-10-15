@@ -317,7 +317,7 @@ export default function SchedulePage() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2.5 sm:gap-3">
+          <div className="grid grid-cols-2 min-[420px]:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-2 sm:gap-2.5">
             {filteredItems.map((item) => {
               const countdownStr = activeTab === 'anime' ? formatCountdown(item.airingAt) : null;
               const isToday = item.localWeekday === todayName;
@@ -326,7 +326,7 @@ export default function SchedulePage() {
                 <Link
                   key={`${item.id}-${item.airingAt || item.title}`}
                   href={`/${locale}${item.href}`}
-                  className="group relative flex flex-col rounded-xl apple-glass border border-white/[0.08] hover:border-blue-500/50 overflow-hidden shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-600/15"
+                  className="group relative flex flex-col rounded-xl apple-glass border border-white/[0.08] hover:border-blue-500/50 overflow-hidden shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-600/15"
                 >
                   {/* Poster Image Frame */}
                   <div className="relative aspect-[2/3] w-full bg-slate-900 overflow-hidden">
@@ -334,21 +334,21 @@ export default function SchedulePage() {
                       src={item.image}
                       alt={item.title}
                       loading="lazy"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
 
                     {/* Gradient Overlay */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent pointer-events-none" />
 
                     {/* Top Badges */}
-                    <div className="absolute top-1.5 left-1.5 right-1.5 flex items-center justify-between pointer-events-none">
+                    <div className="absolute top-1 left-1 right-1 flex items-center justify-between pointer-events-none">
                       {item.episode !== undefined && (
-                        <span className="px-1.5 py-0.5 rounded-md bg-blue-600/90 text-white font-black text-[9px] shadow-sm backdrop-blur-md">
+                        <span className="px-1.5 py-0.5 rounded bg-blue-600/90 text-white font-black text-[8.5px] shadow-sm backdrop-blur-md">
                           EP {item.episode}
                         </span>
                       )}
                       {item.score && (
-                        <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-black/60 text-amber-300 text-[9px] font-bold backdrop-blur-md">
+                        <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-black/70 text-amber-300 text-[8.5px] font-bold backdrop-blur-md">
                           <Star className="w-2.5 h-2.5 fill-amber-300" />
                           {item.score}
                         </span>
@@ -356,15 +356,15 @@ export default function SchedulePage() {
                     </div>
 
                     {/* Bottom Countdown or Time Tag */}
-                    <div className="absolute bottom-1.5 left-1.5 right-1.5 flex flex-col gap-0.5 pointer-events-none">
+                    <div className="absolute bottom-1 left-1 right-1 flex flex-col gap-0.5 pointer-events-none">
                       {countdownStr && (
-                        <span className="px-1.5 py-0.5 rounded bg-emerald-500/85 text-white font-bold text-[8.5px] w-fit backdrop-blur-md flex items-center gap-1">
+                        <span className="px-1.5 py-0.5 rounded bg-emerald-500/90 text-white font-bold text-[8px] w-fit backdrop-blur-md flex items-center gap-1">
                           <Clock className="w-2.5 h-2.5" />
                           {countdownStr}
                         </span>
                       )}
                       {item.localTime && item.localTime !== 'TBA' && (
-                        <span className="text-[9px] font-mono text-slate-300 font-medium">
+                        <span className="text-[8.5px] font-mono text-slate-300 font-medium">
                           {item.localWeekday.slice(0, 3)} • {item.localTime}
                         </span>
                       )}
@@ -372,18 +372,18 @@ export default function SchedulePage() {
                   </div>
 
                   {/* Card Info Details */}
-                  <div className="p-2 sm:p-2.5 flex flex-col flex-1 justify-between gap-1.5">
+                  <div className="p-1.5 sm:p-2 flex flex-col flex-1 justify-between gap-1">
                     <div>
-                      <h3 className="font-bold text-xs text-white line-clamp-1 group-hover:text-blue-400 transition-colors" title={item.title}>
+                      <h3 className="font-bold text-[11px] sm:text-xs text-white line-clamp-1 group-hover:text-blue-400 transition-colors" title={item.title}>
                         {item.title}
                       </h3>
                       {item.studio && (
-                        <p className="text-[10px] text-slate-400 mt-0.5 truncate">{item.studio}</p>
+                        <p className="text-[9px] sm:text-[10px] text-slate-400 mt-0.5 truncate">{item.studio}</p>
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between pt-1 border-t border-white/[0.06] text-[9.5px] text-slate-400">
-                      <span className="capitalize truncate max-w-[70px]">{item.format || 'Series'}</span>
+                    <div className="flex items-center justify-between pt-1 border-t border-white/[0.06] text-[8.5px] sm:text-[9.5px] text-slate-400">
+                      <span className="capitalize truncate max-w-[65px]">{item.format || 'Series'}</span>
                       <span className="flex items-center gap-0.5 text-blue-400 font-bold group-hover:translate-x-0.5 transition-transform shrink-0">
                         <span>Watch</span>
                         <ChevronRight className="w-2.5 h-2.5" />

@@ -257,37 +257,29 @@ export function UniversalPlayer({
     if (controlsTimeoutRef.current) {
       clearTimeout(controlsTimeoutRef.current);
     }
-    // Auto-hide when mouse is stationary (1.8s for smooth cinematic playback)
+    // Auto-hide: 1.8s when playing, 3.5s when paused for clean cinematic frame inspection
+    const hideDelay = state.playing ? 1800 : 3500;
     controlsTimeoutRef.current = setTimeout(() => {
       setControlsVisible(false);
-    }, 1800);
-  }, []);
+    }, hideDelay);
+  }, [state.playing]);
 
   const handleMouseMove = useCallback(() => {
     resetControlsTimeout();
   }, [resetControlsTimeout]);
 
   const handleMouseLeave = useCallback(() => {
-    if (state.playing) {
-      if (controlsTimeoutRef.current) {
-        clearTimeout(controlsTimeoutRef.current);
-      }
-      controlsTimeoutRef.current = setTimeout(() => {
-        setControlsVisible(false);
-      }, 600);
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current);
     }
-  }, [state.playing]);
+    controlsTimeoutRef.current = setTimeout(() => {
+      setControlsVisible(false);
+    }, 400);
+  }, []);
 
-  // Auto-hide controls when video transitions to playing state
+  // Reset controls timer when play state changes
   useEffect(() => {
-    if (state.playing) {
-      resetControlsTimeout();
-    } else {
-      setControlsVisible(true);
-      if (controlsTimeoutRef.current) {
-        clearTimeout(controlsTimeoutRef.current);
-      }
-    }
+    resetControlsTimeout();
   }, [state.playing, resetControlsTimeout]);
 
   // Play / Pause Toggle
@@ -685,7 +677,7 @@ export function UniversalPlayer({
               hasPreviousEpisode={hasPreviousEpisode}
               hasNextEpisode={hasNextEpisode}
               doubleTapFeedback={doubleTapFeedback}
-              visible={controlsVisible || !state.playing}
+              visible={controlsVisible}
             />
           )}
 

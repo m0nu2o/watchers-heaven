@@ -31,6 +31,7 @@ const CATEGORIES = [
   { id: 'movie', label: 'Movies' },
   { id: 'tv', label: 'TV Shows' },
   { id: 'anime', label: 'Anime Series' },
+  { id: 'donghua', label: 'Donghua' },
   { id: 'anime-movie', label: 'Anime Movies' },
   { id: 'animation', label: 'Animation & Cartoons' },
   { id: 'kdrama', label: 'K-Drama' },
@@ -109,6 +110,10 @@ function ExploreContent() {
           endpoint = '/discover/tv';
           queryParams.with_genres = '16';
           queryParams.with_original_language = 'ja';
+        } else if (activeType === 'donghua') {
+          endpoint = '/discover/tv';
+          queryParams.with_genres = '16';
+          queryParams.with_original_language = 'zh';
         } else if (activeType === 'anime-movie') {
           endpoint = '/discover/movie';
           queryParams.with_genres = '16';

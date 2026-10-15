@@ -58,8 +58,9 @@ export function PlayerCenterControls({
         {/* Previous Episode (if available) */}
         {hasPreviousEpisode && onPreviousEpisode && (
           <button
+            type="button"
             onClick={onPreviousEpisode}
-            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/10 hover:bg-white/20 active:bg-white/30 backdrop-blur-xl border border-white/15 text-white/90 hover:text-white flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 shadow-lg cursor-pointer"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-black/40 hover:bg-black/60 active:bg-black/80 backdrop-blur-2xl border border-white/15 text-white/90 hover:text-white flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 shadow-xl cursor-pointer"
             title="Previous Episode"
             aria-label="Previous Episode"
           >
@@ -69,21 +70,23 @@ export function PlayerCenterControls({
 
         {/* -10s Replay */}
         <button
+          type="button"
           onClick={() => onSeekRelative(-10)}
-          className="group relative w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/10 hover:bg-white/20 active:bg-white/30 backdrop-blur-xl border border-white/15 text-white/90 hover:text-white flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 shadow-lg cursor-pointer"
+          className="group relative w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-black/40 hover:bg-black/60 active:bg-black/80 backdrop-blur-2xl border border-white/20 hover:border-white/40 text-white flex flex-col items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 shadow-xl cursor-pointer"
           title="Replay 10 Seconds (Left Arrow)"
           aria-label="Replay 10 Seconds"
         >
-          <RotateCcw className="w-4 h-4 sm:w-[18px] sm:h-[18px] stroke-[2.2]" />
-          <span className="absolute text-[8px] font-black top-[14px] sm:top-[15px] pointer-events-none tracking-tighter opacity-80 group-hover:opacity-100">
-            10
+          <RotateCcw className="w-4 h-4 stroke-[2.2] group-hover:-rotate-12 transition-transform duration-200" />
+          <span className="text-[8.5px] font-black tracking-tight leading-none text-slate-300 group-hover:text-white mt-0.5">
+            10s
           </span>
         </button>
 
         {/* Big Center Play / Pause Button — Apple Cinema Glass */}
         <button
+          type="button"
           onClick={onTogglePlay}
-          className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/15 hover:bg-white/25 active:bg-white/35 backdrop-blur-2xl border border-white/25 text-white flex items-center justify-center shadow-2xl shadow-black/40 transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer ring-1 ring-white/10"
+          className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/20 hover:bg-white/30 active:bg-white/40 backdrop-blur-2xl border border-white/30 hover:border-white/50 text-white flex items-center justify-center shadow-[0_8px_32px_rgba(0,0,0,0.5)] transition-all duration-200 hover:scale-108 active:scale-95 cursor-pointer ring-1 ring-white/20"
           title={playing ? 'Pause (Space)' : 'Play (Space)'}
           aria-label={playing ? 'Pause' : 'Play'}
         >
@@ -96,22 +99,24 @@ export function PlayerCenterControls({
 
         {/* +10s Forward */}
         <button
+          type="button"
           onClick={() => onSeekRelative(10)}
-          className="group relative w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/10 hover:bg-white/20 active:bg-white/30 backdrop-blur-xl border border-white/15 text-white/90 hover:text-white flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 shadow-lg cursor-pointer"
+          className="group relative w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-black/40 hover:bg-black/60 active:bg-black/80 backdrop-blur-2xl border border-white/20 hover:border-white/40 text-white flex flex-col items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 shadow-xl cursor-pointer"
           title="Forward 10 Seconds (Right Arrow)"
           aria-label="Forward 10 Seconds"
         >
-          <RotateCw className="w-4 h-4 sm:w-[18px] sm:h-[18px] stroke-[2.2]" />
-          <span className="absolute text-[8px] font-black top-[14px] sm:top-[15px] pointer-events-none tracking-tighter opacity-80 group-hover:opacity-100">
-            10
+          <RotateCw className="w-4 h-4 stroke-[2.2] group-hover:rotate-12 transition-transform duration-200" />
+          <span className="text-[8.5px] font-black tracking-tight leading-none text-slate-300 group-hover:text-white mt-0.5">
+            10s
           </span>
         </button>
 
         {/* Next Episode (if available) */}
         {hasNextEpisode && onNextEpisode && (
           <button
+            type="button"
             onClick={onNextEpisode}
-            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/10 hover:bg-white/20 active:bg-white/30 backdrop-blur-xl border border-white/15 text-white/90 hover:text-white flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 shadow-lg cursor-pointer"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-black/40 hover:bg-black/60 active:bg-black/80 backdrop-blur-2xl border border-white/15 text-white/90 hover:text-white flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 shadow-xl cursor-pointer"
             title="Next Episode"
             aria-label="Next Episode"
           >

@@ -270,16 +270,16 @@ export function LuminaServerDeck({
                   }}
                   disabled={isLoadingSource && isActive}
                   aria-pressed={isActive}
-                  className={`group relative flex items-center gap-2 px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-colors duration-150 cursor-pointer shrink-0 select-none border whitespace-nowrap ${
+                  className={`group relative flex items-center gap-2 px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer shrink-0 select-none border whitespace-nowrap ${
                     isActive
-                      ? 'bg-blue-600/25 border-blue-500 text-blue-700 dark:text-white shadow-sm ring-1 ring-blue-500/40'
-                      : 'bg-black/[0.03] dark:bg-white/[0.04] hover:bg-black/[0.06] dark:hover:bg-white/[0.08] border-black/10 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                      ? 'bg-blue-600/35 border-blue-400 text-white shadow-md shadow-blue-600/20 ring-1 ring-blue-400/50'
+                      : 'bg-white/[0.06] hover:bg-white/[0.12] border-white/[0.12] hover:border-white/25 text-slate-100 hover:text-white'
                   }`}
                 >
                   {/* Server Badge & Status Dot */}
                   <div className="flex items-center gap-1.5">
                     <span className="text-sm shrink-0 leading-none">{server.badge}</span>
-                    <span className="font-bold text-xs truncate max-w-[130px] sm:max-w-[160px]">
+                    <span className="font-bold text-xs text-white truncate max-w-[130px] sm:max-w-[160px] tracking-wide">
                       {server.name}
                     </span>
                   </div>
@@ -292,29 +292,29 @@ export function LuminaServerDeck({
                         Live
                       </span>
                     ) : (
-                      <span className="px-1.5 py-0.5 rounded bg-black/[0.05] dark:bg-white/[0.08] text-slate-500 dark:text-slate-400 font-medium text-[9px]">
+                      <span className="px-1.5 py-0.5 rounded bg-white/10 text-slate-200 font-semibold text-[9px]">
                         {qualityClean}
                       </span>
                     )}
 
                     {/* Language Badges if available */}
                     {server.supportsHindiDub && (
-                      <span className="px-1 py-0.2 rounded bg-amber-500/20 text-amber-600 dark:text-amber-300 font-black text-[9px]">
+                      <span className="px-1.5 py-0.5 rounded bg-amber-500/30 text-amber-200 border border-amber-400/30 font-black text-[9px]">
                         HI
                       </span>
                     )}
                     {server.supportsEnglishDub && (
-                      <span className="px-1 py-0.2 rounded bg-blue-500/20 text-blue-600 dark:text-blue-300 font-bold text-[9px]">
+                      <span className="px-1.5 py-0.5 rounded bg-blue-500/30 text-blue-200 border border-blue-400/30 font-bold text-[9px]">
                         EN
                       </span>
                     )}
 
                     {/* Latency Ping */}
-                    <span className="flex items-center gap-1 text-[9px] text-slate-400 font-mono">
+                    <span className="flex items-center gap-1 text-[9.5px] text-slate-300 font-mono font-medium">
                       {inCooldown ? (
                         <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
                       ) : (
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                       )}
                       {health.avgLatencyMs ? `${health.avgLatencyMs}ms` : 'Fast'}
                     </span>

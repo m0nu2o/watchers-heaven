@@ -169,7 +169,9 @@ async function resolveReanime(
   const hasDub = flixData.servers.some((s: any) => ['dub', 's-dub'].includes(s.dataType?.toLowerCase()));
 
   const audioTypes = isDub ? ['dub', 's-dub'] : ['sub', 's-sub'];
-  const matchingServers = flixData.servers.filter((server: any) => audioTypes.includes(server.dataType));
+  const matchingServers = flixData.servers.filter((server: any) =>
+    audioTypes.includes(server.dataType?.toLowerCase()?.trim())
+  );
   const serversToTry = matchingServers.length > 0 ? matchingServers : flixData.servers;
 
   const extractionPromises = serversToTry.map(async (server: any, index: number) => {
@@ -250,7 +252,7 @@ async function resolveReanime(
 
   if (availableSources.length > 0) {
     return {
-      provider: `reanime (${primaryServerName || 'HD-1'})`,
+      provider: 'direct-hls',
       sources: availableSources,
       subtitles: (primaryExtracted?.subtitles || []).map((sub: any) => ({
         url: sub.url,

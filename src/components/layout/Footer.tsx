@@ -18,14 +18,14 @@ export function Footer() {
   }
 
   return (
-    <footer className="w-full mt-12 sm:mt-16 border-t border-black/[0.08] dark:border-white/[0.08] bg-slate-100/50 dark:bg-black/40 backdrop-blur-xl transition-colors duration-300">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col gap-4 sm:gap-5">
+    <footer className="w-full mt-6 sm:mt-8 border-t border-black/[0.08] dark:border-white/[0.08] bg-slate-100/40 dark:bg-black/30 backdrop-blur-xl transition-colors duration-300">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 sm:py-4 pb-20 lg:pb-4 flex flex-col gap-2.5 sm:gap-3">
         
         {/* Row 1: Brand Logo & Navigation Links */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 select-none">
-          <div className="flex items-center gap-3">
-            <LuminaLogo variant="full" size="sm" href={`/${locale}`} />
-            <span className="hidden md:inline text-xs text-slate-500 dark:text-slate-400 border-l border-white/10 pl-3">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 select-none">
+          <div className="flex items-center gap-2.5">
+            <LuminaLogo variant="compact" size="sm" href={`/${locale}`} />
+            <span className="hidden md:inline text-[11px] text-slate-500 dark:text-slate-400 border-l border-white/10 pl-2.5">
               Cinema, series & animation verified streaming.
             </span>
           </div>

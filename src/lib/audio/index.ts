@@ -262,13 +262,13 @@ export async function filterContentByDubAsync<T extends Record<string, unknown>>
           // Include Hindi original content OR any title with verified Hindi dub
           keep = avail.isOriginalHindi || avail.dub.hi === true || origLang === 'hi';
         } else if (dubFilter === 'english') {
-          // Include English original content OR foreign content with verified English dub
-          keep = avail.isOriginalEnglish || avail.dub.en === true || (!isAnime && origLang === 'en');
+          // Include English original content OR anime/foreign content with verified English dub
+          keep = avail.isOriginalEnglish || avail.dub.en === true || isAnime || (!isAnime && origLang === 'en');
         } else if (dubFilter === 'both') {
           // Include content with access to both languages
           keep =
             (avail.isOriginalHindi || avail.dub.hi === true || origLang === 'hi') &&
-            (avail.isOriginalEnglish || avail.dub.en === true || (!isAnime && origLang === 'en'));
+            (avail.isOriginalEnglish || avail.dub.en === true || isAnime || (!isAnime && origLang === 'en'));
         }
 
         return { item, keep };
@@ -291,7 +291,7 @@ export function filterContentByDub(
   if (dubFilter === 'all' || !items || items.length === 0) return items;
 
   return items.filter((item) => {
-    const origLang = ((item.original_language as string) || 'en').toLowerCase();
+    const origLang = ((item.original_language as string) || (item.originalLanguage as string) || 'en').toLowerCase();
     const mediaType = (item.media_type as string) || mediaTypeFallback || 'movie';
     const isAnime = mediaType === 'anime' || origLang === 'ja';
     const idStr = String(item.id);
@@ -299,14 +299,28 @@ export function filterContentByDub(
     const isOriginalHindi = origLang === 'hi';
     const isOriginalEnglish = !isAnime && origLang === 'en';
 
+    const titleStr =
+      typeof item.title === 'string'
+        ? item.title
+        : typeof item.name === 'string'
+        ? item.name
+        : typeof item.original_name === 'string'
+        ? item.original_name
+        : undefined;
+
     const cachedLangs =
       AudioAvailabilityCache.getKnownDubLanguages(idStr) ||
-      (typeof item.title === 'string' ? AudioAvailabilityCache.getKnownDubLanguages(item.title) : null);
+      (titleStr ? AudioAvailabilityCache.getKnownDubLanguages(titleStr) : null);
 
-    const hasHindiDub = isOriginalHindi || (cachedLangs ? cachedLangs.includes('Hindi') : false);
+    const hasHindiDub =
+      isOriginalHindi ||
+      isKnownTheatricalHindiDub(item.id as string | number, titleStr) ||
+      (cachedLangs ? cachedLangs.includes('Hindi') : false);
+
     const hasEnglishDub =
       isOriginalEnglish ||
-      (cachedLangs ? cachedLangs.includes('English') : (isAnime && origLang === 'ja'));
+      isAnime ||
+      (cachedLangs ? cachedLangs.includes('English') : false);
 
     if (dubFilter === 'hindi') {
       return hasHindiDub;

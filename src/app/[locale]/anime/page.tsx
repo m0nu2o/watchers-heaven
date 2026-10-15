@@ -85,8 +85,11 @@ export default function AnimePage() {
     if (audioFilter === 'dub') {
       return filterContentByDub(shows as unknown as Record<string, unknown>[], 'english', 'anime') as unknown as AnimeShow[];
     }
+    if (audioFilter === 'sub') {
+      return shows.filter((s) => !s.original_language || s.original_language === 'ja' || animationTab === 'anime');
+    }
     return shows;
-  }, [shows, audioFilter]);
+  }, [shows, audioFilter, animationTab]);
 
   // ── Load Curated Rails & Hero Spotlight (Once on Mount) ──
   useEffect(() => {
@@ -229,7 +232,19 @@ export default function AnimePage() {
               <div className="flex items-center rounded-full bg-black/60 backdrop-blur-md p-0.5 border border-white/10 text-[10px] font-bold">
                 <button
                   type="button"
-                  onClick={() => setAudioFilter('sub')}
+                  onClick={() => setAudioFilter('all')}
+                  className={`px-2.5 py-0.5 rounded-full transition cursor-pointer ${
+                    audioFilter === 'all'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-slate-300 hover:text-white'
+                  }`}
+                  title="Show All Anime"
+                >
+                  🌐 ALL
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAudioFilter(audioFilter === 'sub' ? 'all' : 'sub')}
                   className={`px-2.5 py-0.5 rounded-full transition cursor-pointer ${
                     audioFilter === 'sub'
                       ? 'bg-blue-600 text-white shadow-sm'
@@ -241,7 +256,7 @@ export default function AnimePage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setAudioFilter('dub')}
+                  onClick={() => setAudioFilter(audioFilter === 'dub' ? 'all' : 'dub')}
                   className={`px-2.5 py-0.5 rounded-full transition cursor-pointer ${
                     audioFilter === 'dub'
                       ? 'bg-blue-600 text-white shadow-sm'
