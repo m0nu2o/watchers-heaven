@@ -30,12 +30,12 @@ export async function GET(request: NextRequest) {
     if (streamResult?.success && streamResult.primaryUrl) {
       return NextResponse.json({
         success: true,
-        provider: 'ReAnime Cloud Engine (FlixCloud HD-1 & HD-2)',
+        provider: 'NextGen Anime Server (FlixCloud HD-1 & HD-2)',
         primaryUrl: streamResult.primaryUrl,
         embedUrls: (streamResult.sources || []).map((s: any) => ({
-          label: s.serverName || s.label || 'ReAnime HD',
+          label: s.serverName || s.label || 'NextGen HD',
           url: s.url,
-          serverType: s.serverId || 'reanime_hd1',
+          serverType: s.serverId || 'nextgen_hd1',
           isDub: Boolean(s.isDub),
         })),
         sources: streamResult.sources || [],

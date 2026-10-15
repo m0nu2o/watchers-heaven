@@ -27,8 +27,8 @@ async function run() {
   }
 
   try {
-    // 1. Anime Page: Demon Slayer - Verify ReAnime Server & SUB embed
-    console.log('Testing Anime Playback with ReAnime Cloud Engine...');
+    // 1. Anime Page: Demon Slayer - Verify NextGen Anime Server & SUB embed
+    console.log('Testing Anime Playback with NextGen Anime Server...');
     await page.goto(`${BASE_URL}/en/watch/85937?s=1&e=1&type=anime&track=sub`, { waitUntil: 'domcontentloaded' });
     const iframe = page.locator('iframe').first();
     await iframe.waitFor({ state: 'attached', timeout: 15000 }).catch(() => {});
@@ -36,10 +36,13 @@ async function run() {
 
     const isIframeVisible = await iframe.isVisible();
     const iframeSrc = (await iframe.getAttribute('src')) || '';
+    const nextgenServerBtn = page.locator('button:has-text("NextGen Anime Server"), button:has-text("NextGen")').first();
+    const isNextGenBtnVisible = await nextgenServerBtn.isVisible();
+
     report(
-      '1. Anime Stream loads via ReAnime Cloud Engine (FlixCloud)',
-      isIframeVisible && (iframeSrc.includes('flixcloud.cc') || iframeSrc.includes('reanime') || iframeSrc.length > 0),
-      `Iframe src: ${iframeSrc}`
+      '1. Anime Stream loads via NextGen Anime Server (FlixCloud HD-1 & HD-2)',
+      isIframeVisible && (iframeSrc.includes('flixcloud.cc') || iframeSrc.length > 0) && isNextGenBtnVisible,
+      `Iframe src: ${iframeSrc} | NextGen Server Deck Button: ${isNextGenBtnVisible}`
     );
 
     // 2. Verify [HINDI] button is hidden on Demon Slayer

@@ -12,9 +12,9 @@ export type { MediaType, MediaPlaybackConfig, ProviderAdapter };
 export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
   // ─── 1. Dedicated Anime Providers (1080p, Verified Sub/Dub, 0 Dead Servers) ───
   {
-    id: 'direct-hls',
-    name: 'ReAnime Cloud Engine',
-    quality: '1080p / FlixCloud HD / 0 Ads',
+    id: 'nextgen-anime',
+    name: 'NextGen Anime Server',
+    quality: '1080p / Multi-Server HD / 0 Ads',
     badge: '⚡',
     supportsMovie: false,
     supportsTV: false,
@@ -173,10 +173,12 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
  * automatically redirects to a live 200 OK verified server instead of failing.
  */
 const PROVIDER_ALIASES: Record<string, string> = {
-  // Direct HLS alias
-  'direct-hls': 'direct-hls',
-  'hikari': 'direct-hls',
-  'reanime': 'direct-hls',
+  // NextGen Anime Server aliases
+  'nextgen-anime': 'nextgen-anime',
+  'nextgen': 'nextgen-anime',
+  'direct-hls': 'nextgen-anime',
+  'hikari': 'nextgen-anime',
+  'reanime': 'nextgen-anime',
 
   // Nova aliases
   'nova': 'nova',
@@ -294,7 +296,7 @@ export const ProviderRegistry = {
     const cleanId = id.toLowerCase().trim();
     const canonicalId =
       PROVIDER_ALIASES[cleanId] ||
-      (cleanId.startsWith('reanime') ? 'direct-hls' : cleanId.startsWith('hikari') ? 'direct-hls' : cleanId);
+      (cleanId.startsWith('nextgen') ? 'nextgen-anime' : cleanId.startsWith('reanime') ? 'nextgen-anime' : cleanId.startsWith('hikari') ? 'nextgen-anime' : cleanId);
     return (
       PROVIDER_ADAPTERS.find((p) => p.id === canonicalId) ||
       PROVIDER_ADAPTERS.find((p) => p.id === id)

@@ -220,21 +220,21 @@ async function resolveReanime(
       : s.dataLink;
 
     const serverDisplayName = s.serverName || `HD-${idx + 1}`;
-    const label = `ReAnime ${serverDisplayName} (${(s.dataType || 'sub').toUpperCase()})`;
+    const label = `NextGen ${serverDisplayName} (${(s.dataType || 'sub').toUpperCase()})`;
 
     return {
       label,
       url: finalUrl,
       type: 'embed',
       serverName: label,
-      serverId: `reanime-${serverDisplayName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+      serverId: `nextgen-${serverDisplayName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
       isDub: isServerDub,
       headers: { Referer: `${BASE}/` },
     };
   });
 
   return {
-    provider: 'direct-hls',
+    provider: 'nextgen-anime',
     sources: availableSources,
     subtitles: [],
     hasSub,
@@ -519,7 +519,7 @@ export async function resolveStreamingSources({
 
           const payload = {
             success: true,
-            provider: 'direct-hls',
+            provider: 'nextgen-anime',
             primaryUrl: primarySource.url,
             rawUrl: primarySource.url,
             isHls: false,

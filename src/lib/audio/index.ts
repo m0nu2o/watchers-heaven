@@ -530,7 +530,7 @@ export function getEpisodeAudioTracks(params: GetEpisodeAudioTracksParams): Epis
       languageCode: isAnime ? 'ja' : origLang,
       type: 'sub',
       label: isAnime ? '🇯🇵 Japanese (SUB)' : `${origMeta.flag} ${origMeta.name} (Original)`,
-      provider: isAnime ? 'direct-hls' : 'nova',
+      provider: isAnime ? 'nextgen-anime' : 'nova',
       available: true,
       isOriginal: true,
       evidenceLevel: 'PLAYBACK_VERIFIED',
@@ -542,7 +542,7 @@ export function getEpisodeAudioTracks(params: GetEpisodeAudioTracksParams): Epis
       languageCode: 'en',
       type: 'dub',
       label: isAnime ? '🇬🇧 English (DUB)' : isOriginalEnglish ? '🇬🇧 English (Audio)' : '🇬🇧 English (DUB)',
-      provider: isAnime ? 'direct-hls' : 'nova',
+      provider: isAnime ? 'nextgen-anime' : 'nova',
       available: isOriginalEnglish || isAnime || hasEnglishDub,
       isOriginal: isOriginalEnglish,
       evidenceLevel: (isOriginalEnglish || hasEnglishDub) ? 'PROVIDER_CONFIRMED' : isAnime ? 'PLAYBACK_VERIFIED' : 'UNKNOWN',
@@ -907,11 +907,11 @@ export async function resolveAudioSourceAsync(
     chosenProvider = compatibleProviders[0].id;
   }
 
-  // ── High-Performance Direct HLS Anime Engine (Ported from Taro) ──
-  // Resolves direct ad-free HLS m3u8 streams with subtitles and intro chapters for anime and donghua
+  // ── High-Performance NextGen Anime Engine ──
+  // Resolves direct ad-free streams with subtitles and intro chapters for anime and donghua
   if (
     effectiveMediaType === 'anime' &&
-    (preferredProvider === 'direct-hls' || (!preferredProvider && track.id !== 'dub-hi'))
+    (preferredProvider === 'nextgen-anime' || preferredProvider === 'direct-hls' || (!preferredProvider && track.id !== 'dub-hi'))
   ) {
     try {
       const streamResult = await resolveStreamingSources({
@@ -929,7 +929,7 @@ export async function resolveAudioSourceAsync(
         return {
           success: true,
           available: true,
-          provider: streamResult.provider || 'direct-hls',
+          provider: streamResult.provider || 'nextgen-anime',
           url: streamResult.primaryUrl,
           isHls: Boolean(streamResult.isHls),
           subtitles: streamResult.subtitles || [],

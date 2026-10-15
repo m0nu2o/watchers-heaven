@@ -6,7 +6,7 @@ export const runtime = 'edge';
 
 /**
  * Lumina HLS / Media Proxy with Obfuscation Decryption.
- * Ported from Taro/Hikari streaming engine.
+ * Ported from NextGen Anime streaming engine.
  *
  * Upstream streaming CDNs require specific headers (Referer / Origin / User-Agent),
  * do not send browser-friendly CORS headers, and may encrypt M3U8 playlists with

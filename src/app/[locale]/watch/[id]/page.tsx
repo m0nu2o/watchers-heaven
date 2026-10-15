@@ -564,8 +564,8 @@ export default function WatchPage() {
       const effectiveImdb = imdbId || ApiGateway.getCachedImdbId(id) || undefined;
       const mediaType = isActuallyAnime ? 'anime' : isActuallyTv ? 'tv' : 'movie';
 
-      if (newProviderId === 'direct-hls') {
-        void resolveCurrentSource(selectedAudioTrack, 'direct-hls').then((result) => {
+      if (newProviderId === 'nextgen-anime' || newProviderId === 'direct-hls') {
+        void resolveCurrentSource(selectedAudioTrack, 'nextgen-anime').then((result) => {
           if (result?.url) {
             setEmbedUrl(result.url);
             setIsDirectHls(Boolean(result.isHls));
@@ -658,8 +658,8 @@ export default function WatchPage() {
     const loadSource = async () => {
       setPlaybackError(null);
 
-      if (provider === 'direct-hls') {
-        const result = await resolveCurrentSource(selectedAudioTrack, 'direct-hls');
+      if (provider === 'nextgen-anime' || provider === 'direct-hls') {
+        const result = await resolveCurrentSource(selectedAudioTrack, 'nextgen-anime');
         if (!cancelled && result?.url) {
           setEmbedUrl(result.url);
           setIsDirectHls(Boolean(result.isHls));
@@ -727,14 +727,14 @@ export default function WatchPage() {
         : '🇬🇧 Switching to English DUB...';
       triggerSeekFeedback(feedbackMsg);
 
-      // Auto-route to the correct DUB-capable provider while preserving Hikari Direct 4K
+      // Auto-route to the correct DUB-capable provider while preserving NextGen Anime Server
       let overrideProv: string | undefined = undefined;
       const currentAdapter = ProviderRegistry.getById(provider);
 
       if (trackId === 'dub-en' || trackId === 'dub') {
         if (isActuallyAnime) {
-          // Hikari Direct 4K supports both SUB & DUB natively — keep on or route to direct-hls!
-          overrideProv = 'direct-hls';
+          // NextGen Anime Server supports both SUB & DUB natively — keep on or route to nextgen-anime!
+          overrideProv = 'nextgen-anime';
         } else {
           overrideProv = currentAdapter?.supportsEnglishDub
             ? provider
@@ -744,8 +744,8 @@ export default function WatchPage() {
         // Hindi DUB: nova or current provider if it supports Hindi
         overrideProv = currentAdapter?.supportsHindiDub ? provider : 'nova';
       } else {
-        // SUB: keep current provider or direct-hls for anime
-        overrideProv = isActuallyAnime && provider === 'direct-hls' ? 'direct-hls' : provider;
+        // SUB: keep current provider or nextgen-anime for anime
+        overrideProv = isActuallyAnime && (provider === 'nextgen-anime' || provider === 'direct-hls') ? 'nextgen-anime' : provider;
       }
 
       if (overrideProv && overrideProv !== provider) {
@@ -759,7 +759,7 @@ export default function WatchPage() {
         return;
       }
 
-      const newProv = isActuallyAnime && overrideProv === 'direct-hls' ? 'direct-hls' : (result.provider || overrideProv);
+      const newProv = isActuallyAnime && (overrideProv === 'nextgen-anime' || overrideProv === 'direct-hls') ? 'nextgen-anime' : (result.provider || overrideProv);
       if (newProv && newProv !== provider) {
         setProvider(newProv);
       }
@@ -833,7 +833,7 @@ export default function WatchPage() {
     const streamType = UniversalPlayerEngine.detectStreamType(embedUrl || '', isDirectHls);
     const activeAdapter = availableProviders.find((p) => p.id === provider);
 
-    const audioTracks: PlayerAudioTrack[] = isActuallyAnime && provider === 'direct-hls'
+    const audioTracks: PlayerAudioTrack[] = isActuallyAnime && (provider === 'nextgen-anime' || provider === 'direct-hls')
       ? [
           { id: 'sub', label: '🇯🇵 Japanese (SUB)', language: 'Japanese', languageCode: 'ja', isOriginal: true, available: true },
           { id: 'dub-en', label: '🇬🇧 English (DUB)', language: 'English', languageCode: 'en', isOriginal: false, available: true },
