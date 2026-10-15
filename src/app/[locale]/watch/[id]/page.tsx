@@ -1521,6 +1521,8 @@ export default function WatchPage() {
           onSelectAudioTrack={handleSelectAudioTrack}
           accentColor={accentColor.startsWith('#') ? accentColor : `#${accentColor}`}
           isLoadingSource={isResolvingSource}
+          hasHindiDub={mediaOriginalLang === 'hi' || selectedAudioTrack === 'dub-hi' || audioAvailability?.tracks?.some((t) => t.id === 'dub-hi' && t.available !== false)}
+          hasEnglishDub={mediaOriginalLang === 'en' || selectedAudioTrack === 'dub-en' || audioAvailability?.tracks?.some((t) => (t.id === 'dub-en' || t.id === 'dub') && t.available !== false)}
         />
 
         {/* 2. Apple Quick Action Bar */}

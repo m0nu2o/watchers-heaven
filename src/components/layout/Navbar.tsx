@@ -95,7 +95,7 @@ export function Navbar() {
     },
     {
       id: 'anime',
-      label: t('anime') || 'Animation',
+      label: 'Animation',
       path: '/anime',
       icon: Sparkles,
     },

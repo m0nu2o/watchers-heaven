@@ -13,8 +13,8 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
   // ─── 1. Dedicated Anime Providers (1080p, Verified Sub/Dub, 0 Dead Servers) ───
   {
     id: 'direct-hls',
-    name: 'Hikari Direct 4K',
-    quality: '4K/1080p / Direct HLS / 0 Ads',
+    name: 'ReAnime Cloud Engine',
+    quality: '1080p / FlixCloud HD / 0 Ads',
     badge: '⚡',
     supportsMovie: false,
     supportsTV: false,
@@ -42,7 +42,9 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     isConfigured: () => true,
     getPlaybackUrl: (cfg) => {
       const type = (cfg.season !== undefined && cfg.episode !== undefined) ? 'tv' : 'movie';
-      return ApiGateway.getVidSrcSuUrl(cfg.tmdbId, type, cfg.season || 1, cfg.episode || 1);
+      const isDub = cfg.audioTrackId === 'dub-en' || cfg.audioTrackId === 'dub';
+      const base = ApiGateway.getVidSrcSuUrl(cfg.tmdbId, type, cfg.season || 1, cfg.episode || 1);
+      return isDub ? `${base}${base.includes('?') ? '&' : '?'}dub=1` : base;
     },
   },
   {
@@ -144,6 +146,25 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
       );
     },
   },
+  {
+    id: 'screenscape',
+    name: 'ScreenScape India',
+    quality: '1080p / Hindi Dub / 0 Ads',
+    badge: '🇮🇳',
+    supportsMovie: true,
+    supportsTV: true,
+    supportsAnime: true,
+    supportsEnglishDub: false,
+    supportsHindiDub: true,
+    requiresApiKey: false,
+    isConfigured: () => true,
+    getPlaybackUrl: (cfg) => {
+      const type = (cfg.season !== undefined && cfg.episode !== undefined) || cfg.mediaType === 'tv' ? 'tv' : 'movie';
+      const sParam = cfg.season ? `&s=${cfg.season}` : '';
+      const eParam = cfg.episode ? `&e=${cfg.episode}` : '';
+      return `https://screenscape.me/embed?tmdb=${cfg.tmdbId}&type=${type}${sParam}${eParam}&lan=hi`;
+    },
+  },
 ];
 
 /**
@@ -185,7 +206,7 @@ const PROVIDER_ALIASES: Record<string, string> = {
   '2embed': 'vidsrc-su',
   '2embed-skin': 'vidsrc-su',
   '2embed-cc': 'vidsrc-su',
-  'screenscape': 'nova',
+  'screenscape': 'screenscape',
   'rivestream': 'vidlink',
   '111movies': 'vidlink',
   'videasy': 'vidlink',

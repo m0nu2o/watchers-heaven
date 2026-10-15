@@ -49,10 +49,10 @@ export function PlayerCenterControls({
         </div>
       )}
 
-      {/* Main Center Action Deck — Apple Cinema Frosted Glass */}
+      {/* Main Center Action Deck — Apple Cinema Frosted Glass (Only shown when paused to keep playback clean) */}
       <div
         className={`flex items-center gap-3 sm:gap-5 transition-all duration-300 ease-out transform pointer-events-auto select-none ${
-          visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
+          visible && !playing ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
         }`}
       >
         {/* Previous Episode (if available) */}

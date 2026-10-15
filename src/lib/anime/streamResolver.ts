@@ -133,149 +133,113 @@ async function resolveReanime(
   } = {}
 ) {
   const BASE = 'https://reanime.to';
-  const H = {
-    'User-Agent': USER_AGENT,
-    Accept: 'application/json, */*',
-    Referer: `${BASE}/`,
-  };
+  const cleanAnilistId = String(anilistId).replace(/^anilist-/, '').trim();
+  const targetUrl = `${BASE}/api/flix/${encodeURIComponent(cleanAnilistId)}/${encodeURIComponent(epNum)}`;
 
   let flixData: any = null;
-  try {
-    const { response, body } = await fetchBody(
-      fetchImpl,
-      `${BASE}/api/flix/${anilistId}/${epNum}`,
-      { headers: H },
-      timeoutMs,
-      signal,
-      'Reanime catalog request'
-    );
-    if (response.ok) {
-      try {
-        flixData = JSON.parse(body);
-      } catch {
-        flixData = null;
+
+  // 1. Edge proxy bypasses Cloudflare datacenter IP blocks (Ported from anime website)
+  const workerProxy =
+    process.env.CLOUDFLARE_WORKER_URL ||
+    process.env.STREAM_PROXY_URL ||
+    'https://tblbvrgzoovujszpztvr.supabase.co/functions/v1/anime-proxy';
+
+  if (workerProxy) {
+    try {
+      const cleanWorker = workerProxy.replace(/\/+$/, '');
+      const proxyFetchUrl = cleanWorker.includes('?')
+        ? `${cleanWorker}&url=${encodeURIComponent(targetUrl)}`
+        : `${cleanWorker}?url=${encodeURIComponent(targetUrl)}`;
+
+      const { response, body } = await fetchBody(
+        fetchImpl,
+        proxyFetchUrl,
+        { headers: { Accept: 'application/json' } },
+        Math.min(timeoutMs, 5000),
+        signal,
+        'Reanime edge proxy request'
+      );
+      if (response.ok) {
+        try {
+          const parsed = JSON.parse(body);
+          if (parsed?.success && Array.isArray(parsed?.servers) && parsed.servers.length > 0) {
+            flixData = parsed;
+          }
+        } catch {}
       }
+    } catch {}
+  }
+
+  // 2. Direct request fallback with browser headers
+  if (!flixData) {
+    try {
+      const H = {
+        'User-Agent': USER_AGENT,
+        Accept: 'application/json, */*',
+        Referer: `${BASE}/`,
+      };
+      const { response, body } = await fetchBody(
+        fetchImpl,
+        targetUrl,
+        { headers: H },
+        timeoutMs,
+        signal,
+        'Reanime catalog direct request'
+      );
+      if (response.ok) {
+        try {
+          flixData = JSON.parse(body);
+        } catch {
+          flixData = null;
+        }
+      }
+    } catch (error) {
+      if (signal?.aborted) throw signal.reason;
     }
-  } catch (error) {
-    if (signal?.aborted) throw signal.reason;
-    throw new Error('Reanime catalog request failed');
   }
 
   if (!flixData?.success || !Array.isArray(flixData?.servers) || flixData.servers.length === 0) {
     throw new Error('No servers returned by Reanime');
   }
 
-  const hasSub = flixData.servers.some((s: any) => ['sub', 's-sub'].includes(s.dataType?.toLowerCase()));
-  const hasDub = flixData.servers.some((s: any) => ['dub', 's-dub'].includes(s.dataType?.toLowerCase()));
+  const rawServers: any[] = flixData.servers;
+  const hasSub = rawServers.some((s: any) => ['sub', 's-sub'].includes(s.dataType?.toLowerCase()));
+  const hasDub = rawServers.some((s: any) => ['dub', 's-dub'].includes(s.dataType?.toLowerCase()));
 
-  const audioTypes = isDub ? ['dub', 's-dub'] : ['sub', 's-sub'];
-  const matchingServers = flixData.servers.filter((server: any) =>
-    audioTypes.includes(server.dataType?.toLowerCase()?.trim())
-  );
-  const serversToTry = matchingServers.length > 0 ? matchingServers : flixData.servers;
+  // Prioritize requested audio (dub or sub)
+  const preferredType = isDub ? 'dub' : 'sub';
+  const matchingServers = rawServers.filter((s: any) => s.dataType?.toLowerCase() === preferredType);
+  const otherServers = rawServers.filter((s: any) => s.dataType?.toLowerCase() !== preferredType);
+  const sortedServers = [...matchingServers, ...otherServers];
 
-  const extractionPromises = serversToTry.map(async (server: any, index: number) => {
-    if (!server.dataLink) return null;
-    try {
-      const { response, body } = await fetchBody(
-        fetchImpl,
-        server.dataLink,
-        { headers: H },
-        Math.min(timeoutMs, 7000),
-        signal,
-        `Reanime embed request ${server.serverName || index}`
-      );
-      if (!response.ok) return null;
+  // Map to verified embed sources (FlixCloud HD-1 & HD-2 with ?a=1 for Dub)
+  const availableSources = sortedServers.map((s: any, idx: number) => {
+    const isServerDub = ['dub', 's-dub'].includes(s.dataType?.toLowerCase());
+    const finalUrl = isServerDub
+      ? `${s.dataLink}${s.dataLink.includes('?') ? '&' : '?'}a=1`
+      : s.dataLink;
 
-      const extracted = await extractFlixcloud(body, {
-        apiBase: 'https://flixcloud.cc',
-        headers: H,
-        referer: `${BASE}/`,
-        fetchImpl,
-        signal,
-        timeoutMs: Math.min(timeoutMs, 7000),
-      });
+    const serverDisplayName = s.serverName || `HD-${idx + 1}`;
+    const label = `ReAnime ${serverDisplayName} (${(s.dataType || 'sub').toUpperCase()})`;
 
-      if (extracted?.url) {
-        return {
-          server,
-          extracted,
-          source: {
-            url: extracted.url,
-            type: 'hls',
-            quality: 'auto',
-            serverName: server.serverName || `HD-${index + 1}`,
-            serverId: `server-${(server.serverName || `${index + 1}`).toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
-            pk: extracted.pk || '',
-            headers: {
-              Referer: 'https://flixcloud.cc/',
-              'User-Agent': USER_AGENT,
-              pk: extracted.pk || '',
-            },
-          },
-        };
-      }
-    } catch {
-      // ignore single server failure
-    }
-    return null;
+    return {
+      label,
+      url: finalUrl,
+      type: 'embed',
+      serverName: label,
+      serverId: `reanime-${serverDisplayName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+      isDub: isServerDub,
+      headers: { Referer: `${BASE}/` },
+    };
   });
 
-  const extractionResults = await Promise.allSettled(extractionPromises);
-  const availableSources: any[] = [];
-  let primaryExtracted: any = null;
-  let primaryServerName = '';
-
-  for (const settled of extractionResults) {
-    if (settled.status === 'fulfilled' && settled.value) {
-      const { server, extracted, source } = settled.value;
-      if (!primaryExtracted) {
-        primaryExtracted = extracted;
-        primaryServerName = server.serverName || 'HD-1';
-      }
-      availableSources.push(source);
-    }
-  }
-
-  // Also include embed fallbacks
-  for (const server of serversToTry) {
-    if (server.dataLink) {
-      availableSources.push({
-        url: server.dataLink,
-        type: 'embed',
-        serverName: `${server.serverName || 'HD'} (Embed)`,
-        serverId: `${(server.serverName || 'hd').toLowerCase().replace(/[^a-z0-9]/g, '-')}-embed`,
-        headers: { Referer: `${BASE}/` },
-      });
-    }
-  }
-
-  if (availableSources.length > 0) {
-    return {
-      provider: 'direct-hls',
-      sources: availableSources,
-      subtitles: (primaryExtracted?.subtitles || []).map((sub: any) => ({
-        url: sub.url,
-        language: sub.language || 'en',
-        label: sub.label || sub.language || 'English',
-        default: Boolean(sub.default),
-        format: sub.format || 'vtt',
-      })),
-      intro: primaryExtracted?.intro_chapter || null,
-      outro: primaryExtracted?.outro_chapter || null,
-      pk: primaryExtracted?.pk || '',
-      headers: {
-        Referer: 'https://flixcloud.cc/',
-        'User-Agent': USER_AGENT,
-        pk: primaryExtracted?.pk || '',
-      },
-      hasSub,
-      hasDub,
-    };
-  }
-
-  if (signal?.aborted) throw signal.reason;
-  throw new Error('No playable stream resolved from Reanime');
+  return {
+    provider: 'direct-hls',
+    sources: availableSources,
+    subtitles: [],
+    hasSub,
+    hasDub,
+  };
 }
 
 async function resolveSenshi(
@@ -551,26 +515,17 @@ export async function resolveStreamingSources({
         });
 
         if (reanimeResult?.sources?.length) {
-          const directSources = reanimeResult.sources.filter((s: any) => s.type === 'hls');
-          const primarySource = directSources[0] || reanimeResult.sources[0];
+          const primarySource = reanimeResult.sources[0];
 
           const payload = {
             success: true,
             provider: 'direct-hls',
-            primaryUrl: buildProxyUrl(primarySource.url, primarySource.headers || {}, primarySource.pk || '', isDub),
+            primaryUrl: primarySource.url,
             rawUrl: primarySource.url,
-            isHls: primarySource.type === 'hls',
-            sources: reanimeResult.sources.map((s: any) => ({
-              ...s,
-              proxyUrl: s.type === 'hls' ? buildProxyUrl(s.url, s.headers || {}, s.pk || '', isDub) : s.url,
-            })),
-            subtitles: (reanimeResult.subtitles || []).map((sub: any) => ({
-              ...sub,
-              url: sub.url.endsWith('.ass') ? `/api/proxy/stream?url=${encodeURIComponent(sub.url)}` : sub.url,
-            })),
-            skipTimestamps: reanimeResult.intro
-              ? { intro: [reanimeResult.intro.start, reanimeResult.intro.end] }
-              : undefined,
+            isHls: false,
+            sources: reanimeResult.sources,
+            subtitles: reanimeResult.subtitles || [],
+            skipTimestamps: undefined,
             hasSub: reanimeResult.hasSub,
             hasDub: reanimeResult.hasDub,
             isDonghua: false,

@@ -182,18 +182,17 @@ export async function getContentAudioAvailabilityAsync(
     }
     isVerified = true;
   } else if (isAnime) {
+    hasEnglishDub = true;
     // 1. Anime resolution via dynamic AniList voice actors
     try {
       const aniResult = await checkAniListDubAvailability(params.title || params.id);
       if (aniResult) {
-        hasEnglishDub = hasEnglishDub || aniResult.hasEnglishDub;
         hasHindiDub = hasHindiDub || aniResult.spokenLanguages.includes('Hindi');
         isVerified = true;
       }
     } catch {
       // Fallback to sync check if network failed
       const syncAvail = getContentAudioAvailability(params);
-      hasEnglishDub = syncAvail.dub.en;
       hasHindiDub = syncAvail.dub.hi;
     }
   }
@@ -536,22 +535,18 @@ export function getEpisodeAudioTracks(params: GetEpisodeAudioTracksParams): Epis
       isOriginal: true,
       evidenceLevel: 'PLAYBACK_VERIFIED',
     },
-    // 2. English Track (Only when original is NOT English, e.g. Anime, Foreign)
-    ...(!isOriginalEnglish || isAnime
-      ? [
-          {
-            id: 'dub-en',
-            language: 'English',
-            languageCode: 'en',
-            type: 'dub' as const,
-            label: isAnime ? '🇬🇧 English (DUB)' : '🇬🇧 English (DUB)',
-            provider: isAnime ? 'direct-hls' : 'vidlink',
-            available: hasEnglishDub,
-            isOriginal: isOriginalEnglish,
-            evidenceLevel: hasEnglishDub ? ('PROVIDER_CONFIRMED' as const) : ('UNKNOWN' as const),
-          },
-        ]
-      : []),
+    // 2. English Track (Always available for English-original titles, anime, and verified foreign dubs)
+    {
+      id: 'dub-en',
+      language: 'English',
+      languageCode: 'en',
+      type: 'dub',
+      label: isAnime ? '🇬🇧 English (DUB)' : isOriginalEnglish ? '🇬🇧 English (Audio)' : '🇬🇧 English (DUB)',
+      provider: isAnime ? 'direct-hls' : 'nova',
+      available: isOriginalEnglish || isAnime || hasEnglishDub,
+      isOriginal: isOriginalEnglish,
+      evidenceLevel: (isOriginalEnglish || hasEnglishDub) ? 'PROVIDER_CONFIRMED' : isAnime ? 'PLAYBACK_VERIFIED' : 'UNKNOWN',
+    },
     // 3. Hindi Track
     {
       id: 'dub-hi',
@@ -559,7 +554,7 @@ export function getEpisodeAudioTracks(params: GetEpisodeAudioTracksParams): Epis
       languageCode: 'hi',
       type: 'dub',
       label: isAnime ? '🇮🇳 Hindi (DUB)' : '🇮🇳 Hindi (DUB)',
-      provider: 'nova',
+      provider: 'screenscape',
       available: hasHindiDub,
       isOriginal: isOriginalHindi,
       evidenceLevel: isOriginalHindi
@@ -786,6 +781,8 @@ export function resolveAudioSource(params: ResolveAudioSourceParams): ResolveAud
 
   if (preferredProvider && compatibleProviders.some((p) => p.id === preferredProvider)) {
     chosenProvider = preferredProvider;
+  } else if (track.provider && compatibleProviders.some((p) => p.id === track.provider)) {
+    chosenProvider = track.provider;
   } else if (compatibleProviders.length > 0) {
     chosenProvider = compatibleProviders[0].id;
   }
@@ -904,6 +901,8 @@ export async function resolveAudioSourceAsync(
 
   if (preferredProvider && compatibleProviders.some((p) => p.id === preferredProvider)) {
     chosenProvider = preferredProvider;
+  } else if (track.provider && compatibleProviders.some((p) => p.id === track.provider)) {
+    chosenProvider = track.provider;
   } else if (compatibleProviders.length > 0) {
     chosenProvider = compatibleProviders[0].id;
   }

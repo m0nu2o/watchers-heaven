@@ -131,11 +131,14 @@ export async function GET(req: NextRequest) {
           episode: ep,
           isDub,
         });
-        if (streamResult?.primaryUrl && streamResult.isHls) {
-          return NextResponse.redirect(new URL(streamResult.primaryUrl, req.url));
+        if (streamResult?.primaryUrl) {
+          const target = streamResult.primaryUrl.startsWith('http')
+            ? streamResult.primaryUrl
+            : new URL(streamResult.primaryUrl, req.url).toString();
+          return NextResponse.redirect(new URL(target));
         }
         return NextResponse.json(
-          { error: 'No direct HLS stream available for this title', fallback: 'embed' },
+          { error: 'No stream available for this title', fallback: 'embed' },
           { status: 404 }
         );
       } catch (err) {

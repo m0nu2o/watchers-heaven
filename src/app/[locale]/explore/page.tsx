@@ -70,7 +70,11 @@ function ExploreContent() {
   const [selectedGenre, setSelectedGenre] = useState<string>(initialGenre);
   const [selectedYear, setSelectedYear] = useState<string>(initialYear);
   const [dubFilter, setDubFilter] = useState<'all' | 'hindi' | 'english' | 'both'>(
-    initialAudio === 'hi' ? 'hindi' : initialAudio === 'en' ? 'english' : 'all'
+    initialAudio === 'hi' || initialAudio === 'hindi'
+      ? 'hindi'
+      : initialAudio === 'en' || initialAudio === 'english'
+      ? 'english'
+      : 'all'
   );
   const [sortBy, setSortBy] = useState<string>(initialSort);
   const [searchQuery, setSearchQuery] = useState<string>('');

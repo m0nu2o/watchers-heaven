@@ -257,8 +257,8 @@ export function UniversalPlayer({
     if (controlsTimeoutRef.current) {
       clearTimeout(controlsTimeoutRef.current);
     }
-    // Auto-hide: 1.8s when playing, 3.5s when paused for clean cinematic frame inspection
-    const hideDelay = state.playing ? 1800 : 3500;
+    // Auto-hide: 1.4s when playing, 2.5s when paused for clean cinematic frame inspection
+    const hideDelay = state.playing ? 1400 : 2500;
     controlsTimeoutRef.current = setTimeout(() => {
       setControlsVisible(false);
     }, hideDelay);
@@ -614,6 +614,7 @@ export function UniversalPlayer({
         <iframe
           ref={iframeRef}
           src={source.url}
+          data-player-adapter="embed"
           className="w-full h-full border-0 absolute inset-0 bg-black pointer-events-auto z-0"
           allowFullScreen
           allow="autoplay; fullscreen; picture-in-picture; encrypted-media"

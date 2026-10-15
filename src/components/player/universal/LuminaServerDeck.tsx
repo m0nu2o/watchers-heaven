@@ -14,6 +14,8 @@ export interface LuminaServerDeckProps {
   onSelectAudioTrack?: (trackId: string) => void;
   accentColor?: string;
   isLoadingSource?: boolean;
+  hasHindiDub?: boolean;
+  hasEnglishDub?: boolean;
 }
 
 export function LuminaServerDeck({
@@ -25,6 +27,8 @@ export function LuminaServerDeck({
   onSelectAudioTrack,
   accentColor = '#3b82f6',
   isLoadingSource = false,
+  hasHindiDub = false,
+  hasEnglishDub = true,
 }: LuminaServerDeckProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -173,7 +177,7 @@ export function LuminaServerDeck({
             </div>
           </div>
 
-          {/* ── Sub & Dub Direct 1-Click Toggle (Ported from Taro HSL Server Engine) ── */}
+          {/* ── Sub & Dub Direct 1-Click Toggle ── */}
           {onSelectAudioTrack && (
             <div className="flex items-center gap-1 bg-black/5 dark:bg-white/[0.06] p-0.5 rounded-xl border border-black/5 dark:border-white/10 shrink-0">
               <button
@@ -184,7 +188,7 @@ export function LuminaServerDeck({
                     ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/30 ring-1 ring-blue-500/50'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
                 }`}
-                title="Original Japanese / Subtitles"
+                title="Original Language / Subtitles"
               >
                 <Subtitles className="w-3 h-3" />
                 <span>SUB</span>
@@ -198,13 +202,14 @@ export function LuminaServerDeck({
                     ? 'bg-purple-600 text-white shadow-sm shadow-purple-600/30 ring-1 ring-purple-500/50'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
                 }`}
-                title="English Dubbed Audio"
+                title="English Audio / Dubbed"
               >
                 <Mic className="w-3 h-3" />
                 <span>DUB</span>
               </button>
 
-              {servers.some((s) => s.supportsHindiDub) && (
+              {/* Only show HINDI button if title genuinely has Hindi dub/audio */}
+              {(hasHindiDub || isHindiDubSelected) && (
                 <button
                   type="button"
                   onClick={() => onSelectAudioTrack('dub-hi')}
@@ -213,7 +218,7 @@ export function LuminaServerDeck({
                       ? 'bg-amber-600 text-white shadow-sm shadow-amber-600/30 ring-1 ring-amber-500/50'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
                   }`}
-                  title="Hindi Dubbed Audio"
+                  title="Hindi Dubbed / Audio"
                 >
                   <Volume2 className="w-3 h-3" />
                   <span>HINDI</span>
@@ -272,14 +277,14 @@ export function LuminaServerDeck({
                   aria-pressed={isActive}
                   className={`group relative flex items-center gap-2 px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer shrink-0 select-none border whitespace-nowrap ${
                     isActive
-                      ? 'bg-blue-600/35 border-blue-400 text-white shadow-md shadow-blue-600/20 ring-1 ring-blue-400/50'
-                      : 'bg-white/[0.06] hover:bg-white/[0.12] border-white/[0.12] hover:border-white/25 text-slate-100 hover:text-white'
+                      ? 'bg-blue-600/35 border-blue-500 text-slate-900 dark:text-white shadow-md shadow-blue-600/20 ring-1 ring-blue-500/50'
+                      : 'bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] border-black/10 dark:border-white/[0.12] hover:border-black/20 dark:hover:border-white/25 text-slate-800 dark:text-slate-100'
                   }`}
                 >
                   {/* Server Badge & Status Dot */}
                   <div className="flex items-center gap-1.5">
                     <span className="text-sm shrink-0 leading-none">{server.badge}</span>
-                    <span className="font-bold text-xs text-white truncate max-w-[130px] sm:max-w-[160px] tracking-wide">
+                    <span className="font-bold text-xs text-slate-900 dark:text-white truncate max-w-[130px] sm:max-w-[160px] tracking-wide">
                       {server.name}
                     </span>
                   </div>
@@ -292,29 +297,29 @@ export function LuminaServerDeck({
                         Live
                       </span>
                     ) : (
-                      <span className="px-1.5 py-0.5 rounded bg-white/10 text-slate-200 font-semibold text-[9px]">
+                      <span className="px-1.5 py-0.5 rounded bg-black/[0.06] dark:bg-white/10 text-slate-700 dark:text-slate-200 font-semibold text-[9px]">
                         {qualityClean}
                       </span>
                     )}
 
                     {/* Language Badges if available */}
                     {server.supportsHindiDub && (
-                      <span className="px-1.5 py-0.5 rounded bg-amber-500/30 text-amber-200 border border-amber-400/30 font-black text-[9px]">
+                      <span className="px-1.5 py-0.5 rounded bg-amber-500/20 dark:bg-amber-500/30 text-amber-700 dark:text-amber-200 border border-amber-500/30 font-black text-[9px]">
                         HI
                       </span>
                     )}
                     {server.supportsEnglishDub && (
-                      <span className="px-1.5 py-0.5 rounded bg-blue-500/30 text-blue-200 border border-blue-400/30 font-bold text-[9px]">
+                      <span className="px-1.5 py-0.5 rounded bg-blue-500/20 dark:bg-blue-500/30 text-blue-700 dark:text-blue-200 border border-blue-500/30 font-bold text-[9px]">
                         EN
                       </span>
                     )}
 
                     {/* Latency Ping */}
-                    <span className="flex items-center gap-1 text-[9.5px] text-slate-300 font-mono font-medium">
+                    <span className="flex items-center gap-1 text-[9.5px] text-slate-500 dark:text-slate-300 font-mono font-medium">
                       {inCooldown ? (
                         <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
                       ) : (
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
                       )}
                       {health.avgLatencyMs ? `${health.avgLatencyMs}ms` : 'Fast'}
                     </span>

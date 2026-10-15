@@ -46,6 +46,7 @@ export function PosterCard({ id, title, posterPath, rating, year, className, typ
   return (
     <Link
       href={href}
+      data-testid="poster-card"
       className={`card-snap group relative min-w-[140px] sm:min-w-[160px] md:min-w-[175px] lg:min-w-[190px] aspect-[2/3] rounded-2xl overflow-hidden cursor-pointer bg-slate-200 dark:bg-[#05070c] border border-black/10 dark:border-white/[0.08] hover:border-black/20 dark:hover:border-white/[0.25] shadow-lg shadow-black/10 dark:shadow-black/50 transition-all duration-300 ease-out hover:-translate-y-2 hover:shadow-2xl hover:shadow-black/20 dark:hover:shadow-black/90 active:scale-[0.98] ${className || ''}`}
     >
       {/* Top Badges */}

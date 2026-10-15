@@ -9,7 +9,7 @@ export async function GET(
   try {
     const { id } = await context.params;
     const { searchParams } = new URL(request.url);
-    let type = (searchParams.get('type') || 'movie') as 'movie' | 'tv' | 'anime';
+    let type = (searchParams.get('type') || searchParams.get('mediaType') || 'movie') as 'movie' | 'tv' | 'anime';
     const season = searchParams.get('s') || searchParams.get('season') ? parseInt(searchParams.get('s') || searchParams.get('season')!, 10) : undefined;
     const episode = searchParams.get('e') || searchParams.get('episode') ? parseInt(searchParams.get('e') || searchParams.get('episode')!, 10) : undefined;
     const trackId = searchParams.get('track') || searchParams.get('trackId') || 'sub';
@@ -18,7 +18,7 @@ export async function GET(
     let malId = searchParams.get('malId') ? parseInt(searchParams.get('malId')!, 10) : undefined;
     const startTime = searchParams.get('startTime') ? parseFloat(searchParams.get('startTime')!) : 0;
     const accentColor = searchParams.get('accentColor') || undefined;
-    const originalLanguage = searchParams.get('origLang') || (type === 'anime' ? 'ja' : 'en');
+    let originalLanguage = searchParams.get('origLang') || (type === 'anime' ? 'ja' : 'en');
     let title = searchParams.get('title') || undefined;
 
     const imdbId = searchParams.get('imdbId') || searchParams.get('imdb') || undefined;
@@ -34,6 +34,9 @@ export async function GET(
           if (res.ok) {
             const data = await res.json();
             title = data.name || data.title || data.original_name || data.original_title;
+            if (data.original_language) {
+              originalLanguage = data.original_language;
+            }
           }
         }
       } catch {

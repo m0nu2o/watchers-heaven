@@ -11,7 +11,7 @@ export async function GET(
     let mediaType = (searchParams.get('type') || 'movie') as 'movie' | 'tv' | 'anime';
     const season = searchParams.get('s') ? parseInt(searchParams.get('s')!, 10) : undefined;
     const episode = searchParams.get('e') ? parseInt(searchParams.get('e')!, 10) : undefined;
-    const originalLanguage = searchParams.get('origLang') || (mediaType === 'anime' ? 'ja' : 'en');
+    let originalLanguage = searchParams.get('origLang') || (mediaType === 'anime' ? 'ja' : 'en');
     let title = searchParams.get('title') || undefined;
     const aniListId = searchParams.get('aniListId') ? parseInt(searchParams.get('aniListId')!, 10) : undefined;
     const malId = searchParams.get('malId') ? parseInt(searchParams.get('malId')!, 10) : undefined;
@@ -27,6 +27,9 @@ export async function GET(
           if (res.ok) {
             const data = await res.json();
             title = data.name || data.title || data.original_name || data.original_title;
+            if (data.original_language) {
+              originalLanguage = data.original_language;
+            }
           }
         }
       } catch {
