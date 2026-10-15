@@ -494,7 +494,7 @@ export function EpisodeNavigator({
             <div className="w-7 h-7 rounded-full border-2 border-slate-700 border-t-accent-blue animate-spin" />
           </div>
         ) : displayedEpisodes.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar" data-lenis-prevent>
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-3 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar" data-lenis-prevent>
             {displayedEpisodes.map((ep) => {
               const isActive = ep.episode_number === currentEpisode;
               const upcoming = isUpcoming(ep);
@@ -507,7 +507,7 @@ export function EpisodeNavigator({
                     if (upcoming) return;
                     onSelectEpisode(currentSeason, ep.episode_number);
                   }}
-                  className={`group relative rounded-2xl p-2.5 transition-all duration-200 flex flex-col justify-between border ${
+                  className={`group relative rounded-xl sm:rounded-2xl p-2 sm:p-2.5 transition-all duration-200 flex flex-col justify-between border ${
                     isActive
                       ? 'bg-slate-900 border-blue-500 ring-2 ring-blue-500/30 shadow-lg'
                       : upcoming
@@ -516,7 +516,7 @@ export function EpisodeNavigator({
                   }`}
                 >
                   {/* Thumbnail Banner */}
-                  <div className="w-full aspect-video rounded-xl bg-slate-950 overflow-hidden relative mb-2">
+                  <div className="w-full aspect-video rounded-lg sm:rounded-xl bg-slate-950 overflow-hidden relative mb-1.5 sm:mb-2">
                     {ep.still_path ? (
                       <img
                         src={`https://image.tmdb.org/t/p/w300${ep.still_path}`}
@@ -571,7 +571,7 @@ export function EpisodeNavigator({
                     </h4>
 
                     {ep.overview && (
-                      <p className="text-[10px] text-slate-400 line-clamp-2 leading-relaxed">
+                      <p className="text-[10px] text-slate-400 line-clamp-2 leading-relaxed hidden sm:block">
                         {ep.overview}
                       </p>
                     )}

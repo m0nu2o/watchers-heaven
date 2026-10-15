@@ -80,7 +80,7 @@ export function Footer() {
             href="https://instagram.com/itxz_baka"
             target="_blank"
             rel="noopener noreferrer"
-            className="group inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:white transition-colors cursor-pointer shrink-0"
+            className="group inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer shrink-0"
             title="Follow creator @itxz_baka on Instagram"
           >
             <span>Created by</span>
