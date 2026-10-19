@@ -87,28 +87,11 @@ export function UniversalPlayer({
 
   const isEmbed = source.type === 'embed';
 
-  // Compute fine-tuned, server-aware iframe sandbox policy
-  // 1. VidLink requires allow-top-navigation-by-user-activation to avoid "Please Disable Sandbox"
-  // 2. VidSrc SU requires allow-popups without escape to prevent "Restricted Embed Detected"
-  // 3. VidSrc Global (vidsrc-pm), ScreenScape India (screenscape), NextGen Anime (flixcloud), Nova:
-  //    STRICT NO-POPUPS: completely drops allow-popups and allow-popups-to-escape-sandbox,
-  //    guaranteeing ZERO ad popups and zero redirects at the browser engine level!
-  const sandboxPolicy = useMemo(() => {
-    if (source.providerId === 'vidlink' || source.url.includes('vidlink.pro')) {
-      return 'allow-scripts allow-same-origin allow-forms allow-presentation allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation';
-    }
-    if (source.providerId?.includes('vidsrc-su') || source.url.includes('vidsrc.su')) {
-      return 'allow-scripts allow-same-origin allow-forms allow-presentation allow-popups';
-    }
-    // VidSrc Global (vidsrc.pm), ScreenScape India (screenscape.me), NextGen Anime (flixcloud.cc), Nova (smashystream.com):
-    return 'allow-scripts allow-same-origin allow-forms allow-presentation';
-  }, [source.providerId, source.url]);
-
-  // Parent-level AdShield Protection: Neutralize popups, top navigation hijacks, and focus theft
+  // Parent-level AdShield Protection: Neutralize popups and top navigation hijacks silently
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // 1. Block popup windows at parent level
+    // 1. Block popup windows at parent level without triggering provider anti-sandbox scripts
     const originalOpen = window.open;
     window.open = function (...args) {
       console.warn('[Lumina AdShield] Neutralized popup window attempt:', args[0]);
@@ -123,22 +106,11 @@ export function UniversalPlayer({
       }
     };
 
-    // 3. Keep focus locked to Lumina if an iframe attempts an unfocus/new-tab deflection
-    const handleBlur = () => {
-      if (document.activeElement instanceof HTMLIFrameElement) {
-        setTimeout(() => {
-          window.focus();
-        }, 100);
-      }
-    };
-
     window.addEventListener('beforeunload', handleBeforeUnload);
-    window.addEventListener('blur', handleBlur);
 
     return () => {
       window.open = originalOpen;
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      window.removeEventListener('blur', handleBlur);
     };
   }, []);
 
@@ -669,7 +641,6 @@ export function UniversalPlayer({
         <iframe
           ref={iframeRef}
           src={source.url}
-          sandbox={sandboxPolicy}
           data-player-adapter="embed"
           className="w-full h-full border-0 absolute inset-0 bg-black pointer-events-auto z-0"
           allowFullScreen

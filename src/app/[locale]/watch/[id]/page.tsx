@@ -11,7 +11,6 @@ import {
   RotateCcw,
   RotateCw,
   FastForward,
-  ShieldCheck,
   X,
   Download,
   Users,
@@ -1430,15 +1429,8 @@ export default function WatchPage() {
           </div>
         </div>
 
-        {/* Right Side: Popup Guard & Fullscreen */}
+        {/* Right Side: Fullscreen */}
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-          <div
-            className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-500 dark:text-emerald-400 text-[11px] font-bold tracking-wide"
-            title="Popup Guard: protects this app from opening unwanted top-level tabs"
-          >
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
-            <span>Popup Guard</span>
-          </div>
           <button
             onClick={toggleFullscreen}
             className="text-slate-700 dark:text-slate-300 hover:text-black dark:hover:text-white p-2.5 bg-black/[0.04] dark:bg-slate-900 hover:bg-black/[0.08] dark:hover:bg-slate-850 border border-black/[0.08] dark:border-slate-800 rounded-xl transition-all cursor-pointer hover:scale-105 active:scale-95"
@@ -1540,14 +1532,6 @@ export default function WatchPage() {
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 {availableProviders.find((p) => p.id === provider)?.name || provider}
               </span>
-            </div>
-
-            <div
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold shadow-sm"
-              title="Lumina Ad Shield Active — popups, malicious redirect chains, and sandbox bypass errors are blocked."
-            >
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Ad Shield Active</span>
             </div>
           </div>
 

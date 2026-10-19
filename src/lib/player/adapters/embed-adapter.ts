@@ -38,7 +38,12 @@ export class EmbedAdapter implements PlayerAdapter {
     });
 
     // Set iframe attributes
-    this.iframe.src = source.url;
+    if (this.iframe.hasAttribute('sandbox')) {
+      this.iframe.removeAttribute('sandbox');
+    }
+    if (this.iframe.src !== source.url) {
+      this.iframe.src = source.url;
+    }
     this.iframe.allowFullscreen = true;
     this.iframe.allow = 'autoplay; fullscreen; picture-in-picture; encrypted-media';
     this.iframe.referrerPolicy = 'no-referrer';

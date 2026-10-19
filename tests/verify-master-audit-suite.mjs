@@ -69,35 +69,36 @@ async function runMasterAuditSuite() {
 
     const iframe = page.locator('iframe').first();
     const iframeSrc = await iframe.getAttribute('src');
-    const sandboxAttr = await iframe.getAttribute('sandbox');
-
-    // Verify sandbox attribute is set
-    if (!sandboxAttr || !sandboxAttr.includes('allow-scripts') || !sandboxAttr.includes('allow-same-origin')) {
-      throw new Error(`Iframe sandbox attribute missing or invalid: "${sandboxAttr}"`);
+    if (!iframeSrc || !iframeSrc.startsWith('http')) {
+      throw new Error(`Iframe src missing or invalid: "${iframeSrc}"`);
     }
 
-    // Verify Ad Shield Active badge is visible in Quick Action Bar
+    // Verify "Ad Shield Active" and "Popup Guard" badges are cleanly removed from UI
     const shieldBadge = page.locator('text=Ad Shield Active').first();
-    const isShieldVisible = await shieldBadge.isVisible();
-    if (!isShieldVisible) throw new Error('Ad Shield Active badge not visible on watch page');
+    const isShieldVisible = await shieldBadge.isVisible().catch(() => false);
+    if (isShieldVisible) throw new Error('Ad Shield Active badge should be removed from UI');
 
-    // Verify "Please Disable Sandbox" error is NOT present on screen
+    const popupBadge = page.locator('text=Popup Guard').first();
+    const isPopupVisible = await popupBadge.isVisible().catch(() => false);
+    if (isPopupVisible) throw new Error('Popup Guard badge should be removed from UI');
+
+    // Verify "Please Disable Sandbox" and "Restricted Embed" errors are NOT present on screen
     const pageText = await page.evaluate(() => document.body.innerText);
-    if (pageText.toLowerCase().includes('disable sandbox') || pageText.toLowerCase().includes('remove sandbox')) {
+    if (pageText.toLowerCase().includes('disable sandbox') || pageText.toLowerCase().includes('remove sandbox') || pageText.toLowerCase().includes('restricted embed')) {
       throw new Error('Sandbox error popup detected on screen!');
     }
 
-    // Test parent window.open neutralization (AdShield check)
+    // Test parent window.open neutralization (silent AdShield check)
     const windowOpenBlocked = await page.evaluate(() => {
       const res = window.open('https://malicious-ad.com');
       return res === null;
     });
     if (!windowOpenBlocked) throw new Error('Parent window.open was not neutralized by AdShield');
 
-    pass('2. Watch Movie Sandbox Protection & AdShield Bypass', `Sandbox: "${sandboxAttr.slice(0, 40)}..." | Shield Badge: ${isShieldVisible} | Window.open neutralized: ${windowOpenBlocked} | 0 sandbox errors`);
+    pass('2. Watch Movie Sandbox-Free Playback & Clean Minimal HUD', `Src: "${iframeSrc.slice(0, 40)}..." | Badges cleanly removed (Shield: ${isShieldVisible}, Popup: ${isPopupVisible}) | Window.open neutralized: ${windowOpenBlocked}`);
     await page.close();
   } catch (err) {
-    fail('2. Watch Movie Sandbox Protection & AdShield Bypass', err);
+    fail('2. Watch Movie Sandbox-Free Playback & Clean Minimal HUD', err);
   }
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -262,14 +263,15 @@ async function runMasterAuditSuite() {
     await page.waitForTimeout(2000);
 
     const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
-    const shieldBadgeVisible = await page.locator('text=Ad Shield Active').first().isVisible();
+    const shieldBadgeVisible = await page.locator('text=Ad Shield Active').first().isVisible().catch(() => false);
+    if (shieldBadgeVisible) throw new Error('Ad Shield Active badge should not appear on mobile');
 
     if (hasHorizontalOverflow) throw new Error('Mobile viewport has horizontal layout overflow');
 
-    pass('10. Mobile Responsive Layout & Sandbox Protection', `Shield Badge: ${shieldBadgeVisible} | Zero overflow on 390x844 iPhone`);
+    pass('10. Mobile Responsive Layout & Clean HUD', `Shield Badge: ${shieldBadgeVisible} | Zero overflow on 390x844 iPhone`);
     await page.close();
   } catch (err) {
-    fail('10. Mobile Responsive Layout & Sandbox Protection', err);
+    fail('10. Mobile Responsive Layout & Clean HUD', err);
   }
 
   await browser.close();
