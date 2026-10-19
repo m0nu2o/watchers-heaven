@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
 
-const BASE_URL = 'http://localhost:3002';
+const BASE_URL = process.env.TARGET_URL || 'http://localhost:3002';
 
 async function verifyAllServers() {
   console.log(`========================================================================`);

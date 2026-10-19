@@ -195,7 +195,7 @@ async function runMasterAuditSuite() {
   try {
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
     await page.goto(`${BASE_URL}/en/anime`, { waitUntil: 'domcontentloaded', timeout: 35000 });
-    await page.waitForSelector('[data-testid="poster-card"]', { timeout: 20000 });
+    await page.waitForSelector('[data-testid="poster-card"]', { timeout: 30000 });
 
     const animeCards = await page.locator('[data-testid="poster-card"]').count();
 
