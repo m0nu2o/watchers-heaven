@@ -13,6 +13,14 @@ import "../globals.css";
 export const metadata: Metadata = {
   title: "Lumina — Cinema, Series & Anime",
   description: "Your modern entertainment universe. Stream blockbuster movies, television series, and anime.",
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico' },
+    ],
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
 };
 
 const themeScript = `

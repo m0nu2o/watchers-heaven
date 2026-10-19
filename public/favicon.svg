@@ -1,0 +1,70 @@
+<svg viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="fav-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0d1527" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+
+    <linearGradient id="fav-rim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#67e8f9" stop-opacity="0.9" />
+      <stop offset="40%" stop-color="#3b82f6" stop-opacity="0.4" />
+      <stop offset="80%" stop-color="#818cf8" stop-opacity="0.7" />
+      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.9" />
+    </linearGradient>
+
+    <linearGradient id="fav-beam-v" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#67e8f9" />
+      <stop offset="35%" stop-color="#38bdf8" />
+      <stop offset="70%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#6366f1" />
+    </linearGradient>
+
+    <linearGradient id="fav-beam-h" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#6366f1" />
+      <stop offset="50%" stop-color="#8b5cf6" />
+      <stop offset="100%" stop-color="#06b6d4" />
+    </linearGradient>
+
+    <linearGradient id="fav-prism" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9" />
+      <stop offset="50%" stop-color="#38bdf8" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#4338ca" stop-opacity="0.9" />
+    </linearGradient>
+
+    <radialGradient id="fav-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.75" />
+      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <!-- Apple-Grade Tactile Glass Squircle -->
+  <rect x="3" y="3" width="90" height="90" rx="26" fill="url(#fav-bg)" stroke="url(#fav-rim)" stroke-width="2" />
+
+  <!-- Ambient Starlight Nebula -->
+  <circle cx="64" cy="32" r="26" fill="url(#fav-glow)" />
+
+  <!-- Negative Space Cinema Play Indicator (▶) -->
+  <path d="M40 28L66 44C67.5 45 67.5 47 66 48L40 64C38.5 65 36 64 36 62V30C36 28 38.5 27 40 28Z" fill="#38bdf8" fill-opacity="0.1" />
+
+  <!-- Monogram 'L' - Vertical Pillar -->
+  <path d="M20 22C20 19.8 21.8 18 24 18H34C36.2 18 38 19.8 38 22V56H20V22Z" fill="url(#fav-beam-v)" />
+
+  <!-- Monogram 'L' - Horizontal Floor Beam -->
+  <path d="M20 56H72C74.2 56 76 57.8 76 60V70C76 72.2 74.2 74 72 74H24C21.8 74 20 72.2 20 70V56Z" fill="url(#fav-beam-h)" />
+
+  <!-- Prismatic Joint Corner Facet -->
+  <polygon points="20,56 38,56 38,74 20,74" fill="url(#fav-prism)" />
+
+  <!-- Specular Inner Edge Lights -->
+  <line x1="22" y1="20" x2="22" y2="72" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.6" />
+  <line x1="22" y1="72" x2="74" y2="72" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.6" />
+
+  <!-- Anamorphic Cinema Lens Flare (Horizontal Streak) -->
+  <ellipse cx="64" cy="32" rx="28" ry="1.5" fill="#a5f3fc" fill-opacity="0.9" />
+  <ellipse cx="64" cy="32" rx="14" ry="2.8" fill="#ffffff" />
+
+  <!-- Radiant 8-Point Starlight Nova -->
+  <path d="M64 16C64.8 24 72 31.2 80 32C72 32.8 64.8 40 64 48C63.2 40 56 31.2 48 32C56 31.2 63.2 24 64 16Z" fill="#ffffff" />
+  <path d="M64 22L66.5 29.5L74 32L66.5 34.5L64 42L61.5 34.5L54 32L61.5 29.5L64 22Z" fill="#67e8f9" />
+  <circle cx="64" cy="32" r="3" fill="#ffffff" />
+</svg>
