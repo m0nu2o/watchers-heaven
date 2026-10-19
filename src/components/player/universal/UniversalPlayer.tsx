@@ -88,14 +88,20 @@ export function UniversalPlayer({
   const isEmbed = source.type === 'embed';
 
   // Compute fine-tuned, server-aware iframe sandbox policy
-  // VidLink requires allow-top-navigation-by-user-activation to avoid "Please Disable Sandbox"
-  // while blocking unprovoked / script-driven redirects!
-  // All other servers (FlixCloud, VidSrc SU, VidSrc PM, Nova, etc.) are strictly sandboxed without top navigation.
+  // 1. VidLink requires allow-top-navigation-by-user-activation to avoid "Please Disable Sandbox"
+  // 2. VidSrc SU requires allow-popups without escape to prevent "Restricted Embed Detected"
+  // 3. VidSrc Global (vidsrc-pm), ScreenScape India (screenscape), NextGen Anime (flixcloud), Nova:
+  //    STRICT NO-POPUPS: completely drops allow-popups and allow-popups-to-escape-sandbox,
+  //    guaranteeing ZERO ad popups and zero redirects at the browser engine level!
   const sandboxPolicy = useMemo(() => {
     if (source.providerId === 'vidlink' || source.url.includes('vidlink.pro')) {
       return 'allow-scripts allow-same-origin allow-forms allow-presentation allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation';
     }
-    return 'allow-scripts allow-same-origin allow-forms allow-presentation allow-popups allow-popups-to-escape-sandbox';
+    if (source.providerId?.includes('vidsrc-su') || source.url.includes('vidsrc.su')) {
+      return 'allow-scripts allow-same-origin allow-forms allow-presentation allow-popups';
+    }
+    // VidSrc Global (vidsrc.pm), ScreenScape India (screenscape.me), NextGen Anime (flixcloud.cc), Nova (smashystream.com):
+    return 'allow-scripts allow-same-origin allow-forms allow-presentation';
   }, [source.providerId, source.url]);
 
   // Parent-level AdShield Protection: Neutralize popups, top navigation hijacks, and focus theft
