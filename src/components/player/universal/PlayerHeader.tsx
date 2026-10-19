@@ -111,6 +111,15 @@ export function PlayerHeader({
           </button>
         )}
 
+        {/* Ad Shield Active Badge */}
+        <div
+          className="hidden xs:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-500/15 backdrop-blur-md border border-emerald-500/30 text-emerald-400 text-[11px] font-bold"
+          title="Lumina Ad Shield Active — popups, redirects, and sandbox bypass are blocked"
+        >
+          <ShieldCheck className="w-3.5 h-3.5" />
+          <span className="hidden md:inline">Ad Shield</span>
+        </div>
+
         {/* Server Indicator Pill */}
         {serverName && (
           <div

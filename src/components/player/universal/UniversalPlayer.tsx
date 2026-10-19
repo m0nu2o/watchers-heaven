@@ -87,6 +87,55 @@ export function UniversalPlayer({
 
   const isEmbed = source.type === 'embed';
 
+  // Compute fine-tuned, server-aware iframe sandbox policy
+  // VidLink requires allow-top-navigation-by-user-activation to avoid "Please Disable Sandbox"
+  // while blocking unprovoked / script-driven redirects!
+  // All other servers (FlixCloud, VidSrc SU, VidSrc PM, Nova, etc.) are strictly sandboxed without top navigation.
+  const sandboxPolicy = useMemo(() => {
+    if (source.providerId === 'vidlink' || source.url.includes('vidlink.pro')) {
+      return 'allow-scripts allow-same-origin allow-forms allow-presentation allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation';
+    }
+    return 'allow-scripts allow-same-origin allow-forms allow-presentation allow-popups allow-popups-to-escape-sandbox';
+  }, [source.providerId, source.url]);
+
+  // Parent-level AdShield Protection: Neutralize popups, top navigation hijacks, and focus theft
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // 1. Block popup windows at parent level
+    const originalOpen = window.open;
+    window.open = function (...args) {
+      console.warn('[Lumina AdShield] Neutralized popup window attempt:', args[0]);
+      return null;
+    };
+
+    // 2. Block top-level navigation hijack from within iframes
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (document.activeElement instanceof HTMLIFrameElement) {
+        e.preventDefault();
+        return (e.returnValue = '');
+      }
+    };
+
+    // 3. Keep focus locked to Lumina if an iframe attempts an unfocus/new-tab deflection
+    const handleBlur = () => {
+      if (document.activeElement instanceof HTMLIFrameElement) {
+        setTimeout(() => {
+          window.focus();
+        }, 100);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('blur', handleBlur);
+
+    return () => {
+      window.open = originalOpen;
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, []);
+
   // Player Preferences
   const [preferences, setPreferences] = useState<PlayerPreferences>(() =>
     PlayerPreferencesStore.get()
@@ -614,10 +663,11 @@ export function UniversalPlayer({
         <iframe
           ref={iframeRef}
           src={source.url}
+          sandbox={sandboxPolicy}
           data-player-adapter="embed"
           className="w-full h-full border-0 absolute inset-0 bg-black pointer-events-auto z-0"
           allowFullScreen
-          allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+          allow="autoplay; fullscreen; picture-in-picture; encrypted-media; accelerometer; gyroscope; web-share"
           referrerPolicy="no-referrer"
           loading="eager"
           title="Streaming Player"

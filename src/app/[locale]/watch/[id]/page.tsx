@@ -1527,15 +1527,25 @@ export default function WatchPage() {
 
         {/* 2. Apple Quick Action Bar */}
         <div className="apple-glass rounded-2xl p-2.5 sm:p-3 border border-black/10 dark:border-white/10 shadow-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
-          {/* Left: Active Server Indicator */}
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Active Server:
-            </span>
-            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              {availableProviders.find((p) => p.id === provider)?.name || provider}
-            </span>
+          {/* Left: Active Server Indicator & Ad Shield Badge */}
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Active Server:
+              </span>
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                {availableProviders.find((p) => p.id === provider)?.name || provider}
+              </span>
+            </div>
+
+            <div
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold shadow-sm"
+              title="Lumina Ad Shield Active — popups, malicious redirect chains, and sandbox bypass errors are blocked."
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Ad Shield Active</span>
+            </div>
           </div>
 
           {/* Right: Actions (Auto-Switch, Quick Switch, Download, Party) */}

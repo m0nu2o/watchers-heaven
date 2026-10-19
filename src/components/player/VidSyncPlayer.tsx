@@ -101,9 +101,10 @@ export const VidSyncPlayer = forwardRef<PlayerHandle, VidSyncPlayerProps>(({
       <iframe
         ref={iframeRef}
         src={embedUrl}
+        sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-popups allow-popups-to-escape-sandbox"
         className="w-full h-full border-0 absolute inset-0 z-20"
         allowFullScreen
-        allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+        allow="autoplay; fullscreen; picture-in-picture; encrypted-media; accelerometer; gyroscope; web-share"
         referrerPolicy="no-referrer"
         title="Lumina Sync Player"
         onLoad={() => setIsLoaded(true)}
