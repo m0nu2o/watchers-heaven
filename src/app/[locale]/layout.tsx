@@ -60,16 +60,24 @@ export default async function RootLayout({
         {/* Preconnect to verified streaming CDNs & image servers to eliminate connection latency */}
         <link rel="preconnect" href="https://vidlink.pro" />
         <link rel="dns-prefetch" href="https://vidlink.pro" />
-        <link rel="preconnect" href="https://slast430did.com" />
-        <link rel="dns-prefetch" href="https://slast430did.com" />
-        <link rel="preconnect" href="https://screenscape.me" />
-        <link rel="dns-prefetch" href="https://screenscape.me" />
-        <link rel="preconnect" href="https://autoembed.co" />
-        <link rel="dns-prefetch" href="https://autoembed.co" />
+        <link rel="preconnect" href="https://flixcloud.cc" />
+        <link rel="dns-prefetch" href="https://flixcloud.cc" />
+        <link rel="preconnect" href="https://vidsrc.su" />
+        <link rel="dns-prefetch" href="https://vidsrc.su" />
         <link rel="preconnect" href="https://vidsrc.pm" />
         <link rel="dns-prefetch" href="https://vidsrc.pm" />
-        <link rel="preconnect" href="https://www.2embed.cc" />
-        <link rel="dns-prefetch" href="https://www.2embed.cc" />
+        <link rel="preconnect" href="https://screenscape.me" />
+        <link rel="dns-prefetch" href="https://screenscape.me" />
+        <link rel="preconnect" href="https://slast430did.com" />
+        <link rel="dns-prefetch" href="https://slast430did.com" />
+        <link rel="preconnect" href="https://player.smashystream.com" />
+        <link rel="dns-prefetch" href="https://player.smashystream.com" />
+        <link rel="preconnect" href="https://reanime.to" />
+        <link rel="dns-prefetch" href="https://reanime.to" />
+        <link rel="preconnect" href="https://tblbvrgzoovujszpztvr.supabase.co" />
+        <link rel="dns-prefetch" href="https://tblbvrgzoovujszpztvr.supabase.co" />
+        <link rel="preconnect" href="https://graphql.anilist.co" />
+        <link rel="dns-prefetch" href="https://graphql.anilist.co" />
         <link rel="preconnect" href="https://image.tmdb.org" />
         <link rel="dns-prefetch" href="https://image.tmdb.org" />
         <script

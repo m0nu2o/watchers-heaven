@@ -1151,19 +1151,22 @@ export default function WatchPage() {
 
       if (!eventData) return;
 
-      // Check for explicit player error events
-      if (
+      // Check for explicit player error events from verified video player bridges only.
+      // Generic window errors (like blocked ad trackers or image 404s) must NEVER kill the stream!
+      const dataPayload = (eventData.data || {}) as Record<string, unknown>;
+      const isPlayerError =
         eventData.type === 'PLAYER_ERROR' ||
-        eventData.event === 'error' ||
-        eventData.status === 'error'
-      ) {
+        (eventData.type === 'PLAYER_EVENT' && dataPayload.event === 'error') ||
+        (eventData.type === 'VIDSYNC_PLAYER_EVENT' && (dataPayload.event === 'error' || eventData.status === 'error')) ||
+        (eventData.context === 'player.js' && eventData.event === 'error');
+
+      if (isPlayerError) {
         console.warn('Iframe player reported playback error, triggering fallback:', eventData);
         handleNextServerFallback(false, true);
         return;
       }
 
       // Stream liveness confirmed ONLY on genuine playback progress or play event (never on static metadata like MEDIA_DATA)
-      const dataPayload = (eventData.data || {}) as Record<string, unknown>;
       const isPlaybackConfirmed =
         (eventData.type === 'PLAYER_EVENT' && dataPayload.event === 'play') ||
         (eventData.type === 'PLAYER_EVENT' && typeof dataPayload.currentTime === 'number' && dataPayload.currentTime > 0) ||
