@@ -38,9 +38,6 @@ export class EmbedAdapter implements PlayerAdapter {
     });
 
     // Set iframe attributes
-    if (this.iframe.hasAttribute('sandbox')) {
-      this.iframe.removeAttribute('sandbox');
-    }
     if (this.iframe.src !== source.url) {
       this.iframe.src = source.url;
     }

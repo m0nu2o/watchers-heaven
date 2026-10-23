@@ -69,8 +69,14 @@ async function runMasterAuditSuite() {
 
     const iframe = page.locator('iframe').first();
     const iframeSrc = await iframe.getAttribute('src');
+    const sandboxAttr = await iframe.getAttribute('sandbox');
     if (!iframeSrc || !iframeSrc.startsWith('http')) {
       throw new Error(`Iframe src missing or invalid: "${iframeSrc}"`);
+    }
+
+    // Verify sandbox attribute is active to block popups
+    if (!sandboxAttr || !sandboxAttr.includes('allow-scripts') || !sandboxAttr.includes('allow-same-origin')) {
+      throw new Error(`Iframe sandbox attribute missing or invalid: "${sandboxAttr}"`);
     }
 
     // Verify "Ad Shield Active" and "Popup Guard" badges are cleanly removed from UI
@@ -95,10 +101,10 @@ async function runMasterAuditSuite() {
     });
     if (!windowOpenBlocked) throw new Error('Parent window.open was not neutralized by AdShield');
 
-    pass('2. Watch Movie Sandbox-Free Playback & Clean Minimal HUD', `Src: "${iframeSrc.slice(0, 40)}..." | Badges cleanly removed (Shield: ${isShieldVisible}, Popup: ${isPopupVisible}) | Window.open neutralized: ${windowOpenBlocked}`);
+    pass('2. Watch Movie Sandbox Protection & Clean Native Player', `Sandbox: "${sandboxAttr.slice(0, 35)}..." | Badges cleanly removed | Window.open neutralized: ${windowOpenBlocked}`);
     await page.close();
   } catch (err) {
-    fail('2. Watch Movie Sandbox-Free Playback & Clean Minimal HUD', err);
+    fail('2. Watch Movie Sandbox Protection & Clean Native Player', err);
   }
 
   // ──────────────────────────────────────────────────────────────────────────

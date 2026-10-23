@@ -17,8 +17,6 @@ import {
 import { ProviderAdapter } from '@/types/media';
 import { PlayerPreferencesStore } from '@/lib/player/preferences';
 import { PlayerHeader } from './PlayerHeader';
-import { PlayerControls } from './PlayerControls';
-import { PlayerCenterControls } from './PlayerCenterControls';
 import { PlayerNextEpisodeOverlay } from './PlayerNextEpisodeOverlay';
 import { PlayerResumePrompt } from './PlayerResumePrompt';
 import { PlayerLoadingOverlay } from './PlayerLoadingOverlay';
@@ -86,6 +84,19 @@ export function UniversalPlayer({
   const currentLoadedSourceRef = useRef<string>('');
 
   const isEmbed = source.type === 'embed';
+
+  // Server-aware iframe sandbox policy: blocks ad popups and top navigation redirects
+  // while allowing necessary tokens to prevent "Please Disable Sandbox" and "Restricted Embed" warnings
+  const sandboxPolicy = useMemo(() => {
+    if (source.providerId === 'vidlink' || source.url.includes('vidlink.pro')) {
+      return 'allow-scripts allow-same-origin allow-forms allow-presentation allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation';
+    }
+    if (source.providerId?.includes('vidsrc-su') || source.url.includes('vidsrc.su')) {
+      return 'allow-scripts allow-same-origin allow-forms allow-presentation allow-popups';
+    }
+    // VidSrc Global (vidsrc.pm), ScreenScape India (screenscape.me), NextGen Anime (flixcloud.cc), Nova (smashystream.com):
+    return 'allow-scripts allow-same-origin allow-forms allow-presentation';
+  }, [source.providerId, source.url]);
 
   // Parent-level AdShield Protection: Neutralize popups and top navigation hijacks silently
   useEffect(() => {
@@ -641,6 +652,7 @@ export function UniversalPlayer({
         <iframe
           ref={iframeRef}
           src={source.url}
+          sandbox={sandboxPolicy}
           data-player-adapter="embed"
           className="w-full h-full border-0 absolute inset-0 bg-black pointer-events-auto z-0"
           allowFullScreen
@@ -654,9 +666,9 @@ export function UniversalPlayer({
           key={source.url}
           ref={videoRef}
           playsInline
+          controls
           autoPlay={preferences.autoPlay}
-          onClick={togglePlay}
-          className="w-full h-full object-contain absolute inset-0 bg-black z-0 pointer-events-auto cursor-pointer"
+          className="w-full h-full object-contain absolute inset-0 bg-black z-0 pointer-events-auto"
         />
       )}
 
@@ -689,67 +701,6 @@ export function UniversalPlayer({
           isTheaterMode={state.isTheaterMode}
           onToggleTheaterMode={toggleTheaterMode}
         />
-      )}
-
-      {/* ── 3. Direct Playback Custom Controls (ONLY for direct/HLS streams — Never over third-party iframes!) ── */}
-      {!isEmbed && (
-        <>
-          {/* Center Play, Seek, Prev/Next Controls (Always available when paused so user can start playback) */}
-          {(!state.loading || !state.playing) && (
-            <PlayerCenterControls
-              playing={state.playing}
-              onTogglePlay={togglePlay}
-              onSeekRelative={seekRelative}
-              onPreviousEpisode={onPreviousEpisode}
-              onNextEpisode={onNextEpisode}
-              hasPreviousEpisode={hasPreviousEpisode}
-              hasNextEpisode={hasNextEpisode}
-              doubleTapFeedback={doubleTapFeedback}
-              visible={controlsVisible}
-            />
-          )}
-
-          {/* Bottom Control Deck (Timeline, Audio, Subtitles, Quality, Server, Speed) */}
-          <PlayerControls
-            playing={state.playing}
-            onTogglePlay={togglePlay}
-            onSeekRelative={seekRelative}
-            onSeekTo={seekTo}
-            currentTime={state.currentTime}
-            duration={state.duration}
-            bufferedPercent={state.bufferedPercent}
-            skipTimestamps={source.skipTimestamps}
-            volume={state.volume}
-            muted={state.muted}
-            onVolumeChange={handleVolumeChange}
-            onToggleMute={toggleMute}
-            activeQuality={state.quality}
-            qualities={state.availableQualities}
-            onSelectQuality={handleSelectQuality}
-            activeAudioId={state.activeAudioTrack}
-            audioTracks={state.availableAudioTracks}
-            onSelectAudio={handleSelectAudio}
-            activeSubtitleId={state.activeSubtitleTrack}
-            subtitles={state.availableSubtitleTracks}
-            onSelectSubtitle={handleSelectSubtitle}
-            subtitleStyles={preferences.subtitleStyles}
-            onUpdateSubtitleStyles={handleUpdateSubtitleStyles}
-            availableServers={availableServers}
-            activeServerId={source.providerId}
-            onSelectServer={onSelectServer}
-            playbackSpeed={state.playbackSpeed}
-            onSelectSpeed={handleSelectSpeed}
-            isFullscreen={state.isFullscreen}
-            onToggleFullscreen={toggleFullscreen}
-            isTheaterMode={state.isTheaterMode}
-            onToggleTheaterMode={toggleTheaterMode}
-            onTogglePip={togglePip}
-            preferences={preferences}
-            onUpdatePreferences={handleUpdatePreferences}
-            visible={controlsVisible}
-            accentColor={accentColor}
-          />
-        </>
       )}
 
       {/* ── 4. Status & Loading Overlay (Apple Blur with Spinner, only for direct streams to avoid blocking iframes) ── */}
