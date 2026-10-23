@@ -82,7 +82,7 @@ export default function WatchPage() {
   const [accentColor, setAccentColor] = useState<string>('007bff');
   const [isCreatingParty, setIsCreatingParty] = useState(false);
 
-  const [mediaTitle, setMediaTitle] = useState<string>('');
+  const [mediaTitle, setMediaTitle] = useState<string>(() => searchParams.get('title') || '');
   const [imdbId, setImdbId] = useState<string | null>(() => ApiGateway.getCachedImdbId(id) || null);
   const [mediaOriginalLang, setMediaOriginalLang] = useState<string>(isAnime ? 'ja' : 'en');
   const isActuallyAnime = resolvedContentType === 'anime';
@@ -176,9 +176,15 @@ export default function WatchPage() {
   const [subtitles, setSubtitles] = useState<SubtitleTrack[]>([]);
   const [skipTimestamps, setSkipTimestamps] = useState<SkipTimestamps | null>(null);
 
-  // AniList & MAL IDs — kept strictly separate per Rule 4
-  const [aniListId, setAniListId] = useState<number | null>(null);
-  const [malId, setMalId] = useState<number | null>(null);
+  // AniList & MAL IDs — initialized from search params if present
+  const [aniListId, setAniListId] = useState<number | null>(() => {
+    const raw = searchParams.get('aniListId') || searchParams.get('anilist');
+    return raw ? parseInt(raw, 10) : null;
+  });
+  const [malId, setMalId] = useState<number | null>(() => {
+    const raw = searchParams.get('malId') || searchParams.get('mal');
+    return raw ? parseInt(raw, 10) : null;
+  });
 
   // Apple Cinema HUD Seek Feedback Toast
   const [seekFeedback, setSeekFeedback] = useState<string | null>(null);
@@ -572,7 +578,7 @@ export default function WatchPage() {
             if (result.skipTimestamps) setSkipTimestamps(result.skipTimestamps);
           } else {
             setIsDirectHls(false);
-            const fallbackUrl = ProviderRegistry.resolvePlaybackUrl('vidsrc-su-anime', {
+            const fallbackUrl = ProviderRegistry.resolvePlaybackUrl('vidsrc-pm-anime', {
               mediaType,
               tmdbId: id,
               imdbId: effectiveImdb,
@@ -668,7 +674,7 @@ export default function WatchPage() {
         } else if (!cancelled) {
           setIsDirectHls(false);
           const effectiveImdb = imdbId || ApiGateway.getCachedImdbId(id) || undefined;
-          const fallbackUrl = ProviderRegistry.resolvePlaybackUrl('vidsrc-su-anime', {
+          const fallbackUrl = ProviderRegistry.resolvePlaybackUrl('vidsrc-pm-anime', {
             mediaType: currentMediaType,
             tmdbId: id,
             imdbId: effectiveImdb,

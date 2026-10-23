@@ -472,12 +472,13 @@ export async function resolveStreamingSources({
     if ((!resolvedAnimeId || Number(resolvedAnimeId) <= 0) && (title || tmdbId)) {
       try {
         let searchTitle = title;
-        if (!searchTitle && tmdbId && process.env.TMDB_API_KEY) {
+        const apiKey = process.env.TMDB_API_KEY || '493425cbd908e787bf8746644c42bf66';
+        if (!searchTitle && tmdbId && apiKey) {
           const tmdbRes = await fetchJson(
             fetch,
-            `https://api.tmdb.org/3/tv/${tmdbId}?api_key=${process.env.TMDB_API_KEY}`,
+            `https://api.tmdb.org/3/tv/${tmdbId}?api_key=${apiKey}`,
             {},
-            2000,
+            2500,
             resolutionDeadline.signal
           ).catch(() => null);
           if (tmdbRes) searchTitle = tmdbRes.name || tmdbRes.original_name;
@@ -594,9 +595,9 @@ export async function resolveStreamingSources({
 
       const payload = {
         success: true,
-        provider: 'vidsrc-su',
-        primaryUrl: vidSrcSuUrl,
-        rawUrl: vidSrcSuUrl,
+        provider: 'vidsrc-pm-anime',
+        primaryUrl: vidSrcPmUrl,
+        rawUrl: vidSrcPmUrl,
         isHls: false,
         sources: [
           { url: vidSrcSuUrl, type: 'embed', serverName: 'VidSrc SU (HD-1)', serverId: 'vidsrc-su' },

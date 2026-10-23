@@ -25,7 +25,7 @@ export async function GET(
 
     if (!title && !aniListId) {
       try {
-        const apiKey = process.env.TMDB_API_KEY;
+        const apiKey = process.env.TMDB_API_KEY || '493425cbd908e787bf8746644c42bf66';
         if (apiKey) {
           const tmdbEndpoint = type === 'movie' ? `/movie/${id}` : `/tv/${id}`;
           const res = await fetch(`https://api.tmdb.org/3${tmdbEndpoint}?api_key=${apiKey}`, {
@@ -109,7 +109,7 @@ export async function POST(
 
     if (!resolvedTitle && !aniListId) {
       try {
-        const apiKey = process.env.TMDB_API_KEY;
+        const apiKey = process.env.TMDB_API_KEY || '493425cbd908e787bf8746644c42bf66';
         if (apiKey) {
           const tmdbEndpoint = type === 'movie' ? `/movie/${id}` : `/tv/${id}`;
           const res = await fetch(`https://api.tmdb.org/3${tmdbEndpoint}?api_key=${apiKey}`, {

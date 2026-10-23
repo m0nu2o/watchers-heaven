@@ -295,7 +295,8 @@ export default function AnimePage() {
               <button
                 onClick={() => {
                   const trackParam = audioFilter === 'dub' ? 'dub-en' : 'sub';
-                  router.push(`/${locale}/watch/${heroAnime.id}?s=1&e=1&type=anime&track=${trackParam}`);
+                  const titleParam = encodeURIComponent(heroAnime.name || heroAnime.original_name || '');
+                  router.push(`/${locale}/watch/${heroAnime.id}?s=1&e=1&type=anime&track=${trackParam}&title=${titleParam}`);
                 }}
                 className="flex items-center gap-2.5 bg-white hover:bg-slate-100 text-black font-extrabold px-6 py-3.5 rounded-full text-xs sm:text-sm transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-2xl shadow-white/20 cursor-pointer"
               >
@@ -305,7 +306,8 @@ export default function AnimePage() {
 
               <button
                 onClick={() => {
-                  router.push(`/${locale}/watch/${heroAnime.id}?s=1&e=1&type=anime&track=dub-en`);
+                  const titleParam = encodeURIComponent(heroAnime.name || heroAnime.original_name || '');
+                  router.push(`/${locale}/watch/${heroAnime.id}?s=1&e=1&type=anime&track=dub-en&title=${titleParam}`);
                 }}
                 className="flex items-center gap-2 apple-glass hover:bg-white/[0.1] text-amber-300 font-bold px-4 py-3.5 rounded-full text-xs sm:text-sm transition-all duration-200 cursor-pointer border border-amber-400/25 shadow-lg"
               >
@@ -351,17 +353,18 @@ export default function AnimePage() {
               {trendingList.map((item) => {
                 const track = audioFilter === 'dub' ? 'dub-en' : 'sub';
                 const badge = audioFilter === 'dub' ? '🎙️ DUB' : '🇯🇵 SUB';
+                const titleStr = item.name || item.original_name || 'Anime';
                 return (
                   <PosterCard
                     key={item.id}
                     id={item.id}
-                    title={item.name || item.original_name || 'Anime'}
+                    title={titleStr}
                     posterPath={item.poster_path || ''}
                     rating={item.vote_average}
                     year={item.first_air_date ? item.first_air_date.slice(0, 4) : undefined}
                     type="anime"
                     extraBadge={badge}
-                    hrefOverride={`/${locale}/watch/${item.id}?s=1&e=1&type=anime&track=${track}`}
+                    hrefOverride={`/${locale}/watch/${item.id}?s=1&e=1&type=anime&track=${track}&title=${encodeURIComponent(titleStr)}`}
                   />
                 );
               })}
@@ -393,17 +396,18 @@ export default function AnimePage() {
               {topRatedList.map((item) => {
                 const track = audioFilter === 'dub' ? 'dub-en' : 'sub';
                 const badge = audioFilter === 'dub' ? '🎙️ DUB' : '🇯🇵 SUB';
+                const titleStr = item.name || item.original_name || 'Anime';
                 return (
                   <PosterCard
                     key={item.id}
                     id={item.id}
-                    title={item.name || item.original_name || 'Anime'}
+                    title={titleStr}
                     posterPath={item.poster_path || ''}
                     rating={item.vote_average}
                     year={item.first_air_date ? item.first_air_date.slice(0, 4) : undefined}
                     type="anime"
                     extraBadge={badge}
-                    hrefOverride={`/${locale}/watch/${item.id}?s=1&e=1&type=anime&track=${track}`}
+                    hrefOverride={`/${locale}/watch/${item.id}?s=1&e=1&type=anime&track=${track}&title=${encodeURIComponent(titleStr)}`}
                   />
                 );
               })}
@@ -604,17 +608,18 @@ export default function AnimePage() {
             {displayedShows.map((item) => {
               const track = audioFilter === 'dub' ? 'dub-en' : 'sub';
               const badge = audioFilter === 'dub' ? '🎙️ DUB' : '🇯🇵 SUB';
+              const titleStr = item.name || item.original_name || 'Anime';
               return (
                 <PosterCard
                   key={item.id}
                   id={item.id}
-                  title={item.name || item.original_name || 'Anime'}
+                  title={titleStr}
                   posterPath={item.poster_path || ''}
                   rating={item.vote_average}
                   year={item.first_air_date ? item.first_air_date.slice(0, 4) : undefined}
                   type="anime"
                   extraBadge={badge}
-                  hrefOverride={`/${locale}/watch/${item.id}?s=1&e=1&type=anime&track=${track}`}
+                  hrefOverride={`/${locale}/watch/${item.id}?s=1&e=1&type=anime&track=${track}&title=${encodeURIComponent(titleStr)}`}
                 />
               );
             })}

@@ -38,7 +38,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
-  const apiKey = process.env.TMDB_API_KEY;
+  const apiKey = process.env.TMDB_API_KEY || '493425cbd908e787bf8746644c42bf66';
   if (!apiKey) {
     return NextResponse.json(
       { error: 'TMDB_API_KEY environment variable is required' },

@@ -29,6 +29,23 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     },
   },
   {
+    id: 'vidsrc-pm-anime',
+    name: 'VidSrc Anime Mirror',
+    quality: '1080p / Global CDN / Clean',
+    badge: '🔥',
+    supportsMovie: false,
+    supportsTV: false,
+    supportsAnime: true,
+    supportsEnglishDub: false,
+    supportsHindiDub: false,
+    requiresApiKey: false,
+    isConfigured: () => true,
+    getPlaybackUrl: (cfg) => {
+      const type = (cfg.season !== undefined && cfg.episode !== undefined) ? 'tv' : 'movie';
+      return ApiGateway.getVidSrcPmUrl(cfg.tmdbId, type, cfg.season || 1, cfg.episode || 1);
+    },
+  },
+  {
     id: 'vidsrc-su-anime',
     name: 'VidSrc Anime Ultra',
     quality: '1080p / Sub+Dub / 0 Ads',
@@ -47,25 +64,29 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
       return isDub ? `${base}${base.includes('?') ? '&' : '?'}dub=1` : base;
     },
   },
+
+  // ─── 2. Movies & TV Series Providers (1080p, Verified 200 OK, Multi-Language) ───
   {
-    id: 'vidsrc-pm-anime',
-    name: 'VidSrc Anime Mirror',
-    quality: '1080p / Global CDN / Clean',
+    id: 'vidsrc-pm',
+    name: 'VidSrc Global Mirror',
+    quality: '1080p / High Uptime / Clean',
     badge: '🔥',
-    supportsMovie: false,
-    supportsTV: false,
-    supportsAnime: true,
-    supportsEnglishDub: false,
+    supportsMovie: true,
+    supportsTV: true,
+    supportsAnime: false,
+    supportsEnglishDub: true,
     supportsHindiDub: false,
     requiresApiKey: false,
     isConfigured: () => true,
     getPlaybackUrl: (cfg) => {
-      const type = (cfg.season !== undefined && cfg.episode !== undefined) ? 'tv' : 'movie';
-      return ApiGateway.getVidSrcPmUrl(cfg.tmdbId, type, cfg.season || 1, cfg.episode || 1);
+      return ApiGateway.getVidSrcPmUrl(
+        cfg.tmdbId,
+        cfg.mediaType === 'tv' ? 'tv' : 'movie',
+        cfg.season,
+        cfg.episode
+      );
     },
   },
-
-  // ─── 2. Movies & TV Series Providers (1080p, Verified 200 OK, Multi-Language) ───
   {
     id: 'nova',
     name: 'Nova Ultra HD',
@@ -81,6 +102,25 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
     getPlaybackUrl: (cfg) => {
       const type = (cfg.season !== undefined && cfg.episode !== undefined) || cfg.mediaType === 'tv' ? 'tv' : 'movie';
       return ApiGateway.getNovaUrl(cfg.tmdbId, type, cfg.season, cfg.episode, cfg.imdbId);
+    },
+  },
+  {
+    id: 'screenscape',
+    name: 'ScreenScape India',
+    quality: '1080p / Hindi Dub / 0 Ads',
+    badge: '🇮🇳',
+    supportsMovie: true,
+    supportsTV: true,
+    supportsAnime: true,
+    supportsEnglishDub: false,
+    supportsHindiDub: true,
+    requiresApiKey: false,
+    isConfigured: () => true,
+    getPlaybackUrl: (cfg) => {
+      const type = (cfg.season !== undefined && cfg.episode !== undefined) || cfg.mediaType === 'tv' ? 'tv' : 'movie';
+      const sParam = cfg.season ? `&s=${cfg.season}` : '';
+      const eParam = cfg.episode ? `&e=${cfg.episode}` : '';
+      return `https://screenscape.me/embed?tmdb=${cfg.tmdbId}&type=${type}${sParam}${eParam}&lan=hi`;
     },
   },
   {
@@ -123,46 +163,6 @@ export const PROVIDER_ADAPTERS: ProviderAdapter[] = [
         cfg.season,
         cfg.episode
       );
-    },
-  },
-  {
-    id: 'vidsrc-pm',
-    name: 'VidSrc Global Mirror',
-    quality: '1080p / High Uptime / Clean',
-    badge: '🔥',
-    supportsMovie: true,
-    supportsTV: true,
-    supportsAnime: false,
-    supportsEnglishDub: true,
-    supportsHindiDub: false,
-    requiresApiKey: false,
-    isConfigured: () => true,
-    getPlaybackUrl: (cfg) => {
-      return ApiGateway.getVidSrcPmUrl(
-        cfg.tmdbId,
-        cfg.mediaType === 'tv' ? 'tv' : 'movie',
-        cfg.season,
-        cfg.episode
-      );
-    },
-  },
-  {
-    id: 'screenscape',
-    name: 'ScreenScape India',
-    quality: '1080p / Hindi Dub / 0 Ads',
-    badge: '🇮🇳',
-    supportsMovie: true,
-    supportsTV: true,
-    supportsAnime: true,
-    supportsEnglishDub: false,
-    supportsHindiDub: true,
-    requiresApiKey: false,
-    isConfigured: () => true,
-    getPlaybackUrl: (cfg) => {
-      const type = (cfg.season !== undefined && cfg.episode !== undefined) || cfg.mediaType === 'tv' ? 'tv' : 'movie';
-      const sParam = cfg.season ? `&s=${cfg.season}` : '';
-      const eParam = cfg.episode ? `&e=${cfg.episode}` : '';
-      return `https://screenscape.me/embed?tmdb=${cfg.tmdbId}&type=${type}${sParam}${eParam}&lan=hi`;
     },
   },
 ];

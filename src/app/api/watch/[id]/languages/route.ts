@@ -18,7 +18,7 @@ export async function GET(
 
     if (!title && !aniListId) {
       try {
-        const apiKey = process.env.TMDB_API_KEY;
+        const apiKey = process.env.TMDB_API_KEY || '493425cbd908e787bf8746644c42bf66';
         if (apiKey) {
           const endpoint = mediaType === 'movie' ? `/movie/${id}` : `/tv/${id}`;
           const res = await fetch(`https://api.tmdb.org/3${endpoint}?api_key=${apiKey}`, {
