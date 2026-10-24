@@ -1,0 +1,28 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "watchers-heaven",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2024-12-30",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "watchers-heaven"
+    }
+  ],
+  "vars": {
+    "TMDB_API_KEY": "493425cbd908e787bf8746644c42bf66",
+    "NEXT_PUBLIC_SUPABASE_URL": "https://tblbvrgzoovujszpztvr.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_CHnXiRDFALRCeJsenl_n1g_FOrwf49U",
+    "NOVA_API_URL": "https://8streamapi.vercel.app"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

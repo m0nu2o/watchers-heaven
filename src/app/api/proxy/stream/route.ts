@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { resolveStreamingSources } from '@/lib/anime/streamResolver';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 /**
  * Lumina HLS / Media Proxy with Obfuscation Decryption.
