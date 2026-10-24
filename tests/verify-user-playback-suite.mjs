@@ -20,7 +20,7 @@ async function runVerification() {
   // TEST 1: Anime Catalog Navigation & NextGen Player (Demon Slayer)
   console.log('Test 1: Navigate to Demon Slayer anime watch page...');
   await mainPage.goto('http://localhost:3002/en/watch/85937?s=1&e=1&type=anime&track=sub&title=Demon%20Slayer%3A%20Kimetsu%20no%20Yaiba', { waitUntil: 'domcontentloaded' });
-  await mainPage.waitForTimeout(4000);
+  await mainPage.waitForSelector('iframe', { timeout: 10000 });
 
   const animeUrl = mainPage.url();
   console.log('Anime Watch URL:', animeUrl);
